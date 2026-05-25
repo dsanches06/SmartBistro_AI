@@ -19,7 +19,7 @@ CREATE TABLE customers (
     email VARCHAR(100) NOT NULL UNIQUE,
     phone VARCHAR(20) NOT NULL,
     active BOOLEAN DEFAULT TRUE,
-    gender ENUM('Masculino', 'Feminino', 'Outro', 'Não informado') DEFAULT 'Não informado',
+    gender ENUM('Male', 'Female', 'Other', 'Not specified') DEFAULT 'Not specified',
     role_id INT DEFAULT 2,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (role_id)

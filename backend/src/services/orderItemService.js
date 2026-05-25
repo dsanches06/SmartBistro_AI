@@ -54,7 +54,7 @@ export const createOrderItems = async (orderId, items) => {
 
 // Actualiza a quantidade de um item de pedido
 export const updateOrderItem = async (id, quantity) => {
-  const [, r] = await db.query(
+  const [r] = await db.query(
     "UPDATE order_items SET quantity = ? WHERE id = ?",
     [quantity, id],
   );
@@ -63,13 +63,13 @@ export const updateOrderItem = async (id, quantity) => {
 
 // Elimina um item de pedido e devolve o número de linhas afectadas
 export const deleteOrderItem = async (id) => {
-  const [, r] = await db.query("DELETE FROM order_items WHERE id = ?", [id]);
+  const [r] = await db.query("DELETE FROM order_items WHERE id = ?", [id]);
   return r.affectedRows;
 };
 
 // Elimina todos os itens de um pedido (útil ao cancelar um pedido)
 export const deleteItemsByOrderId = async (orderId) => {
-  const [, r] = await db.query(
+  const [r] = await db.query(
     "DELETE FROM order_items WHERE order_id = ?",
     [orderId],
   );

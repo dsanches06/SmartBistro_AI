@@ -34,7 +34,7 @@ export const createConversation = async (data) => {
 export const updateConversation = async (id, data) => {
   const keys = Object.keys(data),
     vals = Object.values(data);
-  const [, r] = await db.query(
+  const [r] = await db.query(
     `UPDATE conversations SET ${keys.map((k) => k + " = ?").join(", ")} WHERE id = ?`,
     [...vals, id],
   );
@@ -43,6 +43,6 @@ export const updateConversation = async (id, data) => {
 
 // Elimina a conversa e devolve o número de linhas afectadas
 export const deleteConversation = async (id) => {
-  const [, r] = await db.query("DELETE FROM conversations WHERE id = ?", [id]);
+  const [r] = await db.query("DELETE FROM conversations WHERE id = ?", [id]);
   return r.affectedRows ?? 0;
 };

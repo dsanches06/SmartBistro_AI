@@ -59,7 +59,7 @@ export const updateStock = async (id, data) => {
   if (data.unit_cost !== undefined) add("unit_cost", data.unit_cost);
   if (!fields.length) return 0;
   values.push(id);
-  const [, r] = await db.query(
+  const [r] = await db.query(
     `UPDATE stock SET ${fields.join(", ")} WHERE id = ?`,
     values,
   );
@@ -68,7 +68,7 @@ export const updateStock = async (id, data) => {
 
 // Ajusta a quantidade disponível somando ou subtraindo um delta
 export const adjustQuantity = async (ingredientId, delta) => {
-  const [, r] = await db.query(
+  const [r] = await db.query(
     "UPDATE stock SET available_quantity = available_quantity + ? WHERE ingredient_id = ?",
     [delta, ingredientId],
   );
@@ -77,6 +77,6 @@ export const adjustQuantity = async (ingredientId, delta) => {
 
 // Elimina um registo de stock e devolve o número de linhas afectadas
 export const deleteStock = async (id) => {
-  const [, r] = await db.query("DELETE FROM stock WHERE id = ?", [id]);
+  const [r] = await db.query("DELETE FROM stock WHERE id = ?", [id]);
   return r.affectedRows;
 };

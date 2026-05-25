@@ -73,13 +73,13 @@ export const createLog = async (data) => {
 
 // Elimina um log pelo ID e devolve o número de linhas afectadas
 export const deleteLog = async (id) => {
-  const [, r] = await db.query("DELETE FROM logs WHERE id = ?", [id]);
+  const [r] = await db.query("DELETE FROM logs WHERE id = ?", [id]);
   return r.affectedRows;
 };
 
 // Elimina todos os logs de um pedido
 export const deleteLogsByOrderId = async (orderId) => {
-  const [, r] = await db.query(
+  const [r] = await db.query(
     "DELETE FROM logs WHERE order_id = ?",
     [orderId],
   );

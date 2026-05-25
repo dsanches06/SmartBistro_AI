@@ -22,7 +22,7 @@ export const getCustomerById = async (id) => {
 export const createCustomer = async (data) => {
   const [result] = await db.query(
     "INSERT INTO customers (name, email, phone, gender) VALUES (?, ?, ?, ?)",
-    [data.name, data.email, data.phone ?? "", data.gender ?? "Não informado"],
+    [data.name, data.email, data.phone ?? "", data.gender ?? "Not specified"],
   );
   return mapCustomerDTOResponse({ id: result.insertId, ...data });
 };
@@ -40,7 +40,7 @@ export const updateCustomer = async (userId, data) => {
   if (data.gender !== undefined) add("gender", data.gender);
   if (!fields.length) return 0;
   values.push(userId);
-  const [, r] = await db.query(
+  const [r] = await db.query(
     `UPDATE customers SET ${fields.join(", ")} WHERE id = ?`,
     values,
   );
@@ -48,12 +48,12 @@ export const updateCustomer = async (userId, data) => {
 };
 
 export const deleteCustomer = async (id) => {
-  const [, r] = await db.query("DELETE FROM customers WHERE id = ?", [id]);
+  const [r] = await db.query("DELETE FROM customers WHERE id = ?", [id]);
   return r.affectedRows;
 };
 
 export const toggleCustomerActive = async (id, data) => {
-  const [, r] = await db.query("UPDATE customers SET active = ? WHERE id = ?", [
+  const [r] = await db.query("UPDATE customers SET active = ? WHERE id = ?", [
     data.active,
     id,
   ]);

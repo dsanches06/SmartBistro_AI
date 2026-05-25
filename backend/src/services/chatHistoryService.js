@@ -45,7 +45,7 @@ export const createChatHistory = async (data) => {
 export const updateChatHistory = async (id, data) => {
   const keys = Object.keys(data),
     vals = Object.values(data);
-  const [, r] = await db.query(
+  const [r] = await db.query(
     `UPDATE chat_history SET ${keys.map((k) => k + " = ?").join(", ")} WHERE id = ?`,
     [...vals, id],
   );
@@ -54,6 +54,6 @@ export const updateChatHistory = async (id, data) => {
 
 // Elimina a mensagem e devolve o número de linhas afectadas
 export const deleteChatHistory = async (id) => {
-  const [, r] = await db.query("DELETE FROM chat_history WHERE id = ?", [id]);
+  const [r] = await db.query("DELETE FROM chat_history WHERE id = ?", [id]);
   return r.affectedRows ?? 0;
 };

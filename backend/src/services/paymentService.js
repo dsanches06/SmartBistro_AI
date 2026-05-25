@@ -85,7 +85,7 @@ export const updatePayment = async (id, data) => {
   if (data.processed_at !== undefined) add("processed_at", data.processed_at);
   if (!fields.length) return 0;
   values.push(id);
-  const [, r] = await db.query(
+  const [r] = await db.query(
     `UPDATE payments SET ${fields.join(", ")} WHERE id = ?`,
     values,
   );
@@ -95,7 +95,7 @@ export const updatePayment = async (id, data) => {
 // Processa o pagamento: define status Completed e regista a data/hora actual
 export const processPayment = async (id) => {
   const now = new Date();
-  const [, r] = await db.query(
+  const [r] = await db.query(
     "UPDATE payments SET payment_status = 'Completed', processed_at = ? WHERE id = ?",
     [now, id],
   );
@@ -104,7 +104,7 @@ export const processPayment = async (id) => {
 
 // Marca o pagamento como falhado
 export const failPayment = async (id) => {
-  const [, r] = await db.query(
+  const [r] = await db.query(
     "UPDATE payments SET payment_status = 'Failed' WHERE id = ?",
     [id],
   );
@@ -113,6 +113,6 @@ export const failPayment = async (id) => {
 
 // Elimina um pagamento e devolve o número de linhas afectadas
 export const deletePayment = async (id) => {
-  const [, r] = await db.query("DELETE FROM payments WHERE id = ?", [id]);
+  const [r] = await db.query("DELETE FROM payments WHERE id = ?", [id]);
   return r.affectedRows;
 };

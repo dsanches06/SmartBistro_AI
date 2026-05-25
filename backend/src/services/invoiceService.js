@@ -71,7 +71,7 @@ export const updateInvoice = async (id, data) => {
   if (data.profit_margin !== undefined) add("profit_margin", data.profit_margin);
   if (!fields.length) return 0;
   values.push(id);
-  const [, r] = await db.query(
+  const [r] = await db.query(
     `UPDATE invoices SET ${fields.join(", ")} WHERE id = ?`,
     values,
   );
@@ -80,6 +80,6 @@ export const updateInvoice = async (id, data) => {
 
 // Elimina uma fatura e devolve o número de linhas afectadas
 export const deleteInvoice = async (id) => {
-  const [, r] = await db.query("DELETE FROM invoices WHERE id = ?", [id]);
+  const [r] = await db.query("DELETE FROM invoices WHERE id = ?", [id]);
   return r.affectedRows;
 };

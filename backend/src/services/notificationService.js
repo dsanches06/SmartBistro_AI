@@ -67,7 +67,7 @@ export const updateNotification = async (id, data) => {
   if (fields.length === 0) return 0; // Sem campos para actualizar
 
   values.push(id);
-  const [, r] = await db.query(
+  const [r] = await db.query(
     `UPDATE notification SET ${fields.join(", ")} WHERE id = ?`,
     values,
   );
@@ -76,7 +76,7 @@ export const updateNotification = async (id, data) => {
 
 // Alterna o estado de leitura de uma notificação
 export const toggleReadStatus = async (id, is_read) => {
-  const [, r] = await db.query(
+  const [r] = await db.query(
     "UPDATE notification SET is_read = ? WHERE id = ?",
     [is_read, id],
   );
@@ -85,7 +85,7 @@ export const toggleReadStatus = async (id, is_read) => {
 
 // Elimina uma notificação pelo ID
 export const deleteNotification = async (id) => {
-  const [, r] = await db.query("DELETE FROM notification WHERE id = ?", [id]);
+  const [r] = await db.query("DELETE FROM notification WHERE id = ?", [id]);
   return r.affectedRows ?? 0;
 };
 

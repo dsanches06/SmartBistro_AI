@@ -56,7 +56,7 @@ export const updateIngredient = async (id, data) => {
   if (data.measurement_unit !== undefined) add("measurement_unit", data.measurement_unit);
   if (!fields.length) return 0;
   values.push(id);
-  const [, r] = await db.query(
+  const [r] = await db.query(
     `UPDATE ingredients SET ${fields.join(", ")} WHERE id = ?`,
     values,
   );
@@ -65,6 +65,6 @@ export const updateIngredient = async (id, data) => {
 
 // Elimina um ingrediente e devolve o número de linhas afectadas
 export const deleteIngredient = async (id) => {
-  const [, r] = await db.query("DELETE FROM ingredients WHERE id = ?", [id]);
+  const [r] = await db.query("DELETE FROM ingredients WHERE id = ?", [id]);
   return r.affectedRows;
 };

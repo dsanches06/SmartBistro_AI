@@ -75,7 +75,7 @@ export const updateItem = async (id, data) => {
   if (data.price !== undefined) add("price", data.price);
   if (!fields.length) return 0;
   values.push(id);
-  const [, r] = await db.query(
+  const [r] = await db.query(
     `UPDATE items SET ${fields.join(", ")} WHERE id = ?`,
     values,
   );
@@ -84,7 +84,7 @@ export const updateItem = async (id, data) => {
 
 // Activa ou desactiva um item do menu
 export const toggleItemActive = async (id, is_active) => {
-  const [, r] = await db.query("UPDATE items SET is_active = ? WHERE id = ?", [
+  const [r] = await db.query("UPDATE items SET is_active = ? WHERE id = ?", [
     is_active,
     id,
   ]);
@@ -93,6 +93,6 @@ export const toggleItemActive = async (id, is_active) => {
 
 // Elimina um item e devolve o número de linhas afectadas
 export const deleteItem = async (id) => {
-  const [, r] = await db.query("DELETE FROM items WHERE id = ?", [id]);
+  const [r] = await db.query("DELETE FROM items WHERE id = ?", [id]);
   return r.affectedRows;
 };

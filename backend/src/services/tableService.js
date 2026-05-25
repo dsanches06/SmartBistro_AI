@@ -57,7 +57,7 @@ export const updateTable = async (id, data) => {
   if (data.status !== undefined) add("status", data.status);
   if (!fields.length) return 0;
   values.push(id);
-  const [, r] = await db.query(
+  const [r] = await db.query(
     `UPDATE tables SET ${fields.join(", ")} WHERE id = ?`,
     values,
   );
@@ -66,7 +66,7 @@ export const updateTable = async (id, data) => {
 
 // Actualiza apenas o status da mesa (Available / Occupied / Reserved)
 export const updateTableStatus = async (id, status) => {
-  const [, r] = await db.query("UPDATE tables SET status = ? WHERE id = ?", [
+  const [r] = await db.query("UPDATE tables SET status = ? WHERE id = ?", [
     status,
     id,
   ]);
@@ -75,6 +75,6 @@ export const updateTableStatus = async (id, status) => {
 
 // Elimina uma mesa e devolve o número de linhas afectadas
 export const deleteTable = async (id) => {
-  const [, r] = await db.query("DELETE FROM tables WHERE id = ?", [id]);
+  const [r] = await db.query("DELETE FROM tables WHERE id = ?", [id]);
   return r.affectedRows;
 };

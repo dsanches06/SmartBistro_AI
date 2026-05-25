@@ -58,7 +58,7 @@ export const updateRecipeItem = async (id, data) => {
   if (data.ingredient_id !== undefined) add("ingredient_id", data.ingredient_id);
   if (!fields.length) return 0;
   values.push(id);
-  const [, r] = await db.query(
+  const [r] = await db.query(
     `UPDATE recipe_items SET ${fields.join(", ")} WHERE id = ?`,
     values,
   );
@@ -67,13 +67,13 @@ export const updateRecipeItem = async (id, data) => {
 
 // Elimina uma entrada da ficha técnica e devolve o número de linhas afectadas
 export const deleteRecipeItem = async (id) => {
-  const [, r] = await db.query("DELETE FROM recipe_items WHERE id = ?", [id]);
+  const [r] = await db.query("DELETE FROM recipe_items WHERE id = ?", [id]);
   return r.affectedRows;
 };
 
 // Elimina toda a ficha técnica de um item do menu
 export const deleteRecipeByItemId = async (itemId) => {
-  const [, r] = await db.query(
+  const [r] = await db.query(
     "DELETE FROM recipe_items WHERE item_id = ?",
     [itemId],
   );

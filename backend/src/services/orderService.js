@@ -85,7 +85,7 @@ export const updateOrder = async (id, data) => {
   if (data.order_status !== undefined) add("order_status", data.order_status);
   if (!fields.length) return 0;
   values.push(id);
-  const [, r] = await db.query(
+  const [r] = await db.query(
     `UPDATE orders SET ${fields.join(", ")} WHERE id = ?`,
     values,
   );
@@ -94,7 +94,7 @@ export const updateOrder = async (id, data) => {
 
 // Actualiza apenas o status do pedido
 export const updateOrderStatus = async (id, orderStatus) => {
-  const [, r] = await db.query(
+  const [r] = await db.query(
     "UPDATE orders SET order_status = ? WHERE id = ?",
     [orderStatus, id],
   );
@@ -103,6 +103,6 @@ export const updateOrderStatus = async (id, orderStatus) => {
 
 // Elimina um pedido e devolve o número de linhas afectadas
 export const deleteOrder = async (id) => {
-  const [, r] = await db.query("DELETE FROM orders WHERE id = ?", [id]);
+  const [r] = await db.query("DELETE FROM orders WHERE id = ?", [id]);
   return r.affectedRows;
 };
