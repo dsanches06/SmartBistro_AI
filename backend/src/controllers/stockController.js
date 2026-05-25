@@ -1,9 +1,18 @@
-import * as stockService from "../services/stockService.js";
+import {
+  getAllStock,
+  getStockById,
+  getStockByIngredientId,
+  stockExistsForIngredient,
+  createStock,
+  updateStock,
+  adjustQuantity as adjustStockQuantity,
+  deleteStock,
+} from "../services/index.js";
 
 // GET /stock
 export const getAll = async (req, res) => {
   try {
-    const stock = await stockService.getAllStock();
+    const stock = await getAllStock();
     res.json(stock);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -13,7 +22,7 @@ export const getAll = async (req, res) => {
 // GET /stock/:id
 export const getById = async (req, res) => {
   try {
-    const stock = await stockService.getStockById(req.params.id);
+    const stock = await getStockById(req.params.id);
     if (!stock) return res.status(404).json({ error: "Registo de stock não encontrado" });
     res.json(stock);
   } catch (err) {
@@ -24,7 +33,7 @@ export const getById = async (req, res) => {
 // GET /stock/ingredient/:ingredientId
 export const getByIngredientId = async (req, res) => {
   try {
-    const stock = await stockService.getStockByIngredientId(req.params.ingredientId);
+    const stock = await getStockByIngredientId(req.params.ingredientId);
     if (!stock) return res.status(404).json({ error: "Stock para esse ingrediente não encontrado" });
     res.json(stock);
   } catch (err) {
@@ -39,10 +48,10 @@ export const create = async (req, res) => {
     if (!ingredient_id)
       return res.status(400).json({ error: "ingredient_id é obrigatório" });
 
-    const exists = await stockService.stockExistsForIngredient(ingredient_id);
+    const exists = await stockExistsForIngredient(ingredient_id);
     if (exists) return res.status(409).json({ error: "Já existe stock registado para esse ingrediente" });
 
-    const stock = await stockService.createStock({ ingredient_id, available_quantity, unit_cost });
+    const stock = await createStock({ ingredient_id, available_quantity, unit_cost });
     res.status(201).json(stock);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -53,7 +62,7 @@ export const create = async (req, res) => {
 export const update = async (req, res) => {
   try {
     const { available_quantity, unit_cost } = req.body;
-    const affected = await stockService.updateStock(req.params.id, { available_quantity, unit_cost });
+    const affected = await updateStock(req.params.id, { available_quantity, unit_cost });
     if (!affected) return res.status(404).json({ error: "Registo de stock não encontrado" });
     res.json({ message: "Stock actualizado com sucesso" });
   } catch (err) {
@@ -68,7 +77,7 @@ export const adjustQuantity = async (req, res) => {
     if (delta === undefined)
       return res.status(400).json({ error: "Campo delta é obrigatório" });
 
-    const affected = await stockService.adjustQuantity(req.params.ingredientId, delta);
+    const affected = await adjustStockQuantity(req.params.ingredientId, delta);
     if (!affected) return res.status(404).json({ error: "Stock para esse ingrediente não encontrado" });
     res.json({ message: `Quantidade ajustada em ${delta} unidades` });
   } catch (err) {
@@ -79,7 +88,7 @@ export const adjustQuantity = async (req, res) => {
 // DELETE /stock/:id
 export const remove = async (req, res) => {
   try {
-    const affected = await stockService.deleteStock(req.params.id);
+    const affected = await deleteStock(req.params.id);
     if (!affected) return res.status(404).json({ error: "Registo de stock não encontrado" });
     res.json({ message: "Registo de stock eliminado com sucesso" });
   } catch (err) {

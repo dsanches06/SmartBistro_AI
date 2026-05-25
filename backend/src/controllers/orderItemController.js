@@ -1,9 +1,18 @@
-import * as orderItemService from "../services/orderItemService.js";
+import {
+  getAllOrderItems,
+  getOrderItemById,
+  getItemsByOrderId,
+  createOrderItem,
+  createOrderItems,
+  updateOrderItem,
+  deleteOrderItem,
+  deleteItemsByOrderId,
+} from "../services/index.js";
 
 // GET /order-items
 export const getAll = async (req, res) => {
   try {
-    const orderItems = await orderItemService.getAllOrderItems();
+    const orderItems = await getAllOrderItems();
     res.json(orderItems);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -13,7 +22,7 @@ export const getAll = async (req, res) => {
 // GET /order-items/:id
 export const getById = async (req, res) => {
   try {
-    const orderItem = await orderItemService.getOrderItemById(req.params.id);
+    const orderItem = await getOrderItemById(req.params.id);
     if (!orderItem) return res.status(404).json({ error: "Item de pedido não encontrado" });
     res.json(orderItem);
   } catch (err) {
@@ -24,7 +33,7 @@ export const getById = async (req, res) => {
 // GET /order-items/order/:orderId
 export const getByOrderId = async (req, res) => {
   try {
-    const orderItems = await orderItemService.getItemsByOrderId(req.params.orderId);
+    const orderItems = await getItemsByOrderId(req.params.orderId);
     res.json(orderItems);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -38,7 +47,7 @@ export const create = async (req, res) => {
     if (!order_id || !item_id)
       return res.status(400).json({ error: "order_id e item_id são obrigatórios" });
 
-    const orderItem = await orderItemService.createOrderItem({ order_id, item_id, quantity });
+    const orderItem = await createOrderItem({ order_id, item_id, quantity });
     res.status(201).json(orderItem);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -52,7 +61,7 @@ export const createBulk = async (req, res) => {
     if (!order_id || !Array.isArray(items) || !items.length)
       return res.status(400).json({ error: "order_id e items (array) são obrigatórios" });
 
-    const orderItems = await orderItemService.createOrderItems(order_id, items);
+    const orderItems = await createOrderItems(order_id, items);
     res.status(201).json(orderItems);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -66,7 +75,7 @@ export const updateQuantity = async (req, res) => {
     if (quantity === undefined)
       return res.status(400).json({ error: "Campo quantity é obrigatório" });
 
-    const affected = await orderItemService.updateOrderItem(req.params.id, quantity);
+    const affected = await updateOrderItem(req.params.id, quantity);
     if (!affected) return res.status(404).json({ error: "Item de pedido não encontrado" });
     res.json({ message: "Quantidade actualizada com sucesso" });
   } catch (err) {
@@ -77,7 +86,7 @@ export const updateQuantity = async (req, res) => {
 // DELETE /order-items/:id
 export const remove = async (req, res) => {
   try {
-    const affected = await orderItemService.deleteOrderItem(req.params.id);
+    const affected = await deleteOrderItem(req.params.id);
     if (!affected) return res.status(404).json({ error: "Item de pedido não encontrado" });
     res.json({ message: "Item de pedido eliminado com sucesso" });
   } catch (err) {
@@ -88,7 +97,7 @@ export const remove = async (req, res) => {
 // DELETE /order-items/order/:orderId
 export const removeByOrderId = async (req, res) => {
   try {
-    const affected = await orderItemService.deleteItemsByOrderId(req.params.orderId);
+    const affected = await deleteItemsByOrderId(req.params.orderId);
     res.json({ message: `${affected} item(s) do pedido eliminado(s)` });
   } catch (err) {
     res.status(500).json({ error: err.message });

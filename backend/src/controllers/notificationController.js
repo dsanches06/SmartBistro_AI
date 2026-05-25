@@ -1,9 +1,19 @@
-import * as notificationService from "../services/notificationService.js";
+import {
+  getAllNotifications,
+  getNotificationById,
+  getNotificationsByUser,
+  getUnreadNotifications,
+  createNotification,
+  updateNotification,
+  markAsRead as markNotificationAsRead,
+  toggleReadStatus as toggleNotificationReadStatus,
+  deleteNotification,
+} from "../services/index.js";
 
 // GET /notifications
 export const getAll = async (req, res) => {
   try {
-    const notifications = await notificationService.getAllNotifications();
+    const notifications = await getAllNotifications();
     res.json(notifications);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -13,7 +23,7 @@ export const getAll = async (req, res) => {
 // GET /notifications/:id
 export const getById = async (req, res) => {
   try {
-    const notification = await notificationService.getNotificationById(req.params.id);
+    const notification = await getNotificationById(req.params.id);
     if (!notification) return res.status(404).json({ error: "Notificação não encontrada" });
     res.json(notification);
   } catch (err) {
@@ -24,7 +34,7 @@ export const getById = async (req, res) => {
 // GET /notifications/customer/:customerId
 export const getByCustomerId = async (req, res) => {
   try {
-    const notifications = await notificationService.getNotificationsByUser(req.params.customerId);
+    const notifications = await getNotificationsByUser(req.params.customerId);
     res.json(notifications);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -34,7 +44,7 @@ export const getByCustomerId = async (req, res) => {
 // GET /notifications/customer/:customerId/unread
 export const getUnread = async (req, res) => {
   try {
-    const notifications = await notificationService.getUnreadNotifications(req.params.customerId);
+    const notifications = await getUnreadNotifications(req.params.customerId);
     res.json(notifications);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -48,7 +58,7 @@ export const create = async (req, res) => {
     if (!customer_id || !message)
       return res.status(400).json({ error: "customer_id e message são obrigatórios" });
 
-    const notification = await notificationService.createNotification({ customer_id, title, message });
+    const notification = await createNotification({ customer_id, title, message });
     res.status(201).json(notification);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -59,7 +69,7 @@ export const create = async (req, res) => {
 export const update = async (req, res) => {
   try {
     const { title, message, is_read } = req.body;
-    const affected = await notificationService.updateNotification(req.params.id, { title, message, is_read });
+    const affected = await updateNotification(req.params.id, { title, message, is_read });
     if (!affected) return res.status(404).json({ error: "Notificação não encontrada" });
     res.json({ message: "Notificação actualizada com sucesso" });
   } catch (err) {
@@ -70,7 +80,7 @@ export const update = async (req, res) => {
 // PATCH /notifications/:id/read
 export const markAsRead = async (req, res) => {
   try {
-    const affected = await notificationService.markAsRead(req.params.id);
+    const affected = await markNotificationAsRead(req.params.id);
     if (!affected) return res.status(404).json({ error: "Notificação não encontrada" });
     res.json({ message: "Notificação marcada como lida" });
   } catch (err) {
@@ -85,7 +95,7 @@ export const toggleReadStatus = async (req, res) => {
     if (is_read === undefined)
       return res.status(400).json({ error: "Campo is_read é obrigatório" });
 
-    const affected = await notificationService.toggleReadStatus(req.params.id, is_read);
+    const affected = await toggleNotificationReadStatus(req.params.id, is_read);
     if (!affected) return res.status(404).json({ error: "Notificação não encontrada" });
     res.json({ message: `Notificação marcada como ${is_read ? "lida" : "não lida"}` });
   } catch (err) {
@@ -96,7 +106,7 @@ export const toggleReadStatus = async (req, res) => {
 // DELETE /notifications/:id
 export const remove = async (req, res) => {
   try {
-    const affected = await notificationService.deleteNotification(req.params.id);
+    const affected = await deleteNotification(req.params.id);
     if (!affected) return res.status(404).json({ error: "Notificação não encontrada" });
     res.json({ message: "Notificação eliminada com sucesso" });
   } catch (err) {
