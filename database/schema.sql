@@ -115,8 +115,8 @@ CREATE TABLE recipe_items (
 CREATE TABLE orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     customer_id INT NULL,
-    table_id INT NULL,
-    service_type VARCHAR(50) NOT NULL, -- Table ou Takeaway
+    table_id INT NULL,                     -- Fica NULL se for um pedido de Takeaway
+    service_type ENUM('Table', 'Takeaway') NOT NULL, -- Identifica claramente a origem
     allergy_restrictions TEXT,
     kitchen_sequence_json JSON NOT NULL,
     order_status ENUM('Pending in Kitchen', 'N/A') DEFAULT 'Pending in Kitchen',
@@ -124,6 +124,7 @@ CREATE TABLE orders (
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL,
     FOREIGN KEY (table_id) REFERENCES tables(id) ON DELETE SET NULL
 );
+
 
 -- Itens do Pedido
 CREATE TABLE order_items (
