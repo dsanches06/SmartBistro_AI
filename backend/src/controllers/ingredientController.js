@@ -1,10 +1,17 @@
-import * as ingredientService from "../services/ingredientService.js";
+import {
+  getAllIngredients,
+  getIngredientById,
+  ingredientNameExists,
+  createIngredient,
+  updateIngredient,
+  deleteIngredient,
+} from "../services/index.js";
 
 // GET /ingredients?search=&sort=
 export const getAll = async (req, res) => {
   try {
     const { search, sort } = req.query;
-    const ingredients = await ingredientService.getAllIngredients(search, sort);
+    const ingredients = await getAllIngredients(search, sort);
     res.json(ingredients);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -14,7 +21,7 @@ export const getAll = async (req, res) => {
 // GET /ingredients/:id
 export const getById = async (req, res) => {
   try {
-    const ingredient = await ingredientService.getIngredientById(req.params.id);
+    const ingredient = await getIngredientById(req.params.id);
     if (!ingredient) return res.status(404).json({ error: "Ingrediente não encontrado" });
     res.json(ingredient);
   } catch (err) {
@@ -29,10 +36,10 @@ export const create = async (req, res) => {
     if (!name || !measurement_unit)
       return res.status(400).json({ error: "name e measurement_unit são obrigatórios" });
 
-    const exists = await ingredientService.ingredientNameExists(name);
+    const exists = await ingredientNameExists(name);
     if (exists) return res.status(409).json({ error: "Ingrediente com esse nome já existe" });
 
-    const ingredient = await ingredientService.createIngredient({ name, measurement_unit });
+    const ingredient = await createIngredient({ name, measurement_unit });
     res.status(201).json(ingredient);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -46,11 +53,11 @@ export const update = async (req, res) => {
     const { name, measurement_unit } = req.body;
 
     if (name) {
-      const exists = await ingredientService.ingredientNameExists(name, id);
+      const exists = await ingredientNameExists(name, id);
       if (exists) return res.status(409).json({ error: "Ingrediente com esse nome já existe" });
     }
 
-    const affected = await ingredientService.updateIngredient(id, { name, measurement_unit });
+    const affected = await updateIngredient(id, { name, measurement_unit });
     if (!affected) return res.status(404).json({ error: "Ingrediente não encontrado" });
     res.json({ message: "Ingrediente actualizado com sucesso" });
   } catch (err) {
@@ -61,7 +68,7 @@ export const update = async (req, res) => {
 // DELETE /ingredients/:id
 export const remove = async (req, res) => {
   try {
-    const affected = await ingredientService.deleteIngredient(req.params.id);
+    const affected = await deleteIngredient(req.params.id);
     if (!affected) return res.status(404).json({ error: "Ingrediente não encontrado" });
     res.json({ message: "Ingrediente eliminado com sucesso" });
   } catch (err) {

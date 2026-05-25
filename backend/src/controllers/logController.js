@@ -1,10 +1,18 @@
-import * as logService from "../services/logService.js";
+import {
+  getAllLogs,
+  getLogById,
+  getLogsByOrderId,
+  getLogsByAgent,
+  createLog,
+  deleteLog,
+  deleteLogsByOrderId,
+} from "../services/index.js";
 
 // GET /logs?agentName=&status=
 export const getAll = async (req, res) => {
   try {
     const { agentName, status } = req.query;
-    const logs = await logService.getAllLogs(agentName, status);
+    const logs = await getAllLogs(agentName, status);
     res.json(logs);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -14,7 +22,7 @@ export const getAll = async (req, res) => {
 // GET /logs/:id
 export const getById = async (req, res) => {
   try {
-    const log = await logService.getLogById(req.params.id);
+    const log = await getLogById(req.params.id);
     if (!log) return res.status(404).json({ error: "Log não encontrado" });
     res.json(log);
   } catch (err) {
@@ -25,7 +33,7 @@ export const getById = async (req, res) => {
 // GET /logs/order/:orderId
 export const getByOrderId = async (req, res) => {
   try {
-    const logs = await logService.getLogsByOrderId(req.params.orderId);
+    const logs = await getLogsByOrderId(req.params.orderId);
     res.json(logs);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -35,7 +43,7 @@ export const getByOrderId = async (req, res) => {
 // GET /logs/agent/:agentName
 export const getByAgent = async (req, res) => {
   try {
-    const logs = await logService.getLogsByAgent(req.params.agentName);
+    const logs = await getLogsByAgent(req.params.agentName);
     res.json(logs);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -49,7 +57,7 @@ export const create = async (req, res) => {
     if (!agent_name || !status)
       return res.status(400).json({ error: "agent_name e status são obrigatórios" });
 
-    const log = await logService.createLog({ order_id, agent_name, status, input_payload, output_payload });
+    const log = await createLog({ order_id, agent_name, status, input_payload, output_payload });
     res.status(201).json(log);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -59,7 +67,7 @@ export const create = async (req, res) => {
 // DELETE /logs/:id
 export const remove = async (req, res) => {
   try {
-    const affected = await logService.deleteLog(req.params.id);
+    const affected = await deleteLog(req.params.id);
     if (!affected) return res.status(404).json({ error: "Log não encontrado" });
     res.json({ message: "Log eliminado com sucesso" });
   } catch (err) {
@@ -70,7 +78,7 @@ export const remove = async (req, res) => {
 // DELETE /logs/order/:orderId
 export const removeByOrderId = async (req, res) => {
   try {
-    const affected = await logService.deleteLogsByOrderId(req.params.orderId);
+    const affected = await deleteLogsByOrderId(req.params.orderId);
     res.json({ message: `${affected} log(s) do pedido eliminado(s)` });
   } catch (err) {
     res.status(500).json({ error: err.message });

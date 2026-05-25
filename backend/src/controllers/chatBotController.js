@@ -1,6 +1,5 @@
 import { ROLE_USER, ROLE_ASSISTANT } from "../utils/chatBotUtil.js";
-import { createConversation } from "../services/conversationService.js";
-import { createChatHistory } from "../services/chatHistoryService.js";
+import { createConversation, createChatHistory } from "../services/index.js";
 
 // Envia mensagem para o bot com resposta em stream SSE
 export async function sendMessageToBotStream(req, res) {
