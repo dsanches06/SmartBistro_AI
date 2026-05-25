@@ -1,0 +1,21 @@
+{
+  "name": "m8_projeto_final",
+  "version": "1.0.0",
+  "description": "Sistema Multi-Agente Cooperativo e Inteligente com Node.js, React e Gemini para Gestão Operacional e Fluxo de Pedidos em Restaurantes via API REST.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dsanches06/M8_Projeto_Final.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/dsanches06/M8_Projeto_Final/issues"
+  },
+  "homepage": "https://github.com/dsanches06/M8_Projeto_Final#readme"
+}
