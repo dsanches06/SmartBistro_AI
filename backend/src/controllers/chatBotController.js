@@ -2,7 +2,31 @@ import { ROLE_USER, ROLE_ASSISTANT } from '../utils/index.js';
 import { createConversation, createChatHistory } from '../services/index.js';
 import { processChatStream } from '../genai/orchestrations/index.js';
 
-// Envia mensagem para o bot com resposta em stream SSE
+// ── Mapeia geminiType → nome do evento SSE ────────────────────────────────────
+const ERROR_EVENT = {
+  RATE_LIMIT:      'rate_limit',
+  SERVICE_DOWN:    'service_unavailable',
+  AUTH_ERROR:      'auth_error',
+  NETWORK_ERROR:   'network_error',
+  INVALID_REQUEST: 'invalid_request',
+};
+
+function sseErrorEvent(err) {
+  return ERROR_EVENT[err?.geminiType] ?? 'provider_error';
+}
+
+function writeSseError(res, err) {
+  res.write(
+    `event: ${sseErrorEvent(err)}\ndata: ${JSON.stringify({
+      success:   false,
+      errorType: err?.geminiType ?? 'UNKNOWN',
+      message:   err.message,
+    })}\n\n`,
+  );
+  res.end();
+}
+
+// ── Envia mensagem ao bot com resposta em stream SSE ─────────────────────────
 export async function sendMessageToBotStream(req, res) {
   const { message, conversationId, customer_id = 1 } = req.body;
 
@@ -37,23 +61,29 @@ export async function sendMessageToBotStream(req, res) {
       onDone: async () => {
         clearInterval(ping);
         await createChatHistory({ conversation_id: convId, role_id: ROLE_ASSISTANT, content: fullText });
-        res.write(`event: done\ndata: ${JSON.stringify({ success: true, conversationId: convId, message: fullText })}\n\n`);
+        res.write(
+          `event: done\ndata: ${JSON.stringify({
+            success:        true,
+            conversationId: convId,
+            message:        fullText,
+          })}\n\n`,
+        );
         res.end();
       },
+      // Erros do Gemini — já classificados e com mensagem amigável
       onError: (err) => {
         clearInterval(ping);
-        res.write(`event: provider_error\ndata: ${JSON.stringify({ success: false, providerError: true, message: err.message })}\n\n`);
-        res.end();
+        writeSseError(res, err);
       },
     });
   } catch (err) {
+    // Erros antes ou fora do stream (BD, validação, etc.)
     clearInterval(ping);
-    res.write(`event: provider_error\ndata: ${JSON.stringify({ success: false, providerError: true, message: err.message })}\n\n`);
-    res.end();
+    writeSseError(res, err);
   }
 }
 
-// Envia mensagem para uma conversa específica (sem stream)
+// ── Adiciona mensagem a uma conversa existente (sem stream) ───────────────────
 export async function sendMessageToConversation(req, res) {
   const { conversationId } = req.params;
   const { message } = req.body;

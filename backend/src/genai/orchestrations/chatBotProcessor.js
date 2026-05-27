@@ -1,4 +1,5 @@
 import { BaseChatProcessor } from "../models/index.js";
+import { classifyGeminiError } from "../../utils/index.js";
 
 // ── Declarações das ferramentas ────────────────────────────────────────────────
 import {
@@ -158,8 +159,15 @@ export async function processChatStream(
     const result = await processor.chat(message, onChunk);
     if (onDone) onDone(result.message || "");
   } catch (err) {
-    if (onError) onError(err);
-    else throw err;
+    // Classifica o erro bruto do Gemini numa estrutura tipada e com mensagem
+    // amigável antes de propagar para o controller via onError
+    const classified = classifyGeminiError(err);
+    const enriched = new Error(classified.userMessage);
+    enriched.geminiType = classified.type;
+    enriched.originalError = err;
+
+    if (onError) onError(enriched);
+    else throw enriched;
   }
 }
 
