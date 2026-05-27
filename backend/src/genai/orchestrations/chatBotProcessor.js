@@ -1,5 +1,5 @@
 import { BaseChatProcessor } from "../models/index.js";
-import { classifyGeminiError } from "../../utils/index.js";
+import { classifyGeminiError, calculateInvoiceTotals, calculateProfitMargin } from "../../utils/index.js";
 
 // ── Declarações das ferramentas ────────────────────────────────────────────────
 import {
@@ -21,7 +21,10 @@ import {
   updateOrderStatusFunctionDeclaration,
 } from "../functions/orders/index.js";
 import { createOrderItemFunctionDeclaration } from "../functions/order_items/index.js";
-import { createInvoiceFunctionDeclaration } from "../functions/invoices/index.js";
+import {
+  createInvoiceFunctionDeclaration,
+  calculateInvoiceTotalsFunctionDeclaration,
+} from "../functions/invoices/index.js";
 import {
   createPaymentFunctionDeclaration,
   updatePaymentStatusFunctionDeclaration,
@@ -38,6 +41,7 @@ import {
   getAllTables,
   updateTableStatus,
   getItemById,
+  getItemsByOrderId,
   getRecipeByItemId,
   getStockByIngredientId,
   adjustQuantity,
@@ -64,6 +68,7 @@ const ALL_DECLARATIONS = [
   createOrderFunctionDeclaration,
   updateOrderStatusFunctionDeclaration,
   createOrderItemFunctionDeclaration,
+  calculateInvoiceTotalsFunctionDeclaration,
   createInvoiceFunctionDeclaration,
   createPaymentFunctionDeclaration,
   updatePaymentStatusFunctionDeclaration,
@@ -87,7 +92,7 @@ const FUNCTION_HANDLERS = {
     if (args.table_id) return getTableById(args.table_id);
     if (args.table_number) {
       const tables = await getAllTables();
-      return tables.find((t) => t.table_number === args.table_number) ?? null;
+      return tables.find((t) => Number(t.table_number) === Number(args.table_number)) ?? null;
     }
     return null;
   },
@@ -101,6 +106,47 @@ const FUNCTION_HANDLERS = {
   update_order_status: async (args) =>
     updateOrderStatus(args.order_id, args.order_status),
   create_order_item: async (args) => createOrderItem(args),
+
+  // ── Cálculo financeiro em JS puro (nunca pelo modelo) ─────────────────────
+  calculate_invoice_totals: async (args) => {
+    const orderId = Number(args.order_id);
+    const taxRate  = args.tax_rate != null ? Number(args.tax_rate) : undefined;
+
+    // 1. Buscar todos os itens do pedido
+    const orderItems = await getItemsByOrderId(orderId);
+    if (!orderItems?.length) {
+      return { error: `Nenhum item encontrado para o pedido ${orderId}.` };
+    }
+
+    // 2. Enriquecer com preço unitário (busca paralela)
+    const enriched = await Promise.all(
+      orderItems.map(async (oi) => {
+        const item = await getItemById(oi.item_id);
+        return {
+          price:    Number(item?.price ?? 0),
+          quantity: Number(oi.quantity ?? 1),
+          name:     item?.name ?? `item_${oi.item_id}`,
+        };
+      }),
+    );
+
+    // 3. Calcular totais em JS — sem IA
+    const totals = calculateInvoiceTotals({
+      items:   enriched,
+      taxRate: taxRate,
+    });
+
+    return {
+      order_id:        orderId,
+      items:           enriched,
+      subtotal_amount: totals.subtotal,
+      tax_rate:        totals.taxRate,
+      tax_amount:      totals.taxAmount,
+      total_amount:    totals.total,
+      profit_margin:   calculateProfitMargin(totals.total),
+    };
+  },
+
   create_invoice: async (args) => createInvoice(args),
   create_payment: async (args) => createPayment(args),
   update_payment_status: async (args) =>

@@ -2,13 +2,14 @@
  * Processador Base de Chat — Loop agêntico com chamadas de funções em paralelo
  */
 
-import { createGeminiChat, FunctionCallingConfigMode, ORCHESTRATION_SYSTEM_PROMPT } from '../config/index.js';
+import { createGeminiChat, FunctionCallingConfigMode, CHATBOT_SYSTEM_PROMPT } from '../config/index.js';
+import { MAX_AGENTIC_STEPS } from "../../utils/index.js"
 
 // Constrói o config Gemini para o chat com suporte a function calling
 function buildChatConfig(tools = []) {
   const hasTools = Array.isArray(tools) && tools.length > 0;
   return {
-    systemInstruction: ORCHESTRATION_SYSTEM_PROMPT(),
+    systemInstruction: CHATBOT_SYSTEM_PROMPT(),
     temperature: 0.3,
     ...(hasTools && {
       tools: [{ functionDeclarations: tools }],
@@ -19,7 +20,7 @@ function buildChatConfig(tools = []) {
   };
 }
 
-const MAX_AGENTIC_STEPS = 5;
+
 
 export class BaseChatProcessor {
   constructor({ toolConfig = [], functionHandlers = {} }) {

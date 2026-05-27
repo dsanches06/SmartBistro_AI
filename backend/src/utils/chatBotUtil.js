@@ -2,3 +2,6 @@
 // Ajusta estes valores conforme os registos na tua base de dados
 export const ROLE_USER      = 2; // role: "user"
 export const ROLE_ASSISTANT = 3; // role: "assistant"
+
+
+export const MAX_AGENTIC_STEPS = 5;

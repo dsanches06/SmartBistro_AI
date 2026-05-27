@@ -6,6 +6,7 @@ export * as ingredientController from "./ingredientController.js";
 export * as stockController from "./stockController.js";
 export * as recipeItemController from "./recipeItemController.js";
 export * as orderController from "./orderController.js";
+export * as orderPipelineController from "./orderPipelineController.js";
 export * as orderItemController from "./orderItemController.js";
 export * as invoiceController from "./invoiceController.js";
 export * as paymentController from "./paymentController.js";

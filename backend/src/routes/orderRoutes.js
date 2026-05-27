@@ -1,8 +1,13 @@
 import { Router } from "express";
-import { orderController } from "../controllers/index.js";
+import { orderController, orderPipelineController } from "../controllers/index.js";
 
 const router = Router();
 
+// ── Pipeline de 3 agentes (formulário → Maître → Chefe → Gerente → MySQL) ────
+// IMPORTANTE: rota específica "/pipeline" ANTES de "/:id" para evitar conflito
+router.post("/pipeline", orderPipelineController.processOrderPipeline);
+
+// ── CRUD standard ─────────────────────────────────────────────────────────────
 router.get("/", orderController.getAll);
 router.get("/pending", orderController.getPending);
 router.get("/customer/:customerId", orderController.getByCustomerId);
