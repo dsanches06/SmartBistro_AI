@@ -1,5 +1,5 @@
-import BaseAgentAI from '../models/BaseAgentAI.js';
-import { MAITRE_PROMPT } from '../config/systemPrompt.js';
+import { BaseAgentAI } from '../models/index.js';
+import { MAITRE_PROMPT } from '../config/index.js';
 
 // Agente de Sala — gere clientes, mesas, reservas e pedidos de sala
 class MaitreAgent extends BaseAgentAI {

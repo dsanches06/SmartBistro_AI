@@ -2,11 +2,7 @@
  * Processador Base de Chat — Loop agêntico com chamadas de funções em paralelo
  */
 
-import {
-  createGeminiChat,
-  FunctionCallingConfigMode,
-} from '../config/gemini.js';
-import { ORCHESTRATION_SYSTEM_PROMPT } from '../config/systemPrompt.js';
+import { createGeminiChat, FunctionCallingConfigMode, ORCHESTRATION_SYSTEM_PROMPT } from '../config/index.js';
 
 // Constrói o config Gemini para o chat com suporte a function calling
 function buildChatConfig(tools = []) {

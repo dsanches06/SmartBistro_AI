@@ -1,6 +1,5 @@
-import { createGeminiChat, FunctionCallingConfigMode } from '../config/gemini.js';
-import { classifyGeminiError } from '../../utils/classifyError.js';
-import { buildThinkingConfig, parseThinkingResponse } from '../../utils/thinkingBotUtil.js';
+import { createGeminiChat, FunctionCallingConfigMode } from '../config/index.js';
+import { classifyGeminiError, buildThinkingConfig, parseThinkingResponse } from '../../utils/index.js';
 
 // ── Superclasse base para todos os agentes do SmartBistro ─────────────────────
 class BaseAgentAI {
