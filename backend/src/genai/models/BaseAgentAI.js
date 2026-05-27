@@ -1,48 +1,83 @@
-import { createGeminiChat } from '../config/gemini.js';
-import {
-  buildThinkingConfig,
-  parseThinkingResponse,
-} from '../../utils/thinkingBotUtil.js';
+import { createGeminiChat, FunctionCallingConfigMode } from '../config/gemini.js';
+import { classifyGeminiError } from '../../utils/classifyError.js';
+import { buildThinkingConfig, parseThinkingResponse } from '../../utils/thinkingBotUtil.js';
 
-/**
- * Classe base para todos os agentes GenAI do SmartBistro.
- * Encapsula a comunicação com o Gemini e o sistema de thinking.
- */
+// ── Superclasse base para todos os agentes do SmartBistro ─────────────────────
 class BaseAgentAI {
   /**
-   * @param {string} name        - Nome do agente (ex: 'Maitre', 'Chef', 'Manager')
-   * @param {string} systemPrompt - Instrução de sistema do agente
-   * @param {number} temperature  - Temperatura de geração (0.0 – 1.0)
+   * @param {string}         name        - Nome do agente (ex: 'Maitre', 'Chef', 'Manager')
+   * @param {string}         instruction - System instruction do agente
+   * @param {number}         temperature - Temperatura de geração (0.0 – 1.0)
+   * @param {Array|null}     tools       - Declarações de ferramentas (function calling)
+   * @param {Array}          history     - Histórico inicial da conversa
+   * @param {boolean|object} thinking    - Activa thinking; se object, usa como thinkingOptions
    */
-  constructor(name, systemPrompt, temperature = 0.3) {
+  constructor(name, instruction, temperature = 0.25, tools = null, history = [], thinking = false) {
     this.name = name;
-    this.systemPrompt = systemPrompt;
-    this.temperature = temperature;
-  }
+    this.thinking = thinking;
 
-  /**
-   * Envia uma mensagem ao agente e obtém resposta.
-   *
-   * @param {string} userMessage - Mensagem do utilizador / prompt de entrada
-   * @param {Array<{role: string, parts: Array<{text: string}>}>} history
-   *   Histórico da conversa no formato Gemini
-   *   (role: 'user' | 'model')
-   * @returns {Promise<{text: string, thoughts: string, raw: object}>}
-   */
-  async run(userMessage, history = []) {
-    const thinkingConfig = buildThinkingConfig({}, this.temperature);
-
-    const chatConfig = {
-      systemInstruction: this.systemPrompt,
-      temperature: this.temperature,
-      thinkingConfig,
+    const config = {
+      systemInstruction: instruction,
+      temperature,
     };
 
-    const chat = createGeminiChat(chatConfig, history);
-    const response = await chat.sendMessage({ message: userMessage });
+    if (tools) {
+      config.tools = [{ functionDeclarations: tools }];
+      config.toolConfig = {
+        functionCallingConfig: { mode: FunctionCallingConfigMode.AUTO },
+      };
+    }
 
-    const { text, thoughts } = parseThinkingResponse(response);
-    return { text, thoughts, raw: response };
+    if (thinking) {
+      const thinkingOptions = typeof thinking === 'object' ? thinking : {};
+      config.thinkingConfig = buildThinkingConfig(thinkingOptions, temperature);
+    }
+
+    this.chat = createGeminiChat(config, history);
+  }
+
+  // ── Resposta simples (texto) ──────────────────────────────────────────────────
+  async sendMessage(message) {
+    try {
+      const response = await this.chat.sendMessage({ message });
+      return response.text;
+    } catch (error) {
+      const classified = classifyGeminiError(error);
+      console.error(`[${this.name}] ${classified.type}:`, error.message);
+      const enriched = new Error(classified.userMessage);
+      enriched.geminiType = classified.type;
+      enriched.originalError = error;
+      throw enriched;
+    }
+  }
+
+  // ── Resposta com thoughts (útil quando thinking está activo) ──────────────────
+  async sendMessageWithThoughts(message) {
+    try {
+      const response = await this.chat.sendMessage({ message });
+      return parseThinkingResponse(response);
+    } catch (error) {
+      const classified = classifyGeminiError(error);
+      console.error(`[${this.name}] ${classified.type}:`, error.message);
+      const enriched = new Error(classified.userMessage);
+      enriched.geminiType = classified.type;
+      enriched.originalError = error;
+      throw enriched;
+    }
+  }
+
+  // ── Streaming ─────────────────────────────────────────────────────────────────
+  async sendMessageStream(message) {
+    try {
+      return await this.chat.sendMessageStream({ message });
+    } catch (error) {
+      const classified = classifyGeminiError(error);
+      console.error(`[${this.name}] ${classified.type}:`, error.message);
+      const enriched = new Error(classified.userMessage);
+      enriched.geminiType = classified.type;
+      enriched.originalError = error;
+      throw enriched;
+    }
   }
 }
 
