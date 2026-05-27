@@ -1,5 +1,11 @@
 import { createGeminiChat, FunctionCallingConfigMode } from '../config/index.js';
-import { classifyGeminiError, buildThinkingConfig, parseThinkingResponse } from '../../utils/index.js';
+import {
+  classifyGeminiError,
+  buildThinkingConfig,
+  parseThinkingResponse,
+  isRetryableGeminiError,
+  sendWithModelFallback,
+} from '../../utils/index.js';
 
 // ── Superclasse base para todos os agentes do SmartBistro ─────────────────────
 class BaseAgentAI {
@@ -13,8 +19,10 @@ class BaseAgentAI {
    * @param {string|null}    apiKey      - Chave API própria do agente; null → usa GEMINI_API_KEY
    */
   constructor(name, instruction, temperature = 0.25, tools = null, history = [], thinking = false, apiKey = null) {
-    this.name = name;
+    this.name    = name;
     this.thinking = thinking;
+    this.apiKey   = apiKey;
+    this._history = history; // guardado para fallback (novo chat com modelo alternativo)
 
     const config = {
       systemInstruction: instruction,
@@ -33,6 +41,7 @@ class BaseAgentAI {
       config.thinkingConfig = buildThinkingConfig(thinkingOptions, temperature);
     }
 
+    this._chatConfig = config; // guardado para fallback
     this.chat = createGeminiChat(config, history, apiKey);
   }
 
@@ -42,6 +51,18 @@ class BaseAgentAI {
       const response = await this.chat.sendMessage({ message });
       return response.text;
     } catch (error) {
+      // Quota / modelo indisponível → tenta os modelos da fila automaticamente
+      if (isRetryableGeminiError(error)) {
+        console.warn(`[${this.name}] Quota/indisponibilidade no modelo principal. A tentar fallback...`);
+        const { text } = await sendWithModelFallback(
+          this._chatConfig,
+          this._history,
+          message,
+          undefined,    // usa GEMINI_MODEL_QUEUE por defeito
+          this.apiKey,
+        );
+        return text;
+      }
       const classified = classifyGeminiError(error);
       console.error(`[${this.name}] ${classified.type}:`, error.message);
       const enriched = new Error(classified.userMessage);
@@ -57,6 +78,17 @@ class BaseAgentAI {
       const response = await this.chat.sendMessage({ message });
       return parseThinkingResponse(response);
     } catch (error) {
+      if (isRetryableGeminiError(error)) {
+        console.warn(`[${this.name}] Quota/indisponibilidade. A tentar fallback (sem thoughts)...`);
+        const { text } = await sendWithModelFallback(
+          this._chatConfig,
+          this._history,
+          message,
+          undefined,
+          this.apiKey,
+        );
+        return { text, thoughts: null }; // fallback não garante thoughts
+      }
       const classified = classifyGeminiError(error);
       console.error(`[${this.name}] ${classified.type}:`, error.message);
       const enriched = new Error(classified.userMessage);
