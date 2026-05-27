@@ -296,7 +296,7 @@ Write-ScenarioHeader "JANTAR DE CASAL — Ana Silva, Dine-In" `
 $form1 = @{
     customer_id    = 2
     message        = "eu e a minha esposa queremos jantar e queremos espargute e hamburg"
-    payment_method = "Pending"
+    payment_method = "MB Way"
 }
 
 $r1 = Invoke-Pipeline -FormData $form1 -ExpectStatus 201 -ExpectTotal 29.95
@@ -317,7 +317,7 @@ Write-ScenarioHeader "JANTAR COM ALERGIA — Hugo Neto, Dine-In" `
 $form2 = @{
     customer_id    = 1
     message        = "quero jantar, sou alérgico a glúten, quero duas bruschettas"
-    payment_method = "Pending"
+    payment_method = "Cash"
 }
 
 $r2 = Invoke-Pipeline -FormData $form2 -ExpectStatus 201 -ExpectTotal 16.95
@@ -362,7 +362,7 @@ Write-ScenarioHeader "GRUPO COM DESCONTO 10% — Ana Silva, Dine-In" `
 $form4 = @{
     customer_id    = 2
     message        = "somos quatro, queremos jantar: dois esparguetes bolonhesa, um hamburguer gourmet e uma bruschetta"
-    payment_method = "Card"
+    payment_method = "Credit Card"
     discount       = 0.10
     discount_type  = "percent"
 }

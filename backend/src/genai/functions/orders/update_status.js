@@ -7,7 +7,7 @@ class UpdateOrderStatusFunction extends BaseFunction {
       functionName: 'update_order_status',
       description:
         'Actualiza o estado de um pedido existente. ' +
-        "Estados possíveis: 'Pending in Kitchen', 'In Preparation', 'Ready', 'Delivered', 'Cancelled'.",
+        "Estados: 'Pending' → 'In Preparation' → 'Ready' → 'Done' → 'Delivered'. Pode ir directo a 'Cancelled'.",
       properties: {
         order_id: {
           type: Type.INTEGER,
@@ -16,7 +16,7 @@ class UpdateOrderStatusFunction extends BaseFunction {
         order_status: {
           type: Type.STRING,
           description:
-            "Novo estado do pedido: 'Pending in Kitchen' | 'In Preparation' | 'Ready' | 'Delivered' | 'Cancelled'",
+            "Novo estado: 'Pending' | 'In Preparation' | 'Ready' | 'Done' | 'Delivered' | 'Cancelled'",
         },
       },
       required: ['order_id', 'order_status'],
@@ -25,13 +25,22 @@ class UpdateOrderStatusFunction extends BaseFunction {
 
   mapValues(args = {}) {
     const STATUS_MAP = {
-      'pendente':       'Pending in Kitchen',
-      'em preparação':  'In Preparation',
-      'pronto':         'Ready',
-      'entregue':       'Delivered',
-      'cancelado':      'Cancelled',
+      'pendente':           'Pending',
+      'pending in kitchen': 'Pending',
+      'em preparação':      'In Preparation',
+      'in preparation':     'In Preparation',
+      'a preparar':         'In Preparation',
+      'pronto':             'Ready',
+      'ready':              'Ready',
+      'concluído':          'Done',
+      'done':               'Done',
+      'feito':              'Done',
+      'entregue':           'Delivered',
+      'delivered':          'Delivered',
+      'cancelado':          'Cancelled',
+      'cancelled':          'Cancelled',
     };
-    const raw = this.parseString(args.order_status, 'Pending in Kitchen');
+    const raw = this.parseString(args.order_status, 'Pending');
     return {
       order_id:     this.parseNumber(args.order_id, 0),
       order_status: STATUS_MAP[raw.toLowerCase()] ?? raw,

@@ -54,11 +54,11 @@ export async function processOrderPipeline(req, res) {
     const kitchenSeq = sequenced.kitchen_sequence ?? sequenced.kitchenSequence ?? [];
     const items      = validated.items ?? orderData.items;
 
-    // Normaliza service_type para os valores exactos do ENUM MySQL ('Dine-In' | 'Takeaway')
+    // Normaliza service_type para os valores exactos do ENUM MySQL ('Table' | 'Takeaway')
     const rawService = String(validated.service_type ?? '');
     const serviceType = /take.?away|para.?levar|para\s?fora|to.?go/i.test(rawService)
       ? 'Takeaway'
-      : 'Dine-In';
+      : 'Table';
 
     // ── 1. Criar pedido ───────────────────────────────────────────────────────
     const order = await createOrder({
@@ -67,7 +67,7 @@ export async function processOrderPipeline(req, res) {
       service_type:          serviceType,
       allergy_restrictions:  validated.allergy_restrictions ?? orderData.allergy_restrictions ?? null,
       kitchen_sequence_json: kitchenSeq,
-      order_status:          'Pending in Kitchen',
+      order_status:          'Pending',
     });
 
     // ── 2. Criar itens do pedido (em paralelo) ────────────────────────────────
@@ -91,16 +91,25 @@ export async function processOrderPipeline(req, res) {
     });
 
     // ── 4. Criar registo de pagamento (pendente) ──────────────────────────────
+    // Normaliza payment_method para o ENUM MySQL: 'MB Way' | 'Multibanco' | 'Credit Card' | 'Cash'
+    const rawPayment  = String(orderData.payment_method ?? '');
+    const paymentMethod =
+      /mb.?way/i.test(rawPayment)                                    ? 'MB Way' :
+      /multibanco|atm/i.test(rawPayment)                             ? 'Multibanco' :
+      /credit.?card|card|cartão|visa|mastercard/i.test(rawPayment)   ? 'Credit Card' :
+      /cash|dinheiro|numerário/i.test(rawPayment)                    ? 'Cash' :
+      'MB Way'; // default — a definir no momento do pagamento
+
     const payment = await createPayment({
       invoice_id:     invoice.id,
       customer_id:    customerId,
       amount:         financials.total,
-      payment_method: orderData.payment_method ?? 'Pending',
+      payment_method: paymentMethod,
       payment_status: 'Pending',
     });
 
-    // ── 5. Marcar mesa como Occupied (apenas Dine-In) ─────────────────────────
-    if (tableId && serviceType === 'Dine-In') {
+    // ── 5. Marcar mesa como Occupied (apenas Table/Dine-In) ──────────────────
+    if (tableId && serviceType === 'Table') {
       await updateTableStatus(Number(tableId), 'Occupied');
     }
 

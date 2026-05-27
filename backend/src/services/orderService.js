@@ -40,7 +40,7 @@ export const getOrdersByCustomerId = async (customerId) => {
 // Devolve todos os pedidos pendentes na cozinha (KDS)
 export const getPendingOrders = async () => {
   const [r] = await db.query(
-    "SELECT * FROM orders WHERE order_status = 'Pending in Kitchen' ORDER BY created_at ASC",
+    "SELECT * FROM orders WHERE order_status = 'Pending' ORDER BY created_at ASC",
   );
   return r.map(mapOrderDTOResponse);
 };
@@ -57,7 +57,7 @@ export const createOrder = async (data) => {
       data.service_type,
       data.allergy_restrictions ?? null,
       JSON.stringify(data.kitchen_sequence_json),
-      data.order_status ?? "Pending in Kitchen",
+      data.order_status ?? "Pending",
     ],
   );
   return mapOrderDTOResponse({
@@ -67,7 +67,7 @@ export const createOrder = async (data) => {
     service_type: data.service_type,
     allergy_restrictions: data.allergy_restrictions ?? null,
     kitchen_sequence_json: data.kitchen_sequence_json,
-    order_status: data.order_status ?? "Pending in Kitchen",
+    order_status: data.order_status ?? "Pending",
     created_at: new Date(),
   });
 };

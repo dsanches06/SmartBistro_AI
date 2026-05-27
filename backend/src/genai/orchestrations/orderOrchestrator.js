@@ -5,7 +5,53 @@ import {
 } from "../../utils/index.js";
 import { getAllTables, getActiveItems } from "../../services/index.js";
 
-// ── Extrai JSON de resposta do agente — 3 estratégias ─────────────────────────
+// ── Repara brackets trocados gerados por LLMs (ex: ] em vez de }) ────────────
+// Percorre o JSON caracter a caracter (ignorando strings) e corrige qualquer
+// bracket de fecho errado com base na pilha de aberturas.
+function repairBrackets(str) {
+  const stack = [];
+  let inStr  = false;
+  let result = "";
+
+  for (let i = 0; i < str.length; i++) {
+    const ch   = str[i];
+    const prev = i > 0 ? str[i - 1] : "";
+
+    // Controla se estamos dentro de uma string JSON (ignora escapes simples)
+    if (ch === '"' && prev !== "\\") {
+      inStr = !inStr;
+      result += ch;
+      continue;
+    }
+    if (inStr) { result += ch; continue; }
+
+    if      (ch === "{") { stack.push("}"); result += ch; }
+    else if (ch === "[") { stack.push("]"); result += ch; }
+    else if (ch === "}" || ch === "]") {
+      if (stack.length > 0) {
+        result += stack.pop(); // usa o fecho correcto, ignora o errado
+      }
+      // se stack vazio, descarta bracket extra
+    } else {
+      result += ch;
+    }
+  }
+  // Fecha qualquer bracket que ficou em aberto
+  while (stack.length) result += stack.pop();
+  return result;
+}
+
+// ── Limpa erros comuns de JSON gerado por LLMs ────────────────────────────────
+function sanitiseJSON(str) {
+  return repairBrackets(
+    str
+      .replace(/,\s*([\]}])/g, "$1")    // vírgulas finais:  {"a":1,}  → {"a":1}
+      .replace(/\/\/[^\n]*/g, "")       // comentários //
+      .replace(/\/\*[\s\S]*?\*\//g, ""), // comentários /* */
+  ).trim();
+}
+
+// ── Extrai JSON de resposta do agente — 3 estratégias + sanitização ────────────
 // Os agentes podem devolver:
 //   a) bloco markdown: ```json { ... } ```
 //   b) JSON puro:      { ... }
@@ -13,26 +59,37 @@ import { getAllTables, getActiveItems } from "../../services/index.js";
 function extractJSON(text, agentName = "agent") {
   if (!text) throw new Error(`[${agentName}] Resposta vazia.`);
 
+  const tryParse = (raw) => {
+    // tenta raw primeiro, depois versão sanitizada
+    try { return JSON.parse(raw); } catch {}
+    try { return JSON.parse(sanitiseJSON(raw)); } catch {}
+    return null;
+  };
+
   // 1. Bloco markdown ```json ... ``` ou ``` ... ```
-  const block = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const block = text.match(/```(?:json)?\s*([\s\S]*?)```/s);
   if (block) {
-    try { return JSON.parse(block[1].trim()); } catch {}
+    const result = tryParse(block[1].trim());
+    if (result) return result;
   }
 
   // 2. JSON puro (resposta começa com { ou [)
   const trimmed = text.trim();
   if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
-    try { return JSON.parse(trimmed); } catch {}
+    const result = tryParse(trimmed);
+    if (result) return result;
   }
 
-  // 3. Primeiro objeto JSON encontrado no texto
+  // 3. Primeiro bloco { ... } encontrado no texto (greedy — apanha o maior)
   const match = text.match(/\{[\s\S]*\}/);
   if (match) {
-    try { return JSON.parse(match[0]); } catch {}
+    const result = tryParse(match[0]);
+    if (result) return result;
   }
 
   throw new Error(
-    `[${agentName}] Não foi possível extrair JSON da resposta.\nResposta (primeiros 300 chars): ${text.substring(0, 300)}`,
+    `[${agentName}] Não foi possível extrair JSON da resposta.\n` +
+    `Resposta (primeiros 400 chars): ${text.substring(0, 400)}`,
   );
 }
 
@@ -64,18 +121,19 @@ MENU ACTIVO:
 ${menuInfo}
 
 TAREFA:
-1. Detecta o tipo de serviço: "Dine-In" (jantar/almoço/comer aqui) ou "Takeaway" (levar/para fora/takeaway)
-2. Se Dine-In: escolhe UMA mesa disponível adequada ao número de pessoas mencionado (mínimo 1)
-3. Identifica os pratos pedidos fazendo corresponder ao menu activo por semelhança fonética/textual
-4. Estima a quantidade de cada prato (1 por padrão, salvo indicação contrária)
-5. Usa os preços exactos do menu activo fornecido acima
-6. Regista restrições alimentares ou alergias mencionadas (null se nenhuma)
+1. Detecta o tipo de serviço: "Table" (jantar/almoço/comer aqui/mesa) ou "Takeaway" (levar/para fora/takeaway)
+2. Se "Table": escolhe UMA mesa disponível adequada ao número de pessoas mencionado (mínimo 1)
+3. Se "Takeaway": table_id deve ser null
+4. Identifica os pratos pedidos fazendo corresponder ao menu activo por semelhança fonética/textual
+5. Estima a quantidade de cada prato (1 por padrão, salvo indicação contrária)
+6. Usa os preços exactos do menu activo fornecido acima
+7. Regista restrições alimentares ou alergias mencionadas (null se nenhuma)
 
 RESPONDE EXACTAMENTE com este JSON (sem comentários, sem markdown):
 {
   "customer_id": <número>,
   "table_id": <número ou null se Takeaway>,
-  "service_type": "Dine-In" | "Takeaway",
+  "service_type": "Table" ou "Takeaway",
   "allergy_restrictions": <"string" ou null>,
   "validation_status": "valid",
   "items": [
@@ -96,11 +154,11 @@ TAREFA:
 3. Estima o tempo total de preparação em minutos
 4. Se algum ingrediente estiver em falta, indica na lista stock_alerts
 
-RESPONDE EXACTAMENTE com este JSON:
+RESPONDE EXACTAMENTE com este JSON (ATENÇÃO: "sections" usa CHAVES {}, não parênteses rectos []):
 {
   "kitchen_sequence": ["<prato 1>", "<prato 2>"],
-  "sections": { "<secção>": ["<prato>"] },
-  "stock_status": "ok" | "partial" | "insufficient",
+  "sections": { "<secção>": ["<prato 1>", "<prato 2>"] },
+  "stock_status": "ok",
   "stock_alerts": [],
   "estimated_minutes": <número>,
   "items": [

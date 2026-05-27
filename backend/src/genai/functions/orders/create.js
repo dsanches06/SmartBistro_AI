@@ -31,7 +31,7 @@ class CreateOrderFunction extends BaseFunction {
         },
         order_status: {
           type: Type.STRING,
-          description: "Estado inicial do pedido (default: 'Pending in Kitchen')",
+          description: "Estado inicial do pedido (default: 'Pending')",
         },
       },
       required: ['customer_id', 'table_id', 'service_type'],
@@ -45,7 +45,7 @@ class CreateOrderFunction extends BaseFunction {
       service_type:          this.parseString(args.service_type, 'Dine In'),
       allergy_restrictions:  this.parseString(args.allergy_restrictions, ''),
       kitchen_sequence_json: this.parseString(args.kitchen_sequence_json, '[]'),
-      order_status:          this.parseString(args.order_status, 'Pending in Kitchen'),
+      order_status:          this.parseString(args.order_status, 'Pending'),
     };
   }
 }

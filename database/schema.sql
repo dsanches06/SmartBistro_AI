@@ -119,7 +119,7 @@ CREATE TABLE orders (
     service_type ENUM('Table', 'Takeaway') NOT NULL, -- Identifica claramente a origem
     allergy_restrictions TEXT,
     kitchen_sequence_json JSON NOT NULL,
-    order_status ENUM('Pending in Kitchen', 'N/A') DEFAULT 'Pending in Kitchen',
+    order_status ENUM('Pending', 'In Preparation', 'Ready', 'Done', 'Delivered', 'Cancelled') DEFAULT 'Pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL,
     FOREIGN KEY (table_id) REFERENCES tables(id) ON DELETE SET NULL
