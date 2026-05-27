@@ -1,8 +1,12 @@
 import { ThinkingLevel } from "@google/genai";
 
 // Retorna o nível de pensamento com base na temperatura
+// temp 0.0–0.3 → LOW  (tarefas precisas/determinísticas)
+// temp 0.3–0.7 → MEDIUM (tarefas equilibradas)
+// temp 0.7–1.0 → HIGH  (tarefas criativas/complexas)
 export function getThinkingLevel(temp) {
   const normalizedTemp = Number(temp);
+  if (isNaN(normalizedTemp)) return ThinkingLevel.LOW; // fallback seguro
   return normalizedTemp <= 0.3
     ? ThinkingLevel.LOW
     : normalizedTemp <= 0.7
