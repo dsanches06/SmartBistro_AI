@@ -47,5 +47,3 @@ class CreateCustomerFunction extends BaseFunction {
 
 const createCustomerFunction = new CreateCustomerFunction();
 export const createCustomerFunctionDeclaration = createCustomerFunction.getDeclaration();
-export const functionDeclarations = [createCustomerFunctionDeclaration];
-export const createCustomer = createCustomerFunction.execute.bind(createCustomerFunction);

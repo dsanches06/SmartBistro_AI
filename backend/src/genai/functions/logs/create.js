@@ -47,5 +47,3 @@ class CreateLogFunction extends BaseFunction {
 
 const createLogFunction = new CreateLogFunction();
 export const createLogFunctionDeclaration = createLogFunction.getDeclaration();
-export const functionDeclarations = [createLogFunctionDeclaration];
-export const createLog = createLogFunction.execute.bind(createLogFunction);

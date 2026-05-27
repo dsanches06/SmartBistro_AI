@@ -27,5 +27,3 @@ class GetRecipeItemsFunction extends BaseFunction {
 
 const getRecipeItemsFunction = new GetRecipeItemsFunction();
 export const getRecipeItemsFunctionDeclaration = getRecipeItemsFunction.getDeclaration();
-export const functionDeclarations = [getRecipeItemsFunctionDeclaration];
-export const getRecipeItems = getRecipeItemsFunction.execute.bind(getRecipeItemsFunction);

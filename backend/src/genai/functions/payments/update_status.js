@@ -50,5 +50,3 @@ class UpdatePaymentStatusFunction extends BaseFunction {
 
 const updatePaymentStatusFunction = new UpdatePaymentStatusFunction();
 export const updatePaymentStatusFunctionDeclaration = updatePaymentStatusFunction.getDeclaration();
-export const functionDeclarations = [updatePaymentStatusFunctionDeclaration];
-export const updatePaymentStatus = updatePaymentStatusFunction.execute.bind(updatePaymentStatusFunction);

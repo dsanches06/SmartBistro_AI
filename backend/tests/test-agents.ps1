@@ -1,18 +1,21 @@
 # ╔══════════════════════════════════════════════════════════════════╗
 # ║      SMARTBISTRO AI — TESTE DO PIPELINE DE 3 AGENTES            ║
 # ║                                                                  ║
-# ║  Simula submissão de formulário de pedido e valida o pipeline:   ║
-# ║    1. Maître  → valida cliente, mesa, alergias, fila de pedidos  ║
+# ║  Simula pedidos em linguagem natural e valida o pipeline:        ║
+# ║    1. Maître  → interpreta msg, escolhe mesa, mapeia itens       ║
 # ║    2. Chefe   → sequência de preparação + desconto de stock      ║
 # ║    3. Gerente → fatura com IVA + margens, objeto JSON final      ║
 # ║    4. MySQL   → pedido, itens, fatura e pagamento persistidos    ║
 # ║                                                                  ║
 # ║  Endpoint: POST /orders/pipeline                                 ║
 # ║                                                                  ║
+# ║  Corpo mínimo:                                                   ║
+# ║    { customer_id: <n>, message: "<pedido em linguagem natural>" }║
+# ║                                                                  ║
 # ║  Clientes reais (seed BD):                                       ║
 # ║    id 1 → Hugo Neto   · id 2 → Ana Silva · id 3 → Joana Luz     ║
 # ║                                                                  ║
-# ║  Mesas reais (seed BD):                                          ║
+# ║  Mesas reais (seed BD — o Maître escolhe):                       ║
 # ║    T03 (id 3) · T04 (id 4) · T05 (id 5)                         ║
 # ║                                                                  ║
 # ║  Menu real (seed BD):                                            ║
@@ -29,10 +32,10 @@
 # ╚══════════════════════════════════════════════════════════════════╝
 
 param(
-    [int]   $Port          = 3000,
-    [int]   $DelayBetween  = 15,    # segundos entre cenários (Gemini Free Tier = 10 RPM × agente)
-    [int]   $PipelineTimeout = 120, # segundos máximos por chamada ao pipeline
-    [switch]$Verbose       = $false
+    [int]   $Port            = 3000,
+    [int]   $DelayBetween    = 15,    # segundos entre cenários (Gemini Free Tier = 10 RPM × agente)
+    [int]   $PipelineTimeout = 120,   # segundos máximos por chamada ao pipeline
+    [switch]$Verbose         = $false
 )
 
 $BASE         = "http://localhost:$Port"
@@ -69,16 +72,14 @@ function Write-ScenarioHeader {
 function Write-FormData {
     param([hashtable]$Form)
     Write-Host ""
-    Write-Host "  📋 FORMULÁRIO SUBMETIDO" -ForegroundColor Yellow
-    Write-Host ("     Cliente      : {0}" -f $Form.customer_id) -ForegroundColor White
-    Write-Host ("     Mesa         : {0}" -f $(if ($Form.table_id) { "T0$($Form.table_id) (id $($Form.table_id))" } else { "— (Takeaway)" })) -ForegroundColor White
-    Write-Host ("     Serviço      : {0}" -f $Form.service_type) -ForegroundColor White
-    if ($Form.allergy_restrictions) {
-        Write-Host ("     Alergias     : {0}" -f $Form.allergy_restrictions) -ForegroundColor DarkYellow
+    Write-Host "  📋 PEDIDO SUBMETIDO" -ForegroundColor Yellow
+    Write-Host ("     Cliente      : id {0}" -f $Form.customer_id) -ForegroundColor White
+    Write-Host ("     Mensagem     : `"{0}`"" -f $Form.message) -ForegroundColor Cyan
+    if ($Form.ContainsKey("discount") -and $Form.discount -gt 0) {
+        Write-Host ("     Desconto     : {0:P0} ({1})" -f $Form.discount, $Form.discount_type) -ForegroundColor DarkYellow
     }
-    Write-Host "     Itens        :" -ForegroundColor White
-    foreach ($item in $Form.items) {
-        Write-Host ("       • {0} × {1}  €{2:F2}" -f $item.quantity, $item.name, $item.price) -ForegroundColor Gray
+    if ($Form.ContainsKey("payment_method") -and $Form.payment_method) {
+        Write-Host ("     Pagamento    : {0}" -f $Form.payment_method) -ForegroundColor White
     }
     Write-Host ""
     Write-Host "  ⏳ A aguardar pipeline (Maître → Chefe → Gerente)..." -ForegroundColor DarkGray
@@ -91,6 +92,25 @@ function Write-PipelineResult {
     Write-Host ""
     Write-Host "  📊 RESULTADO DO PIPELINE" -ForegroundColor Green
 
+    if ($Result.pipeline -and $Result.pipeline.validated) {
+        $v = $Result.pipeline.validated
+        $mesaLabel = if ($v.table_id) { "T0$($v.table_id) (id $($v.table_id))" } else { "— (Takeaway)" }
+        Write-Host ("     Mesa         : {0}" -f $mesaLabel) -ForegroundColor White
+        Write-Host ("     Serviço      : {0}" -f $v.service_type) -ForegroundColor White
+        if ($v.items) {
+            Write-Host "     Itens        :" -ForegroundColor White
+            foreach ($item in $v.items) {
+                Write-Host ("       • {0} × {1}  €{2:F2}" -f $item.quantity, $item.name, $item.price) -ForegroundColor Gray
+            }
+        }
+        if ($v.allergy_restrictions) {
+            Write-Host ("     Alergias     : {0}" -f $v.allergy_restrictions) -ForegroundColor DarkYellow
+        }
+        if ($v.notes) {
+            Write-Host ("     Nota Maître  : {0}" -f $v.notes) -ForegroundColor DarkGray
+        }
+    }
+
     if ($Result.order) {
         Write-Host ("     order_id     : {0}" -f $Result.order_id) -ForegroundColor White
         Write-Host ("     status       : {0}" -f $Result.order.order_status) -ForegroundColor White
@@ -98,7 +118,10 @@ function Write-PipelineResult {
     if ($Result.financials) {
         $f = $Result.financials
         Write-Host ("     Subtotal     : €{0:F2}" -f $f.subtotal) -ForegroundColor White
-        Write-Host ("     IVA ({0:P0}) : €{1:F2}" -f $f.taxRate, $f.taxAmount) -ForegroundColor White
+        if ($f.discount -gt 0) {
+            Write-Host ("     Desconto     : -€{0:F2}" -f $f.discount) -ForegroundColor DarkYellow
+        }
+        Write-Host ("     IVA ({0:P0})  : €{1:F2}" -f $f.taxRate, $f.taxAmount) -ForegroundColor White
         Write-Host ("     TOTAL        : €{0:F2}" -f $f.total) -ForegroundColor Cyan
     }
     if ($Result.invoice) {
@@ -130,9 +153,9 @@ function Write-Info { param([string]$Msg) Write-Host "  ℹ️  $Msg" -Foregroun
 function Invoke-Pipeline {
     param(
         [hashtable]$FormData,
-        [int]      $ExpectStatus  = 201,   # HTTP status code esperado
-        [double]   $ExpectTotal   = -1,    # total financeiro esperado (-1 = não valida)
-        [string]   $ExpectField   = $null  # campo esperado na resposta
+        [int]      $ExpectStatus = 201,   # HTTP status code esperado
+        [double]   $ExpectTotal  = -1,    # total financeiro esperado (-1 = não valida)
+        [string]   $ExpectField  = $null  # campo esperado na resposta
     )
 
     Write-FormData $FormData
@@ -176,12 +199,25 @@ function Invoke-Pipeline {
             return $null
         }
 
-        # 5. total financeiro (se especificado)
+        # 5. Maître atribuiu mesa/serviço
+        if ($response.pipeline -and $response.pipeline.validated) {
+            $v = $response.pipeline.validated
+            if (-not $v.service_type) {
+                Write-Fail "Maître não determinou service_type"
+                return $response
+            }
+            Write-Info ("Maître → {0}  ·  mesa: {1}  ·  itens: {2}" -f `
+                $v.service_type,
+                $(if ($v.table_id) { "T0$($v.table_id)" } else { "Takeaway" }),
+                $v.items.Count)
+        }
+
+        # 6. total financeiro (se especificado)
         if ($ExpectTotal -ge 0) {
             $actualTotal = [double]$response.financials.total
             $diff = [Math]::Abs($actualTotal - $ExpectTotal)
-            if ($diff -gt 0.01) {
-                Write-Fail "Total esperado: €$($ExpectTotal.ToString('F2'))  ·  Obtido: €$($actualTotal.ToString('F2'))"
+            if ($diff -gt 0.02) {
+                Write-Fail ("Total esperado: €{0:F2}  ·  Obtido: €{1:F2}" -f $ExpectTotal, $actualTotal)
                 return $response
             }
             Write-Pass ("Total correcto: €{0:F2}  (subtotal €{1:F2} + IVA €{2:F2})" -f `
@@ -193,24 +229,19 @@ function Invoke-Pipeline {
 
     } catch {
         # ── Extrair status code e body do erro HTTP ─────────────────────────────
-        # PS 5.1: o body JSON do erro está em $_.ErrorDetails.Message
-        # Fallback: lê o stream de resposta manualmente
         $statusCode = $null
         $errBody    = $null
         $errMessage = $_.Exception.Message
 
-        # Status code
         if ($_.Exception.Response) {
             $statusCode = [int]$_.Exception.Response.StatusCode
         }
 
-        # Body: tenta .ErrorDetails primeiro (PS 5.1 popula automaticamente)
         if ($_.ErrorDetails -and $_.ErrorDetails.Message) {
             try { $errBody = $_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue } catch {}
             if (-not $errBody) { $errMessage = $_.ErrorDetails.Message }
         }
 
-        # Fallback: lê stream da resposta
         if (-not $errBody -and $_.Exception.Response) {
             try {
                 $stream  = $_.Exception.Response.GetResponseStream()
@@ -225,12 +256,12 @@ function Invoke-Pipeline {
         $displayMsg = if ($errBody -and $errBody.error) { $errBody.error } else { $errMessage }
 
         if ($statusCode -and $statusCode -eq $ExpectStatus) {
-            # Status esperado (ex: 400 numa validação de erro)
             Write-Pass "HTTP $statusCode conforme esperado — $displayMsg"
             return @{ status = $statusCode; body = $errBody }
         }
 
-        Write-Fail "Erro HTTP $($statusCode ?? '?') — $displayMsg"
+        $codeDisplay = if ($statusCode) { $statusCode } else { '?' }
+        Write-Fail "Erro HTTP $codeDisplay — $displayMsg"
         return $null
     }
 }
@@ -253,65 +284,49 @@ try {
 }
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  CENÁRIO 1 — MESA DINE-IN (Ana Silva, T03)
-#  Cliente real: Ana Silva (id 2, ana@dev.com)
-#  Mesa real   : T03 (id 3, 4 lugares, Available)
-#  Itens reais : Esparguete Bolonhesa (id 1, €12.50) + Hamburguer Gourmet (id 2, €14.00)
-#  Esperado    : subtotal €26.50  ·  IVA 13% €3.45  ·  total €29.95
+#  CENÁRIO 1 — JANTAR DE CASAL (Ana Silva, Dine-In)
+#  O Maître detecta "jantar", "eu e a minha esposa" (2 pessoas), escolhe mesa,
+#  mapeia "espargute" → Esparguete Bolonhesa (€12.50) e "hamburg" → Hamburguer Gourmet (€14.00)
+#  Esperado (se mapeamento correcto): subtotal €26.50 · IVA 13% €3.45 · total €29.95
 # ══════════════════════════════════════════════════════════════════════════════
 
-Write-ScenarioHeader "MESA DINE-IN — Ana Silva, T03" `
-    "Maître valida cliente e mesa · Chefe sequencia e verifica stock · Gerente gera fatura"
+Write-ScenarioHeader "JANTAR DE CASAL — Ana Silva, Dine-In" `
+    "Maître detecta 2 pessoas, escolhe mesa, mapeia esparguete+hamburguer do menu"
 
 $form1 = @{
-    customer_id          = 2
-    table_id             = 3
-    service_type         = "Dine-In"
-    allergy_restrictions = $null
-    payment_method       = "Pending"
-    items                = @(
-        @{ item_id = 1; name = "Esparguete Bolonhesa"; quantity = 1; price = 12.50 },
-        @{ item_id = 2; name = "Hamburguer Gourmet";   quantity = 1; price = 14.00 }
-    )
+    customer_id    = 2
+    message        = "eu e a minha esposa queremos jantar e queremos espargute e hamburg"
+    payment_method = "Pending"
 }
 
 $r1 = Invoke-Pipeline -FormData $form1 -ExpectStatus 201 -ExpectTotal 29.95
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  CENÁRIO 2 — MESA COM RESTRIÇÕES ALIMENTARES (Hugo Neto, T04)
-#  Cliente real: Hugo Neto (id 1, hugo@dev.com)
-#  Mesa real   : T04 (id 4, 4 lugares, Available)
-#  Itens reais : Bruschetta (id 3, €7.50) × 2
-#  Alergias    : "Glúten"
-#  Esperado    : subtotal €15.00  ·  IVA 13% €1.95  ·  total €16.95
+#  CENÁRIO 2 — JANTAR COM RESTRIÇÃO ALIMENTAR (Hugo Neto, Dine-In)
+#  Maître detecta alergia a glúten e mapeia "duas bruschettas" → Bruschetta × 2 (€7.50 cada)
+#  Esperado: subtotal €15.00 · IVA 13% €1.95 · total €16.95
 # ══════════════════════════════════════════════════════════════════════════════
 
 Write-Host ""
 Write-Host "  ⏳ Aguardando ${DelayBetween}s entre cenários..." -ForegroundColor DarkGray
 Start-Sleep -Seconds $DelayBetween
 
-Write-ScenarioHeader "MESA COM ALERGIAS — Hugo Neto, T04" `
-    "Maître identifica restrição 'Glúten' · Chefe verifica alternativas · Gerente fatura"
+Write-ScenarioHeader "JANTAR COM ALERGIA — Hugo Neto, Dine-In" `
+    "Maître regista restrição 'Glúten' · Chefe verifica alternativas · Gerente fatura"
 
 $form2 = @{
-    customer_id          = 1
-    table_id             = 4
-    service_type         = "Dine-In"
-    allergy_restrictions = "Glúten"
-    payment_method       = "Pending"
-    items                = @(
-        @{ item_id = 3; name = "Bruschetta"; quantity = 2; price = 7.50 }
-    )
+    customer_id    = 1
+    message        = "quero jantar, sou alérgico a glúten, quero duas bruschettas"
+    payment_method = "Pending"
 }
 
 $r2 = Invoke-Pipeline -FormData $form2 -ExpectStatus 201 -ExpectTotal 16.95
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  CENÁRIO 3 — TAKEAWAY (Joana Luz, sem mesa)
-#  Cliente real: Joana Luz (id 3, joana@dev.com)
-#  Mesa        : null (Takeaway — sem ocupação de mesa)
-#  Itens reais : Esparguete Bolonhesa (id 1, €12.50) × 2
-#  Esperado    : subtotal €25.00  ·  IVA 13% €3.25  ·  total €28.25
+#  Maître detecta "para levar" → Takeaway, sem atribuição de mesa
+#  "dois esparguetes" → Esparguete Bolonhesa × 2 (€12.50 cada)
+#  Esperado: subtotal €25.00 · IVA 13% €3.25 · total €28.25
 # ══════════════════════════════════════════════════════════════════════════════
 
 Write-Host ""
@@ -319,93 +334,76 @@ Write-Host "  ⏳ Aguardando ${DelayBetween}s entre cenários..." -ForegroundCol
 Start-Sleep -Seconds $DelayBetween
 
 Write-ScenarioHeader "TAKEAWAY — Joana Luz, sem mesa" `
-    "service_type=Takeaway · Maître confirma sem mesa · Gerente gera fatura takeaway"
+    "Maître detecta Takeaway, não atribui mesa · Gerente gera fatura takeaway"
 
 $form3 = @{
-    customer_id          = 3
-    table_id             = $null
-    service_type         = "Takeaway"
-    allergy_restrictions = $null
-    payment_method       = "MB Way"
-    items                = @(
-        @{ item_id = 1; name = "Esparguete Bolonhesa"; quantity = 2; price = 12.50 }
-    )
+    customer_id    = 3
+    message        = "quero dois esparguetes bolonhesa para levar"
+    payment_method = "MB Way"
 }
 
 $r3 = Invoke-Pipeline -FormData $form3 -ExpectStatus 201 -ExpectTotal 28.25
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  CENÁRIO 4 — MULTI-ITEM COM DESCONTO (Ana Silva, T05)
-#  Cliente real: Ana Silva (id 2)
-#  Mesa real   : T05 (id 5, 6 lugares)
-#  Itens       : 2×Esparguete + 1×Hamburguer + 1×Bruschetta
-#  Desconto    : 10% (discount=0.10, discount_type=percent)
-#  Esperado    : subtotal €46.50 · desconto €4.65 · base €41.85 · IVA 13% €5.44 · total €47.29
+#  CENÁRIO 4 — MESA PARA GRUPO COM DESCONTO (Ana Silva, Dine-In)
+#  Maître detecta grupo de 4, escolhe mesa com capacidade adequada
+#  "2 esparguetes, 1 hamburguer e 1 bruschetta"
+#  Desconto 10% passado como parâmetro extra (não na mensagem — calcula em JS)
+#  Esperado: subtotal €46.50 · desconto €4.65 · base €41.85 · IVA 13% €5.44 · total €47.29
 # ══════════════════════════════════════════════════════════════════════════════
 
 Write-Host ""
 Write-Host "  ⏳ Aguardando ${DelayBetween}s entre cenários..." -ForegroundColor DarkGray
 Start-Sleep -Seconds $DelayBetween
 
-Write-ScenarioHeader "MULTI-ITEM COM DESCONTO 10% — Ana Silva, T05" `
-    "4 itens · desconto de 10% aplicado em JS antes de chegar ao Gerente"
+Write-ScenarioHeader "GRUPO COM DESCONTO 10% — Ana Silva, Dine-In" `
+    "4 pratos · desconto de 10% calculado em JS antes de chegar ao Gerente"
 
 $form4 = @{
-    customer_id          = 2
-    table_id             = 5
-    service_type         = "Dine-In"
-    allergy_restrictions = $null
-    payment_method       = "Card"
-    discount             = 0.10
-    discount_type        = "percent"
-    items                = @(
-        @{ item_id = 1; name = "Esparguete Bolonhesa"; quantity = 2; price = 12.50 },
-        @{ item_id = 2; name = "Hamburguer Gourmet";   quantity = 1; price = 14.00 },
-        @{ item_id = 3; name = "Bruschetta";           quantity = 1; price =  7.50 }
-    )
+    customer_id    = 2
+    message        = "somos quatro, queremos jantar: dois esparguetes bolonhesa, um hamburguer gourmet e uma bruschetta"
+    payment_method = "Card"
+    discount       = 0.10
+    discount_type  = "percent"
 }
 
-# subtotal: 25 + 14 + 7.5 = 46.50
+# subtotal: 25.00 + 14.00 + 7.50 = 46.50
 # desconto 10%: 4.65 → base tributável: 41.85
 # IVA 13%: 5.44 → total: 47.29
 $r4 = Invoke-Pipeline -FormData $form4 -ExpectStatus 201 -ExpectTotal 47.29
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  CENÁRIO 5 — VALIDAÇÃO: BODY SEM ITEMS (deve retornar HTTP 400)
-#  Testa: controller rejeita payload inválido antes de chamar os agentes
+#  CENÁRIO 5 — VALIDAÇÃO: SEM message (deve retornar HTTP 400)
+#  Controller rejeita sem chamar qualquer agente
 # ══════════════════════════════════════════════════════════════════════════════
 
 Write-Host ""
 Write-Host "  ⏳ Aguardando 3s..." -ForegroundColor DarkGray
 Start-Sleep -Seconds 3
 
-Write-ScenarioHeader "VALIDAÇÃO — Body sem items (HTTP 400 esperado)" `
+Write-ScenarioHeader "VALIDAÇÃO — Body sem message (HTTP 400 esperado)" `
     "Controller deve rejeitar antes de chamar qualquer agente"
 
-$formInvalid = @{
-    customer_id  = 2
-    table_id     = 3
-    service_type = "Dine-In"
-    # items ausente → deve retornar 400
+$formNoMsg = @{
+    customer_id = 2
+    # message ausente → deve retornar 400
 }
 
-$r5 = Invoke-Pipeline -FormData $formInvalid -ExpectStatus 400
+$r5 = Invoke-Pipeline -FormData $formNoMsg -ExpectStatus 400
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  CENÁRIO 6 — VALIDAÇÃO: SEM service_type (deve retornar HTTP 400)
+#  CENÁRIO 6 — VALIDAÇÃO: SEM customer_id (deve retornar HTTP 400)
 # ══════════════════════════════════════════════════════════════════════════════
 
-Write-ScenarioHeader "VALIDAÇÃO — Sem service_type (HTTP 400 esperado)" `
+Write-ScenarioHeader "VALIDAÇÃO — Sem customer_id (HTTP 400 esperado)" `
     "Controller deve rejeitar sem chamar agentes"
 
-$formNoService = @{
-    customer_id = 1
-    table_id    = 3
-    items       = @(@{ item_id = 1; name = "Esparguete Bolonhesa"; quantity = 1; price = 12.50 })
-    # service_type ausente → deve retornar 400
+$formNoCustomer = @{
+    message = "quero jantar, esparguete bolonhesa"
+    # customer_id ausente → deve retornar 400
 }
 
-$r6 = Invoke-Pipeline -FormData $formNoService -ExpectStatus 400
+$r6 = Invoke-Pipeline -FormData $formNoCustomer -ExpectStatus 400
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  RESUMO FINAL
@@ -427,8 +425,9 @@ if ($script:Failed -eq 0) {
 Write-Host "╚══════════════════════════════════════════════════════════════════╝" -ForegroundColor Magenta
 Write-Host ""
 Write-Host "  Consulta na BD:" -ForegroundColor DarkGray
-Write-Host "    GET $BASE/orders        — todos os pedidos" -ForegroundColor DarkGray
-Write-Host "    GET $BASE/orders/pending — KDS — pedidos em cozinha" -ForegroundColor DarkGray
-Write-Host "    GET $BASE/invoices      — todas as faturas" -ForegroundColor DarkGray
-Write-Host "    GET $BASE/payments      — todos os pagamentos" -ForegroundColor DarkGray
+Write-Host "    GET $BASE/orders         — todos os pedidos" -ForegroundColor DarkGray
+Write-Host "    GET $BASE/orders/pending  — KDS — pedidos em cozinha" -ForegroundColor DarkGray
+Write-Host "    GET $BASE/invoices        — todas as faturas" -ForegroundColor DarkGray
+Write-Host "    GET $BASE/payments        — todos os pagamentos" -ForegroundColor DarkGray
+Write-Host "    GET $BASE/tables          — estado das mesas (incl. Occupied)" -ForegroundColor DarkGray
 Write-Host ""

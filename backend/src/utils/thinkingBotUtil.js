@@ -6,7 +6,7 @@ import { ThinkingLevel } from "@google/genai";
 // temp 0.7–1.0 → HIGH  (tarefas criativas/complexas)
 export function getThinkingLevel(temp) {
   const normalizedTemp = Number(temp);
-  if (isNaN(normalizedTemp)) return ThinkingLevel.LOW; // fallback seguro
+  if (isNaN(normalizedTemp)) return ThinkingLevel.LOW;
   return normalizedTemp <= 0.3
     ? ThinkingLevel.LOW
     : normalizedTemp <= 0.7
@@ -14,28 +14,39 @@ export function getThinkingLevel(temp) {
       : ThinkingLevel.HIGH;
 }
 
-// Monta a configuração de thinking — aceita thinkingLevel ou thinkingBudget (não ambos)
+// Mapeamento ThinkingLevel → thinkingBudget (tokens)
+// A API Gemini aceita thinkingBudget (número), não thinkingLevel (enum)
+//   -1 = dinâmico (modelo decide)
+//    0 = sem thinking
+//   N+ = orçamento fixo em tokens
+const THINKING_BUDGET_MAP = {
+  [ThinkingLevel.LOW]:    1024,
+  [ThinkingLevel.MEDIUM]: 8192,
+  [ThinkingLevel.HIGH]:   24576,
+};
+
+// Monta a configuração de thinking — usa sempre thinkingBudget (campo válido na API)
+// Aceita thinkingLevel (enum) ou thinkingBudget (número) nas options; nunca ambos
 export function buildThinkingConfig(options = {}, temp = 0.3) {
-  const hasLevel = options.thinkingLevel !== undefined;
+  const hasLevel  = options.thinkingLevel  !== undefined;
   const hasBudget = options.thinkingBudget !== undefined;
 
   if (hasLevel && hasBudget) {
     throw new Error(
-      "thinkingConfig deve usar apenas thinkingLevel ou thinkingBudget, não ambos."
+      "buildThinkingConfig: usa apenas thinkingLevel ou thinkingBudget, não ambos.",
     );
   }
 
-  const config = { includeThoughts: true };
-
-  if (hasLevel) {
-    config.thinkingLevel = options.thinkingLevel;
-  } else if (hasBudget) {
-    config.thinkingBudget = options.thinkingBudget;
-  } else {
-    config.thinkingLevel = getThinkingLevel(temp);
+  // Budget explícito tem prioridade
+  if (hasBudget) {
+    return { includeThoughts: true, thinkingBudget: options.thinkingBudget };
   }
 
-  return config;
+  // Converte ThinkingLevel → thinkingBudget
+  const level  = hasLevel ? options.thinkingLevel : getThinkingLevel(temp);
+  const budget = THINKING_BUDGET_MAP[level] ?? 1024;
+
+  return { includeThoughts: true, thinkingBudget: budget };
 }
 
 // Extrai thoughts e text final das partes da resposta

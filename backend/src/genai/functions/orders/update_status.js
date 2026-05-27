@@ -41,5 +41,3 @@ class UpdateOrderStatusFunction extends BaseFunction {
 
 const updateOrderStatusFunction = new UpdateOrderStatusFunction();
 export const updateOrderStatusFunctionDeclaration = updateOrderStatusFunction.getDeclaration();
-export const functionDeclarations = [updateOrderStatusFunctionDeclaration];
-export const updateOrderStatus = updateOrderStatusFunction.execute.bind(updateOrderStatusFunction);

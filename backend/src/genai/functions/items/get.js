@@ -27,5 +27,3 @@ class GetItemFunction extends BaseFunction {
 
 const getItemFunction = new GetItemFunction();
 export const getItemFunctionDeclaration = getItemFunction.getDeclaration();
-export const functionDeclarations = [getItemFunctionDeclaration];
-export const getItem = getItemFunction.execute.bind(getItemFunction);

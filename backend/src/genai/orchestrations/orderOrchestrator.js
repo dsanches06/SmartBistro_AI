@@ -3,6 +3,7 @@ import {
   calculateInvoiceTotals,
   calculateProfitMargin,
 } from "../../utils/index.js";
+import { getAllTables, getActiveItems } from "../../services/index.js";
 
 // ── Extrai JSON de resposta do agente — 3 estratégias ─────────────────────────
 // Os agentes podem devolver:
@@ -37,32 +38,51 @@ function extractJSON(text, agentName = "agent") {
 
 // ── Mensagens estruturadas para cada agente ────────────────────────────────────
 
-function buildMaitreMessage(orderData) {
+function buildMaitreMessage(orderData, availableTables, menuItems) {
+  const tablesInfo = availableTables.length
+    ? availableTables
+        .map((t) => `  - id ${t.id}, ${t.table_number}, capacidade ${t.capacity}, ${t.status}`)
+        .join("\n")
+    : "  (nenhuma mesa disponível de momento)";
+
+  const menuInfo = menuItems
+    .map((i) => `  - id ${i.id}, ${i.name}, ${i.category ?? "—"}, €${Number(i.price).toFixed(2)}`)
+    .join("\n");
+
   return `
-Analisa o seguinte pedido de restaurante e devolve APENAS JSON (sem texto adicional, sem markdown).
+Analisa a mensagem do cliente e devolve APENAS JSON (sem texto adicional, sem markdown).
+
+MENSAGEM DO CLIENTE:
+"${orderData.message}"
+
+CUSTOMER_ID: ${orderData.customer_id}
+
+MESAS DISPONÍVEIS (status Available):
+${tablesInfo}
+
+MENU ACTIVO:
+${menuInfo}
 
 TAREFA:
-1. Confirma se o cliente (customer_id ${orderData.customer_id}) é válido
-2. Confirma se a mesa (table_id ${orderData.table_id ?? "null — Takeaway"}) está disponível
-3. Valida os itens do menu solicitados
-4. Regista restrições alimentares: ${orderData.allergy_restrictions ?? "nenhuma"}
-5. Organiza a fila inicial de pedidos (itens por ordem de chegada)
+1. Detecta o tipo de serviço: "Dine-In" (jantar/almoço/comer aqui) ou "Takeaway" (levar/para fora/takeaway)
+2. Se Dine-In: escolhe UMA mesa disponível adequada ao número de pessoas mencionado (mínimo 1)
+3. Identifica os pratos pedidos fazendo corresponder ao menu activo por semelhança fonética/textual
+4. Estima a quantidade de cada prato (1 por padrão, salvo indicação contrária)
+5. Usa os preços exactos do menu activo fornecido acima
+6. Regista restrições alimentares ou alergias mencionadas (null se nenhuma)
 
 RESPONDE EXACTAMENTE com este JSON (sem comentários, sem markdown):
 {
   "customer_id": <número>,
-  "table_id": <número ou null>,
-  "service_type": "<Dine-In ou Takeaway>",
+  "table_id": <número ou null se Takeaway>,
+  "service_type": "Dine-In" | "Takeaway",
   "allergy_restrictions": <"string" ou null>,
   "validation_status": "valid",
   "items": [
-    { "item_id": <número>, "name": "<nome>", "quantity": <número>, "price": <preço> }
+    { "item_id": <número>, "name": "<nome exacto do menu>", "quantity": <número>, "price": <preço decimal> }
   ],
-  "notes": "<observações do Maître>"
+  "notes": "<observações do Maître — ex: mesa T03 atribuída para 2 pessoas>"
 }
-
-DADOS DO PEDIDO:
-${JSON.stringify(orderData, null, 2)}
 `.trim();
 }
 
@@ -133,14 +153,21 @@ ${JSON.stringify(sequenced, null, 2)}
 
 /**
  * Pipeline sequencial dos 3 agentes:
- *   Maître  → valida cliente, mesa e itens; organiza fila de pedidos
+ *   Maître  → interpreta a mensagem em linguagem natural, selecciona mesa
+ *             (Dine-In) a partir das mesas Available em BD, e mapeia os
+ *             itens pedidos ao menu activo devolvendo JSON estruturado
  *   Chefe   → sequência de preparação por secção + desconto de stock
  *   Gerente → confirma fatura (totais pré-calculados em JS) + objeto final
  *
  * Os totais financeiros são SEMPRE calculados por funções JS puras
  * ANTES de chegar ao ManagerAgent — o agente nunca faz aritmética.
  *
- * @param {object} orderData - Dados do pedido (formulário)
+ * @param {object} orderData
+ * @param {number} orderData.customer_id  - ID do cliente (obrigatório)
+ * @param {string} orderData.message      - Pedido em linguagem natural (obrigatório)
+ * @param {number} [orderData.tax_rate]   - IVA (default da calculateInvoiceTotals)
+ * @param {number} [orderData.discount]   - Desconto (ex: 0.10 = 10%)
+ * @param {string} [orderData.discount_type] - "percent" | "fixed"
  * @returns {{ validated, sequenced, financials, final }}
  */
 export async function runOrderPipeline(orderData) {
@@ -151,12 +178,20 @@ export async function runOrderPipeline(orderData) {
     discountType: orderData.discountType ?? orderData.discount_type ?? undefined,
   };
 
+  // ── Pré-carrega contexto para o Maître (em paralelo) ──────────────────────────
+  console.log("[Pipeline] A carregar mesas disponíveis e menu activo...");
+  const [availableTables, menuItems] = await Promise.all([
+    getAllTables("Available"),
+    getActiveItems(),
+  ]);
+  console.log(`[Pipeline] Contexto: ${availableTables.length} mesa(s) disponível(eis), ${menuItems.length} item(ns) no menu`);
+
   // ── Fase 1 — Maître ───────────────────────────────────────────────────────────
-  console.log("[Pipeline] Fase 1 — Maître a validar pedido...");
+  console.log("[Pipeline] Fase 1 — Maître a interpretar pedido em linguagem natural...");
   const maitre = new MaitreAgent();
-  const validatedText = await maitre.sendMessage(buildMaitreMessage(normalised));
+  const validatedText = await maitre.sendMessage(buildMaitreMessage(normalised, availableTables, menuItems));
   const validated = extractJSON(validatedText, "Maître");
-  console.log(`[Pipeline] Maître concluído — ${validated.items?.length ?? 0} item(s) validado(s)`);
+  console.log(`[Pipeline] Maître concluído — mesa: ${validated.table_id ?? "Takeaway"}, ${validated.items?.length ?? 0} item(s)`);
 
   // ── Fase 2 — Chefe ────────────────────────────────────────────────────────────
   console.log("[Pipeline] Fase 2 — Chefe a verificar stock e sequência...");

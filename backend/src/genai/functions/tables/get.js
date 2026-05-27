@@ -32,5 +32,3 @@ class GetTableFunction extends BaseFunction {
 
 const getTableFunction = new GetTableFunction();
 export const getTableFunctionDeclaration = getTableFunction.getDeclaration();
-export const functionDeclarations = [getTableFunctionDeclaration];
-export const getTable = getTableFunction.execute.bind(getTableFunction);

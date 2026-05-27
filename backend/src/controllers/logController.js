@@ -8,11 +8,11 @@ import {
   deleteLogsByOrderId,
 } from "../services/index.js";
 
-// GET /logs?agentName=&status=
+// GET /logs?agent_name=&status=
 export const getAll = async (req, res) => {
   try {
-    const { agentName, status } = req.query;
-    const logs = await getAllLogs(agentName, status);
+    const { agent_name, status } = req.query;
+    const logs = await getAllLogs(agent_name, status);
     res.json(logs);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -53,11 +53,11 @@ export const getByAgent = async (req, res) => {
 // POST /logs
 export const create = async (req, res) => {
   try {
-    const { order_id, agent_name, status, input_payload, output_payload } = req.body;
+    const { agent_name, status } = req.body;
     if (!agent_name || !status)
       return res.status(400).json({ error: "agent_name e status são obrigatórios" });
 
-    const log = await createLog({ order_id, agent_name, status, input_payload, output_payload });
+    const log = await createLog(req.body);
     res.status(201).json(log);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -79,7 +79,7 @@ export const remove = async (req, res) => {
 export const removeByOrderId = async (req, res) => {
   try {
     const affected = await deleteLogsByOrderId(req.params.orderId);
-    res.json({ message: `${affected} log(s) do pedido eliminado(s)` });
+    res.json({ message: `${affected} log(s) eliminado(s) para o pedido ${req.params.orderId}` });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

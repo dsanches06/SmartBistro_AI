@@ -47,5 +47,3 @@ class CreatePaymentFunction extends BaseFunction {
 
 const createPaymentFunction = new CreatePaymentFunction();
 export const createPaymentFunctionDeclaration = createPaymentFunction.getDeclaration();
-export const functionDeclarations = [createPaymentFunctionDeclaration];
-export const createPayment = createPaymentFunction.execute.bind(createPaymentFunction);

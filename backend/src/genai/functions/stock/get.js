@@ -27,5 +27,3 @@ class GetStockFunction extends BaseFunction {
 
 const getStockFunction = new GetStockFunction();
 export const getStockFunctionDeclaration = getStockFunction.getDeclaration();
-export const functionDeclarations = [getStockFunctionDeclaration];
-export const getStock = getStockFunction.execute.bind(getStockFunction);

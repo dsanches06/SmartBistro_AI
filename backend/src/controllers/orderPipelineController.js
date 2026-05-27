@@ -1,20 +1,21 @@
 /**
  * POST /orders/pipeline
  *
- * Recebe os dados do formulário de pedido, executa o pipeline de 3 agentes
+ * Recebe o pedido em linguagem natural, executa o pipeline de 3 agentes
  * (Maître → Chefe → Gerente) e persiste os resultados na BD MySQL.
+ *
+ * O Maître interpreta a mensagem, selecciona a mesa (Dine-In) e mapeia
+ * os itens ao menu activo — o cliente NÃO escolhe mesa nem envia item_ids.
  *
  * Corpo esperado:
  * {
- *   customer_id:          number,           // obrigatório
- *   table_id:             number | null,    // null para Takeaway
- *   service_type:         "Dine-In" | "Takeaway",
- *   items:                [{ item_id, name, quantity, price }],
- *   allergy_restrictions: string | null,    // ex: "Glúten, Lactose"
- *   payment_method:       string,           // "MB Way" | "Cash" | "Card" (default: "Pending")
- *   tax_rate:             number,           // 0.13 (default) | 0.23 | 0.06
- *   discount:             number,           // 0.10 = 10% (default: 0)
- *   discount_type:        "percent" | "fixed"
+ *   customer_id:    number,  // obrigatório
+ *   message:        string,  // obrigatório — pedido em linguagem natural
+ *                            // ex: "eu e a minha esposa queremos jantar, esparguete e hamburguer"
+ *   payment_method: string,  // "MB Way" | "Cash" | "Card" (default: "Pending")
+ *   tax_rate:       number,  // 0.13 (default) | 0.23 | 0.06
+ *   discount:       number,  // 0.10 = 10% (default: 0)
+ *   discount_type:  "percent" | "fixed"
  * }
  */
 
@@ -34,32 +35,36 @@ export async function processOrderPipeline(req, res) {
   if (!orderData.customer_id) {
     return res.status(400).json({ success: false, error: 'customer_id é obrigatório.' });
   }
-  if (!orderData.service_type) {
-    return res.status(400).json({ success: false, error: 'service_type é obrigatório (Dine-In | Takeaway).' });
-  }
-  if (!Array.isArray(orderData.items) || !orderData.items.length) {
-    return res.status(400).json({ success: false, error: 'items são obrigatórios e não podem estar vazios.' });
+  if (!orderData.message || !String(orderData.message).trim()) {
+    return res.status(400).json({ success: false, error: 'message é obrigatório — descreva o seu pedido em linguagem natural.' });
   }
 
   try {
-    console.log(`[Pipeline] A iniciar para customer_id=${orderData.customer_id}, service_type=${orderData.service_type}`);
+    const msgPreview = String(orderData.message).substring(0, 80);
+    console.log(`[Pipeline] A iniciar para customer_id=${orderData.customer_id} — "${msgPreview}"`);
 
     // ── Pipeline dos 3 agentes: Maître → Chefe → Gerente ─────────────────────
     const { validated, sequenced, financials } = await runOrderPipeline(orderData);
 
     console.log(`[Pipeline] Agentes concluídos — total calculado: €${financials.total}`);
 
-    // ── Extrair campos do pipeline ────────────────────────────────────────────
+    // ── Extrair e normalizar campos do pipeline ───────────────────────────────
     const customerId = Number(validated.customer_id ?? orderData.customer_id);
-    const tableId    = validated.table_id   ?? orderData.table_id   ?? null;
+    const tableId    = validated.table_id ?? null;   // atribuído pelo Maître, nunca pelo cliente
     const kitchenSeq = sequenced.kitchen_sequence ?? sequenced.kitchenSequence ?? [];
     const items      = validated.items ?? orderData.items;
+
+    // Normaliza service_type para os valores exactos do ENUM MySQL ('Dine-In' | 'Takeaway')
+    const rawService = String(validated.service_type ?? '');
+    const serviceType = /take.?away|para.?levar|para\s?fora|to.?go/i.test(rawService)
+      ? 'Takeaway'
+      : 'Dine-In';
 
     // ── 1. Criar pedido ───────────────────────────────────────────────────────
     const order = await createOrder({
       customer_id:           customerId,
       table_id:              tableId ? Number(tableId) : null,
-      service_type:          validated.service_type ?? orderData.service_type,
+      service_type:          serviceType,
       allergy_restrictions:  validated.allergy_restrictions ?? orderData.allergy_restrictions ?? null,
       kitchen_sequence_json: kitchenSeq,
       order_status:          'Pending in Kitchen',
@@ -95,7 +100,7 @@ export async function processOrderPipeline(req, res) {
     });
 
     // ── 5. Marcar mesa como Occupied (apenas Dine-In) ─────────────────────────
-    if (tableId && order.service_type !== 'Takeaway') {
+    if (tableId && serviceType === 'Dine-In') {
       await updateTableStatus(Number(tableId), 'Occupied');
     }
 

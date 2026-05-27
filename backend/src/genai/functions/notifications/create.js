@@ -37,5 +37,3 @@ class CreateNotificationFunction extends BaseFunction {
 
 const createNotificationFunction = new CreateNotificationFunction();
 export const createNotificationFunctionDeclaration = createNotificationFunction.getDeclaration();
-export const functionDeclarations = [createNotificationFunctionDeclaration];
-export const createNotification = createNotificationFunction.execute.bind(createNotificationFunction);

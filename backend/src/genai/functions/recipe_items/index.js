@@ -1,1 +1,1 @@
-export * from './get.js';
+export { getRecipeItemsFunctionDeclaration } from './get.js';

@@ -52,5 +52,3 @@ class CreateOrderFunction extends BaseFunction {
 
 const createOrderFunction = new CreateOrderFunction();
 export const createOrderFunctionDeclaration = createOrderFunction.getDeclaration();
-export const functionDeclarations = [createOrderFunctionDeclaration];
-export const createOrder = createOrderFunction.execute.bind(createOrderFunction);

@@ -1,10 +1,2 @@
-import { getStock, getStockFunctionDeclaration } from './get.js';
-import { adjustStock, adjustStockFunctionDeclaration } from './adjust.js';
-
-export { getStock, getStockFunctionDeclaration };
-export { adjustStock, adjustStockFunctionDeclaration };
-
-export const functionDeclarations = [
-  getStockFunctionDeclaration,
-  adjustStockFunctionDeclaration,
-];
+export { getStockFunctionDeclaration }    from './get.js';
+export { adjustStockFunctionDeclaration } from './adjust.js';

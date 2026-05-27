@@ -33,5 +33,3 @@ class AdjustStockFunction extends BaseFunction {
 
 const adjustStockFunction = new AdjustStockFunction();
 export const adjustStockFunctionDeclaration = adjustStockFunction.getDeclaration();
-export const functionDeclarations = [adjustStockFunctionDeclaration];
-export const adjustStock = adjustStockFunction.execute.bind(adjustStockFunction);

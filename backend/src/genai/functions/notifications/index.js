@@ -1,1 +1,1 @@
-export * from './create.js';
+export { createNotificationFunctionDeclaration } from './create.js';

@@ -1,1 +1,1 @@
-export * from './create.js';
+export { createLogFunctionDeclaration } from './create.js';

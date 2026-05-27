@@ -37,5 +37,3 @@ class UpdateTableStatusFunction extends BaseFunction {
 
 const updateTableStatusFunction = new UpdateTableStatusFunction();
 export const updateTableStatusFunctionDeclaration = updateTableStatusFunction.getDeclaration();
-export const functionDeclarations = [updateTableStatusFunctionDeclaration];
-export const updateTableStatus = updateTableStatusFunction.execute.bind(updateTableStatusFunction);

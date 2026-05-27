@@ -47,5 +47,3 @@ class CreateInvoiceFunction extends BaseFunction {
 
 const createInvoiceFunction = new CreateInvoiceFunction();
 export const createInvoiceFunctionDeclaration = createInvoiceFunction.getDeclaration();
-export const functionDeclarations = [createInvoiceFunctionDeclaration];
-export const createInvoice = createInvoiceFunction.execute.bind(createInvoiceFunction);

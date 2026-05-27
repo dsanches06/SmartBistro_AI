@@ -1,1 +1,1 @@
-export * from './get.js';
+export { getItemFunctionDeclaration } from './get.js';
