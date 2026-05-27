@@ -6,8 +6,8 @@ class CreateInvoiceFunction extends BaseFunction {
     super({
       functionName: 'create_invoice',
       description:
-        'Gera uma fatura para um pedido concluído com os totais calculados pelo Gerente. ' +
-        'tax = subtotal × 0.23 (IVA 23%); total = subtotal + tax.',
+        'Gera uma fatura para um pedido concluído. Os totais são fornecidos pré-calculados ' +
+        '(IVA 13% refeições / 23% bebidas alcoólicas); não recalcules os valores.',
       properties: {
         order_id: {
           type: Type.INTEGER,
