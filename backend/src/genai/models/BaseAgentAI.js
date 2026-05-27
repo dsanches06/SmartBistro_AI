@@ -10,8 +10,9 @@ class BaseAgentAI {
    * @param {Array|null}     tools       - Declarações de ferramentas (function calling)
    * @param {Array}          history     - Histórico inicial da conversa
    * @param {boolean|object} thinking    - Activa thinking; se object, usa como thinkingOptions
+   * @param {string|null}    apiKey      - Chave API própria do agente; null → usa GEMINI_API_KEY
    */
-  constructor(name, instruction, temperature = 0.25, tools = null, history = [], thinking = false) {
+  constructor(name, instruction, temperature = 0.25, tools = null, history = [], thinking = false, apiKey = null) {
     this.name = name;
     this.thinking = thinking;
 
@@ -32,7 +33,7 @@ class BaseAgentAI {
       config.thinkingConfig = buildThinkingConfig(thinkingOptions, temperature);
     }
 
-    this.chat = createGeminiChat(config, history);
+    this.chat = createGeminiChat(config, history, apiKey);
   }
 
   // ── Resposta simples (texto) ──────────────────────────────────────────────────

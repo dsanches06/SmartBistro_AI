@@ -22,9 +22,15 @@ if (!process.env.MODEL_NAME) {
 export const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 export const MODEL_NAME = process.env.MODEL_NAME;
 
-// Fábrica genérica — cada caller fornece o seu próprio config
-export function createGeminiChat(config, history = []) {
-  return genAI.chats.create({ model: MODEL_NAME, history, config });
+// Cria um cliente Gemini com uma chave específica (para agentes com chave própria)
+export function createGeminiClient(apiKey) {
+  return new GoogleGenAI({ apiKey });
+}
+
+// Fábrica genérica — aceita apiKey opcional; se omitida usa o cliente padrão
+export function createGeminiChat(config, history = [], apiKey = null) {
+  const client = apiKey ? createGeminiClient(apiKey) : genAI;
+  return client.chats.create({ model: MODEL_NAME, history, config });
 }
 
 export { FunctionCallingConfigMode };
