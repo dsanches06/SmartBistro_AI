@@ -1,0 +1,281 @@
+@import "tailwindcss";
+
+/* Tailwind dark: responde à classe .dark-theme no <html> */
+@custom-variant dark (&:where(.dark-theme, .dark-theme *));
+
+/* ── Tema / Fontes / Animações ──────────────────────────────────────────── */
+@theme {
+  --font-sans: 'Inter', Tahoma, Geneva, Verdana, sans-serif;
+  --font-spartan: 'League Spartan', Tahoma, Geneva, Verdana, sans-serif;
+  --animate-cursor-blink: blink 1s step-end infinite;
+  --animate-fadeIn: fadeIn 0.3s ease-in;
+  --animate-fadeInUp: fadeInUp 0.45s ease-out;
+  @keyframes blink {
+    from, to { opacity: 1; }
+    50% { opacity: 0; }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* ── CSS Variables (dark por omissão) ────────────────────────────────────── */
+:root {
+  color-scheme: dark;
+  --body-bg: #0d0d0d;
+  --bg: #0d0d0d;
+  --surface: #111111;
+  --surface-2: #1a1a1a;
+  --surface-3: #2a2a2a;
+  --text: #ececec;
+  --text-muted: #94a3b8;
+  --text-secondary: #9ca3af;
+  --border: #333333;
+  --border-strong: #444444;
+  --primary: #2463eb;
+  --primary-hover: #1d4ed8;
+  --icon-border: #ffffff;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.light-theme {
+  color-scheme: light;
+  --body-bg: #fee2e2;
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --surface-3: #e2e8f0;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --text-secondary: #475569;
+  --border: #cbd5e1;
+  --border-strong: #94a3b8;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --icon-border: #0f172a;
+}
+
+/* ── Base ────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  /* Prevent font size inflation on mobile */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  background-color: var(--body-bg);
+  min-height: 100%;
+}
+
+body {
+  @apply m-0;
+  min-height: 100vh;
+  background-color: var(--body-bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', sans-serif;
+  /* Smooth scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Portfólio: headings (League Spartan, uppercase, semibold) ───────────── */
+.portfolio-section h1,
+.portfolio-section h2,
+.portfolio-section h3 {
+  font-family: var(--font-spartan);
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* ── Layout do app (chat/app pages com header fixo) ─────────────────────── */
+.app-main {
+  margin-top: 52px;
+  padding: 16px 16px 80px;
+  min-height: calc(100dvh - 52px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 16px;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .app-main {
+    padding: 24px 24px 80px;
+    gap: 20px;
+  }
+}
+
+@media (min-width: 768px) {
+  .app-main {
+    margin-top: 60px;
+    padding: 40px 20px 60px;
+    gap: 24px;
+  }
+}
+
+/* ── Nav links (usa variáveis do tema, sem hardcode) ─────────────────────── */
+.nav-link {
+  color: var(--text-muted);
+  background-color: transparent;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+.nav-link:hover {
+  color: var(--text);
+  background-color: var(--surface-2);
+}
+.nav-link.active {
+  color: var(--bg);
+  background-color: var(--primary);
+}
+
+/* ── Utility classes ─────────────────────────────────────────────────────── */
+.text-main       { color: var(--text); }
+.text-muted      { color: var(--text-muted); }
+.text-secondary  { color: var(--text-secondary); }
+.bg-page         { background-color: var(--bg); }
+.bg-surface      { background-color: var(--surface); }
+.bg-surface-2    { background-color: var(--surface-2); }
+.bg-surface-3    { background-color: var(--surface-3); }
+.border-surface  { border-color: var(--border); }
+.border-surface-strong { border-color: var(--border-strong); }
+.hover\:bg-surface-2:hover { background-color: var(--surface-2); }
+.hover\:text-main:hover    { color: var(--text); }
+
+.light-theme .bg-surface,
+.light-theme .bg-surface-2 {
+  border: 1px solid var(--border);
+}
+
+/* ── Animations ──────────────────────────────────────────────────────────── */
+.animate-fadeIn   { animation: fadeIn   0.3s ease-in; }
+.animate-fadeInUp { animation: fadeInUp 0.45s ease-out; }
+
+/* ── Transitions ─────────────────────────────────────────────────────────── */
+header, h1, h2, h3, h4 { transition: background-color 0.3s ease, color 0.3s ease; }
+
+button {
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: hover) {
+  button:hover { transform: translateY(-2px); }
+}
+
+/* ── Banner ──────────────────────────────────────────────────────────────── */
+.banner {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  max-width: min(380px, calc(100% - 2rem));
+  padding: 1rem 1.25rem;
+  border-radius: 1rem;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+  color: #fff;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  opacity: 0;
+  transition: opacity 200ms ease;
+  pointer-events: auto;
+  text-align: center;
+}
+.banner--visible { opacity: 1; }
+.banner--info    { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+.banner--success { background: linear-gradient(135deg, #22c55e, #16a34a); }
+.banner--error   { background: linear-gradient(135deg, #f97316, #dc2626); }
+.banner--warning { background: linear-gradient(135deg, #f59e0b, #d97706); }
+
+/* ── Notifications ───────────────────────────────────────────────────────── */
+.notifi-box {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: min(350px, calc(100vw - 16px));
+  max-height: 400px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  overflow-y: auto;
+  padding: 1rem;
+}
+.notifi-box.open          { opacity: 1; transform: translateY(0); }
+.notifi-box.bottom        { top: auto; bottom: 100%; transform: translateY(10px); }
+.notifi-box.bottom.open   { transform: translateY(0); }
+.notifi-box h2            { margin: 0 0 1rem; font-size: 1.1rem; color: var(--text); }
+.notifi-item              { padding: .75rem; border-bottom: 1px solid var(--border); background: var(--surface-2); border-radius: 4px; margin-bottom: .5rem; }
+.notifi-item:last-child   { border-bottom: none; }
+.notifi-item .text strong { display: block; color: var(--text); margin-bottom: .25rem; }
+.notifi-item .text p      { margin: .25rem 0; color: var(--text-muted); font-size: .9rem; }
+
+.icon-button {
+  position: relative;
+  background: none;
+  border: 2px solid var(--icon-border);
+  cursor: pointer;
+  padding: .75rem;
+  border-radius: 50%;
+  transition: background-color .2s, border-color .2s;
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+}
+.icon-button:hover             { background-color: var(--surface-2); border-color: var(--primary); }
+.notification-button svg       { width: 28px; height: 28px; }
+.icon-button-badge {
+  position: absolute;
+  top: -5px; right: -5px;
+  background-color: #dc3545;
+  color: white;
+  border-radius: 50%;
+  width: 18px; height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .7rem;
+  font-weight: bold;
+  border: 2px solid var(--surface);
+}
+
+/* ── Mobile touch targets ────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  /* Make interactive elements comfortably tappable */
+  button, a, [role="button"] {
+    min-height: 40px;
+  }
+
+  /* Prevent horizontal overflow */
+  .overflow-x-hidden { overflow-x: hidden; }
+
+  /* Tighter padding on small screens */
+  .px-6 { padding-left: 1rem; padding-right: 1rem; }
+
+  /* Stat cards: 2 per row on very small screens */
+  .stat-grid-mobile {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── Scrollbar (desktop) ─────────────────────────────────────────────────── */
+@media (hover: hover) {
+  ::-webkit-scrollbar       { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+}

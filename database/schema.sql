@@ -201,11 +201,26 @@ INSERT INTO tables (table_number, capacity, status) VALUES
 ('T03', 4, 'Available'),   -- id 3  · Mesa standard
 ('T04', 4, 'Available'),   -- id 4  · Mesa standard
 ('T05', 6, 'Available'),   -- id 5  · Mesa média
-('T06', 6, 'Available'),   -- id 6  · Mesa média
+('T06', 6, 'Occupied'),   -- id 6  · Mesa média
 ('T07', 8, 'Available'),   -- id 7  · Mesa grande
 ('T08', 8, 'Available'),   -- id 8  · Mesa grande
 ('T09', 2, 'Available'),   -- id 9  · Mesa pequena (esplanada)
-('T10', 10, 'Available');  -- id 10 · Mesa de grupo / eventos
+('T10', 10, 'Available'),  -- id 10 · Mesa de grupo / eventos
+('T11', 2, 'Reserved'),   -- id 11  · Mesa pequena
+('T12', 4, 'Available'),   -- id 12  · Mesa standard
+('T13', 4, 'Occupied'),   -- id 13  · Mesa standard
+('T14', 6, 'Reserved'),   -- id 14  · Mesa média
+('T15', 8, 'Available'),   -- id 15  · Mesa grande
+('T16', 2, 'Reserved'),   -- id 16  · Mesa pequena (janela)
+('T17', 4, 'Available'),   -- id 17  · Mesa standard
+('T18', 4, 'Available'),   -- id 18  · Mesa standard
+('T19', 6, 'Reserved'),   -- id 19  · Mesa média
+('T20', 10, 'Available'),  -- id 20  · Mesa de grupo / eventos
+('T21', 4, 'Available'),   -- id 22  · Mesa standard
+('T22', 4, 'Available'),   -- id 23  · Mesa standard
+('T23', 6, 'Available'),   -- id 24  · Mesa média
+('T24', 8, 'Available');   -- id 25  · Mesa grande
+
 
 -- Ingredientes base (existentes)
 INSERT INTO ingredients (name, measurement_unit) VALUES

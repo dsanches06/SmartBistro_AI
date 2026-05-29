@@ -1,0 +1,10 @@
+// ── Chat components barrel ────────────────────────────────────────────────────
+export { ChatBot }          from "./ChatBot.jsx";
+export { ChatUI }           from "./ChatUI.jsx";
+export { ChatBubbleUI }     from "./ChatBubbleUI.jsx";
+export { ChatHeaderUI }     from "./ChatHeaderUI.jsx";
+export { ChatInputUI }      from "./ChatInputUI.jsx";
+export { ChatLoadingUI }    from "./ChatLoadingUI.jsx";
+export { ChatMessage }      from "./ChatMessage.jsx";
+export { ChatHistory }      from "./ChatHistory.jsx";
+export { ProviderErrorCard }  from "./ProviderErrorCard.jsx";

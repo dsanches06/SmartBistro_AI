@@ -4,6 +4,7 @@ import { tableController } from "../controllers/index.js";
 const router = Router();
 
 router.get("/", tableController.getAll);
+router.get("/:id/details", tableController.getDetails);
 router.get("/:id", tableController.getById);
 router.post("/", tableController.create);
 router.put("/:id", tableController.update);

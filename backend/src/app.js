@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-// pipeline: Maître interpreta mensagem natural → selecciona mesa → mapeia itens
 import logger from "./middlewares/loggerMiddleware.js";
 import {
   customerRoutes,

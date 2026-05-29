@@ -20,6 +20,52 @@ export const getTableById = async (id) => {
   return r[0] ? mapTableDTOResponse(r[0]) : null;
 };
 
+export const getTableDetailsById = async (id) => {
+  const [tableRows] = await db.query("SELECT * FROM tables WHERE id = ?", [id]);
+  if (!tableRows[0]) return null;
+
+  const [orderRows] = await db.query(
+    `SELECT o.*, c.name AS customer_name
+     FROM orders o
+     LEFT JOIN customers c ON c.id = o.customer_id
+     WHERE o.table_id = ? AND o.order_status NOT IN ('Done', 'Cancelled')
+     ORDER BY o.created_at DESC
+     LIMIT 1`,
+    [id],
+  );
+
+  const table = mapTableDTOResponse(tableRows[0]);
+  if (!orderRows[0]) {
+    return {
+      ...table,
+      activeOrder: null,
+    };
+  }
+
+  const order = orderRows[0];
+  const [summaryRows] = await db.query(
+    `SELECT
+       COALESCE(SUM(oi.quantity), 0) AS items,
+       COALESCE(SUM(oi.quantity * it.price), 0) AS total_amount
+     FROM order_items oi
+     JOIN items it ON it.id = oi.item_id
+     WHERE oi.order_id = ?`,
+    [order.id],
+  );
+
+  return {
+    ...table,
+    activeOrder: {
+      id: order.id,
+      order_ref: `#${order.id}`,
+      customer_name: order.customer_name ?? "Cliente desconhecido",
+      items: summaryRows[0]?.items ?? 0,
+      total_amount: Number(summaryRows[0]?.total_amount ?? 0),
+      status: order.order_status,
+    },
+  };
+};
+
 // Verifica se já existe uma mesa com o mesmo table_number (opcionalmente excluindo um ID)
 export const tableNumberExists = async (tableNumber, excludeId = null) => {
   const q = excludeId

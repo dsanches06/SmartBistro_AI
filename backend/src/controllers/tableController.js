@@ -1,6 +1,7 @@
 import {
   getAllTables,
   getTableById,
+  getTableDetailsById,
   tableNumberExists,
   createTable,
   updateTable,
@@ -25,6 +26,17 @@ export const getById = async (req, res) => {
     const table = await getTableById(req.params.id);
     if (!table) return res.status(404).json({ error: "Mesa não encontrada" });
     res.json(table);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// GET /tables/:id/details
+export const getDetails = async (req, res) => {
+  try {
+    const details = await getTableDetailsById(req.params.id);
+    if (!details) return res.status(404).json({ error: "Mesa não encontrada" });
+    res.json(details);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
