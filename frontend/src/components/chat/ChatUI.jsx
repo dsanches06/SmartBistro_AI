@@ -108,15 +108,42 @@ export function ChatUI({ isOpen, onClose }) {
     );
   };
 
+  const TABLE_MUTATION_FNS = ['cancel_reservation', 'create_reservation', 'update_table_status'];
+
   const makeOnDone = (botMsgId) => (payload) => {
     setLoading(false);
     if (payload?.conversationId) setConversationId(payload.conversationId);
+
     if (payload?.success && payload?.message) {
       setConversationHistory((prev) => [
         ...prev,
         { role: "assistant", content: payload.message },
       ]);
     }
+
+    const results = payload?.functionResults ?? [];
+
+    // Notifica TablePage para re-fetch quando o bot muda mesas/reservas
+    const hasMutation = results.some((r) => TABLE_MUTATION_FNS.includes(r.functionName));
+    if (hasMutation) {
+      window.dispatchEvent(new CustomEvent('table:refresh'));
+    }
+
+    // Marca mensagem como "done" quando cancelamento ou criação de reserva é bem-sucedido
+    const isDone =
+      results.some((r) => r.functionName === 'cancel_reservation' && r.result?.success) ||
+      results.some((r) => r.functionName === 'create_reservation' && r.result?.id);
+
+    if (isDone || results.length) {
+      setMessages((p) =>
+        p.map((m) =>
+          m.id === botMsgId
+            ? { ...m, done: isDone, functionResults: results }
+            : m
+        )
+      );
+    }
+
     if (!payload?.success) {
       setMessages((p) =>
         p.map((m) =>

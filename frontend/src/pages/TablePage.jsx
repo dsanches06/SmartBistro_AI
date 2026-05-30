@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTheme } from "@/context/ThemeContext";
-import { tableService } from "@/services";
+import { reservationService, tableService } from "@/services";
 import { STATUS_CONFIG } from "@/utils/tablePageUtils";
 import { PageSection, StatCard, TableCard } from "@/components";
 
@@ -14,50 +14,72 @@ export default function TablePage() {
   const [tableDetails, setTableDetails] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchMesas = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await tableService.getAll();
-        setMesas(data);
-      } catch (err) {
-        setError(err.message || "Não foi possível carregar as mesas.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchMesas();
+  const fetchMesas = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      setMesas(await tableService.getAll());
+    } catch (err) {
+      setError(err.message || "Não foi possível carregar as mesas.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  useEffect(() => {
-    if (!selectedTableId) {
+  const fetchTableDetails = useCallback(async (id) => {
+    if (!id) { setTableDetails(null); setDetailsError(null); return; }
+    setDetailsLoading(true);
+    setDetailsError(null);
+    try {
+      setTableDetails(await tableService.getDetailsById(id));
+    } catch (err) {
       setTableDetails(null);
-      setDetailsError(null);
-      return;
+      setDetailsError(err.message || "Não foi possível carregar os detalhes da mesa.");
+    } finally {
+      setDetailsLoading(false);
     }
+  }, []);
 
-    const fetchTableDetails = async () => {
-      setDetailsLoading(true);
-      setDetailsError(null);
+  useEffect(() => { fetchMesas(); }, [fetchMesas]);
+  useEffect(() => { fetchTableDetails(selectedTableId); }, [selectedTableId, fetchTableDetails]);
 
-      try {
-        const details = await tableService.getDetailsById(selectedTableId);
-        setTableDetails(details);
-      } catch (err) {
-        setTableDetails(null);
-        setDetailsError(
-          err.message || "Não foi possível carregar os detalhes da mesa.",
-        );
-      } finally {
-        setDetailsLoading(false);
-      }
+  // Actualiza mesas e detalhes quando o chatbot faz mutações (cancel/create reservation, update_table_status)
+  useEffect(() => {
+    const onRefresh = () => {
+      fetchMesas();
+      if (selectedTableId) fetchTableDetails(selectedTableId);
     };
+    window.addEventListener('table:refresh', onRefresh);
+    return () => window.removeEventListener('table:refresh', onRefresh);
+  }, [fetchMesas, fetchTableDetails, selectedTableId]);
 
-    fetchTableDetails();
-  }, [selectedTableId]);
+  const handleConfirmReservation = async () => {
+    if (!activeReservation) return;
+    setActionLoading(true);
+    try {
+      await reservationService.confirm(activeReservation.id);
+      await fetchTableDetails(selectedTableId);
+    } catch (err) {
+      setDetailsError(err.message || "Erro ao confirmar reserva.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCancelReservation = async () => {
+    if (!activeReservation) return;
+    setActionLoading(true);
+    try {
+      await reservationService.cancel(activeReservation.id);
+      await Promise.all([fetchMesas(), fetchTableDetails(selectedTableId)]);
+    } catch (err) {
+      setDetailsError(err.message || "Erro ao cancelar reserva.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const selectedTable = useMemo(
     () => mesas.find((mesa) => mesa.id === selectedTableId),
@@ -85,7 +107,18 @@ export default function TablePage() {
       .toFixed(2)
       .replace(".", ",")}`;
 
-  const activeOrder = tableDetails?.activeOrder ?? null;
+  const activeOrder       = tableDetails?.activeOrder       ?? null;
+  const activeReservation = tableDetails?.activeReservation ?? null;
+  const isReserved        = selectedTable?.status === "Reserved";
+
+  const formatReservationDate = (dateStr) => {
+    if (!dateStr) return "--";
+    return new Date(dateStr).toLocaleString("pt-PT", {
+      day: "2-digit", month: "2-digit", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    });
+  };
+
   const selectedStatusConfig = selectedTable
     ? STATUS_CONFIG[selectedTable.status]
     : null;
@@ -190,73 +223,155 @@ export default function TablePage() {
                 </div>
               )}
 
-              <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                <div className="rounded-3xl bg-surface-2 p-4">
-                  <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-secondary)]">
-                    Cliente em fila
-                  </p>
-                  <p className="mt-2 text-base font-semibold text-[var(--text)]">
-                    {detailsLoading
-                      ? "A carregar..."
-                      : (activeOrder?.customer_name ?? "Sem cliente")}
-                  </p>
-                </div>
-                <div className="rounded-3xl bg-surface-2 p-4">
-                  <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-secondary)]">
-                    Pedidos ativos
-                  </p>
-                  <p className="mt-2 text-base font-semibold text-[var(--text)]">
-                    {detailsLoading
-                      ? "A carregar..."
-                      : (activeOrder?.order_ref ?? "--")}
-                  </p>
-                </div>
-                <div className="rounded-3xl bg-surface-2 p-4">
-                  <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-secondary)]">
-                    Items
-                  </p>
-                  <p className="mt-2 text-base font-semibold text-[var(--text)]">
-                    {detailsLoading
-                      ? "A carregar..."
-                      : (activeOrder?.items ?? 0)}
-                  </p>
-                </div>
-                <div className="rounded-3xl bg-surface-2 p-4">
-                  <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-secondary)]">
-                    Valor atual
-                  </p>
-                  <p className="mt-2 text-2xl font-bold text-[var(--text)]">
-                    {detailsLoading
-                      ? "A carregar..."
-                      : formattedTotalValue(activeOrder?.total_amount)}
-                  </p>
-                </div>
-              </div>
+              {isReserved ? (
+                <>
+                  {!detailsLoading && activeReservation?.id && (
+                    <div className="mt-6 rounded-3xl bg-[var(--primary)] px-5 py-3 flex items-center justify-between">
+                      <p className="text-xs uppercase tracking-[0.24em] text-white/70 font-medium">
+                        Nº de reserva
+                      </p>
+                      <p className="text-lg font-bold text-white">
+                        #{activeReservation.id}
+                      </p>
+                    </div>
+                  )}
 
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                <button
-                  className={`flex-1 rounded-full px-4 py-3 text-sm font-semibold text-white transition ${
-                    activeOrder
-                      ? "bg-[var(--primary)] hover:bg-[var(--primary-hover)]"
-                      : "bg-[var(--surface-2)] text-[var(--text-secondary)] cursor-not-allowed"
-                  }`}
-                  type="button"
-                  disabled={!activeOrder}
-                >
-                  Ver pedido
-                </button>
-                <button
-                  className={`flex-1 rounded-full border border-[var(--border)] px-4 py-3 text-sm font-semibold transition ${
-                    activeOrder
-                      ? "bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-2)]"
-                      : "bg-[var(--surface-2)] text-[var(--text-secondary)] cursor-not-allowed"
-                  }`}
-                  type="button"
-                  disabled={!activeOrder}
-                >
-                  Fechar conta
-                </button>
-              </div>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                    <div className="rounded-3xl bg-surface-2 p-4">
+                      <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-secondary)]">
+                        Cliente
+                      </p>
+                      <p className="mt-2 text-base font-semibold text-[var(--text)]">
+                        {detailsLoading ? "A carregar..." : (activeReservation?.customer_name ?? "Sem cliente")}
+                      </p>
+                    </div>
+                    <div className="rounded-3xl bg-surface-2 p-4">
+                      <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-secondary)]">
+                        Data da reserva
+                      </p>
+                      <p className="mt-2 text-base font-semibold text-[var(--text)]">
+                        {detailsLoading ? "A carregar..." : formatReservationDate(activeReservation?.reservation_date)}
+                      </p>
+                    </div>
+                    <div className="rounded-3xl bg-surface-2 p-4">
+                      <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-secondary)]">
+                        Nº de pessoas
+                      </p>
+                      <p className="mt-2 text-base font-semibold text-[var(--text)]">
+                        {detailsLoading ? "A carregar..." : (activeReservation?.party_size ?? "--")}
+                      </p>
+                    </div>
+                    <div className="rounded-3xl bg-surface-2 p-4">
+                      <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-secondary)]">
+                        Contacto
+                      </p>
+                      <p className="mt-2 text-base font-semibold text-[var(--text)]">
+                        {detailsLoading ? "A carregar..." : (activeReservation?.phone ?? "--")}
+                      </p>
+                    </div>
+                  </div>
+
+                  {!detailsLoading && activeReservation?.notes && (
+                    <div className="mt-4 rounded-3xl bg-surface-2 p-4">
+                      <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-secondary)]">
+                        Notas
+                      </p>
+                      <p className="mt-2 text-sm text-[var(--text)]">
+                        {activeReservation.notes}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                    <button
+                      className={`flex-1 rounded-full px-4 py-3 text-sm font-semibold text-white transition ${
+                        activeReservation && !actionLoading
+                          ? "bg-[var(--primary)] hover:bg-[var(--primary-hover)]"
+                          : "bg-[var(--surface-2)] text-[var(--text-secondary)] cursor-not-allowed"
+                      }`}
+                      type="button"
+                      disabled={!activeReservation || actionLoading}
+                      onClick={handleConfirmReservation}
+                    >
+                      {actionLoading ? "A processar..." : "Confirmar reserva"}
+                    </button>
+                    <button
+                      className={`flex-1 rounded-full border border-[var(--border)] px-4 py-3 text-sm font-semibold transition ${
+                        activeReservation && !actionLoading
+                          ? "bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-2)]"
+                          : "bg-[var(--surface-2)] text-[var(--text-secondary)] cursor-not-allowed"
+                      }`}
+                      type="button"
+                      disabled={!activeReservation || actionLoading}
+                      onClick={handleCancelReservation}
+                    >
+                      {actionLoading ? "A processar..." : "Cancelar reserva"}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                    <div className="rounded-3xl bg-surface-2 p-4">
+                      <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-secondary)]">
+                        Cliente em fila
+                      </p>
+                      <p className="mt-2 text-base font-semibold text-[var(--text)]">
+                        {detailsLoading ? "A carregar..." : (activeOrder?.customer_name ?? "Sem cliente")}
+                      </p>
+                    </div>
+                    <div className="rounded-3xl bg-surface-2 p-4">
+                      <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-secondary)]">
+                        Pedidos ativos
+                      </p>
+                      <p className="mt-2 text-base font-semibold text-[var(--text)]">
+                        {detailsLoading ? "A carregar..." : (activeOrder?.order_ref ?? "--")}
+                      </p>
+                    </div>
+                    <div className="rounded-3xl bg-surface-2 p-4">
+                      <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-secondary)]">
+                        Items
+                      </p>
+                      <p className="mt-2 text-base font-semibold text-[var(--text)]">
+                        {detailsLoading ? "A carregar..." : (activeOrder?.items ?? 0)}
+                      </p>
+                    </div>
+                    <div className="rounded-3xl bg-surface-2 p-4">
+                      <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-secondary)]">
+                        Valor atual
+                      </p>
+                      <p className="mt-2 text-2xl font-bold text-[var(--text)]">
+                        {detailsLoading ? "A carregar..." : formattedTotalValue(activeOrder?.total_amount)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                    <button
+                      className={`flex-1 rounded-full px-4 py-3 text-sm font-semibold text-white transition ${
+                        activeOrder
+                          ? "bg-[var(--primary)] hover:bg-[var(--primary-hover)]"
+                          : "bg-[var(--surface-2)] text-[var(--text-secondary)] cursor-not-allowed"
+                      }`}
+                      type="button"
+                      disabled={!activeOrder}
+                    >
+                      Ver pedido
+                    </button>
+                    <button
+                      className={`flex-1 rounded-full border border-[var(--border)] px-4 py-3 text-sm font-semibold transition ${
+                        activeOrder
+                          ? "bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-2)]"
+                          : "bg-[var(--surface-2)] text-[var(--text-secondary)] cursor-not-allowed"
+                      }`}
+                      type="button"
+                      disabled={!activeOrder}
+                    >
+                      Fechar conta
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

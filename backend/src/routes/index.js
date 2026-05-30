@@ -14,3 +14,4 @@ export { default as conversationRoutes } from "./conversationRoutes.js";
 export { default as chatHistoryRoutes } from "./chatHistoryRoutes.js";
 export { default as chatRoutes } from "./chatRoutes.js";
 export { default as logRoutes } from "./logRoutes.js";
+export { default as reservationRoutes } from "./reservationRoutes.js";

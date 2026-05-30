@@ -15,3 +15,4 @@ export * as conversationController from "./conversationController.js";
 export * as chatHistoryController from "./chatHistoryController.js";
 export * as chatBotController from "./chatBotController.js";
 export * as logController from "./logController.js";
+export * as reservationController from "./reservationController.js";

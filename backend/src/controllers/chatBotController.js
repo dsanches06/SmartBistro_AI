@@ -58,14 +58,18 @@ export async function sendMessageToBotStream(req, res) {
         fullText += text;
         res.write(`event: message\ndata: ${JSON.stringify({ text })}\n\n`);
       },
-      onDone: async () => {
+      onDone: async (_, functionResults = []) => {
         clearInterval(ping);
         await createChatHistory({ conversation_id: convId, role_id: ROLE_ASSISTANT, content: fullText });
         res.write(
           `event: done\ndata: ${JSON.stringify({
-            success:        true,
-            conversationId: convId,
-            message:        fullText,
+            success:         true,
+            conversationId:  convId,
+            message:         fullText,
+            functionResults: functionResults.map((fr) => ({
+              functionName: fr.functionName,
+              result:       fr.result,
+            })),
           })}\n\n`,
         );
         res.end();

@@ -31,6 +31,13 @@ export function ChatBubbleUI({ message, sender }) {
           </div>
         )}
 
+        {message.done && (
+          <div className="mt-2 flex items-center gap-1.5 text-green-400 text-xs font-semibold">
+            <i className="fa-solid fa-circle-check" />
+            <span>Concluído</span>
+          </div>
+        )}
+
         {message.timestamp && (
           <p className="text-xs mt-1 opacity-70">
             {message.timestamp.toLocaleTimeString([], {

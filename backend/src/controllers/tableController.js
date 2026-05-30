@@ -2,6 +2,7 @@ import {
   getAllTables,
   getTableById,
   getTableDetailsById,
+  getTableReservationById,
   tableNumberExists,
   createTable,
   updateTable,
@@ -37,6 +38,17 @@ export const getDetails = async (req, res) => {
     const details = await getTableDetailsById(req.params.id);
     if (!details) return res.status(404).json({ error: "Mesa não encontrada" });
     res.json(details);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// GET /tables/:id/reservation
+export const getReservation = async (req, res) => {
+  try {
+    const reservation = await getTableReservationById(req.params.id);
+    if (!reservation) return res.status(404).json({ error: "Sem reserva activa para esta mesa" });
+    res.json(reservation);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

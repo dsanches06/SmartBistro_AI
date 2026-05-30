@@ -31,6 +31,11 @@ import {
 } from "../functions/payments/index.js";
 import { createNotificationFunctionDeclaration } from "../functions/notifications/index.js";
 import { createLogFunctionDeclaration } from "../functions/logs/index.js";
+import {
+  getReservationFunctionDeclaration,
+  createReservationFunctionDeclaration,
+  cancelReservationFunctionDeclaration,
+} from "../functions/reservations/index.js";
 
 // ── Services (operações reais na BD) ──────────────────────────────────────────
 import {
@@ -53,11 +58,15 @@ import {
   updatePayment,
   createNotification,
   createLog,
+  getReservationById,
+  getActiveReservationByCustomerId,
+  getReservationsByTableId,
+  createReservation,
+  cancelReservation,
 } from "../../services/index.js";
 
 // ── Todas as declarações de ferramentas do pipeline ───────────────────────────
 const ALL_DECLARATIONS = [
-  createCustomerFunctionDeclaration,
   getCustomerFunctionDeclaration,
   getTableFunctionDeclaration,
   updateTableStatusFunctionDeclaration,
@@ -74,6 +83,9 @@ const ALL_DECLARATIONS = [
   updatePaymentStatusFunctionDeclaration,
   createNotificationFunctionDeclaration,
   createLogFunctionDeclaration,
+  getReservationFunctionDeclaration,
+  createReservationFunctionDeclaration,
+  cancelReservationFunctionDeclaration,
 ];
 
 // ── Handlers: recebem os args do Gemini e executam operações na BD ─────────────
@@ -157,6 +169,28 @@ const FUNCTION_HANDLERS = {
     }),
   create_notification: async (args) => createNotification(args),
   create_log: async (args) => createLog(args),
+
+  get_reservation: async (args) => {
+    if (args.reservation_id) return getReservationById(args.reservation_id);
+    if (args.customer_id)    return getActiveReservationByCustomerId(args.customer_id);
+    if (args.table_id)       return getReservationsByTableId(args.table_id);
+    return null;
+  },
+
+  create_reservation: async (args) => createReservation(args),
+
+  cancel_reservation: async (args) => {
+    const reservation = await getReservationById(args.reservation_id);
+    if (!reservation) return { error: `Reserva ${args.reservation_id} não encontrada.` };
+
+    await cancelReservation(args.reservation_id);
+
+    if (reservation.table_id) {
+      await updateTableStatus(reservation.table_id, "Available");
+    }
+
+    return { success: true, reservation_id: args.reservation_id, table_freed: reservation.table_id ?? null };
+  },
 };
 
 // ── SmartBistroChatProcessor ───────────────────────────────────────────────────
@@ -203,7 +237,7 @@ export async function processChatStream(
   const processor = getOrCreateSession(String(conversationId));
   try {
     const result = await processor.chat(message, onChunk);
-    if (onDone) onDone(result.message || "");
+    if (onDone) onDone(result.message || "", result.functionResults ?? []);
   } catch (err) {
     // Classifica o erro bruto do Gemini numa estrutura tipada e com mensagem
     // amigável antes de propagar para o controller via onError

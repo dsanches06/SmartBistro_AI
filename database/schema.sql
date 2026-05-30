@@ -63,8 +63,24 @@ CREATE TABLE notification (
 CREATE TABLE tables (
     id INT AUTO_INCREMENT PRIMARY KEY,
     table_number VARCHAR(50) NOT NULL UNIQUE,
-    capacity INT DEFAULT 4, 
+    capacity INT DEFAULT 4,
     status ENUM('Available', 'Occupied', 'Reserved') DEFAULT 'Available'
+);
+
+-- Reservas
+CREATE TABLE reservations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NULL,
+    table_id INT NULL,
+    reservation_date DATETIME NOT NULL,
+    party_size INT DEFAULT 1,
+    status ENUM('Pending', 'Confirmed', 'Cancelled', 'Completed') DEFAULT 'Pending',
+    phone VARCHAR(20) DEFAULT NULL,
+    notes TEXT DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL,
+    FOREIGN KEY (table_id) REFERENCES tables(id) ON DELETE SET NULL
 );
 
 /* =========================================================================
@@ -387,3 +403,179 @@ INSERT INTO recipe_items (item_id, ingredient_id, required_quantity) VALUES
 (14, 23, 0.50), -- Craft Beer           0.50 L
 (15, 24, 0.15), -- Red Wine             0.15 L
 (16, 21, 0.50); -- Sparkling Water      0.50 L
+
+-- =========================================================================
+-- 5. NOVOS INGREDIENTES PARA ITENS ADICIONAIS DO MENU
+-- =========================================================================
+
+INSERT INTO ingredients (name, measurement_unit) VALUES
+('Beef Steak',       'kg'),      -- id 25
+('Rice',             'kg'),      -- id 26
+('Seafood Mix',      'kg'),      -- id 27
+('Pizza Dough',      'units'),   -- id 28
+('Tomato Sauce',     'kg'),      -- id 29
+('Cucumber',         'kg'),      -- id 30
+('Cod Fish',         'kg'),      -- id 31
+('Potatoes',         'kg'),      -- id 32
+('Coffee Beans',     'kg'),      -- id 33
+('Mixed Vegetables', 'kg'),      -- id 34
+('Coca-Cola',        'L'),       -- id 35
+('Sumol',            'L');       -- id 36
+
+INSERT INTO stock (ingredient_id, available_quantity, unit_cost) VALUES
+(25, 12.00, 14.0000),  -- Beef Steak
+(26, 20.00,  0.8000),  -- Rice
+(27,  8.00, 10.0000),  -- Seafood Mix
+(28, 30.00,  0.5000),  -- Pizza Dough
+(29, 10.00,  1.5000),  -- Tomato Sauce
+(30, 10.00,  1.0000),  -- Cucumber
+(31, 10.00, 12.0000),  -- Cod Fish
+(32, 15.00,  0.6000),  -- Potatoes
+(33,  5.00, 15.0000),  -- Coffee Beans
+(34, 10.00,  2.0000),  -- Mixed Vegetables
+(35, 40.00,  0.8000),  -- Coca-Cola
+(36, 30.00,  0.7000);  -- Sumol
+
+-- =========================================================================
+-- 6. NOVOS ITENS DO MENU
+-- =========================================================================
+
+INSERT INTO items (name, category, price) VALUES
+('Bife à Casa',       'Main Course', 16.00),  -- id 17
+('Arroz de Marisco',  'Main Course', 19.50),  -- id 18
+('Batatas Fritas',    'Appetizer',    4.00),  -- id 19
+('Pizza Margherita',  'Main Course', 14.50),  -- id 20
+('Bacalhau à Brás',   'Main Course', 17.00),  -- id 21
+('Salada Mista',      'Appetizer',    6.00),  -- id 22
+('Frango Assado',     'Main Course', 14.50),  -- id 23
+('Legumes Salteados', 'Appetizer',    7.50),  -- id 24
+('Coca-Cola',         'Beverage',     2.50),  -- id 25
+('Sumol',             'Beverage',     2.00),  -- id 26
+('Café',              'Beverage',     1.50),  -- id 27
+('Pão',               'Appetizer',    2.50);  -- id 28
+
+INSERT INTO recipe_items (item_id, ingredient_id, required_quantity) VALUES
+-- Bife à Casa (id 17)
+(17, 25, 0.25), (17, 18, 0.15),
+-- Arroz de Marisco (id 18)
+(18, 27, 0.20), (18, 26, 0.15), (18, 19, 0.02),
+-- Batatas Fritas (id 19)
+(19, 18, 0.20), (19, 19, 0.02),
+-- Pizza Margherita (id 20)
+(20, 28, 1.00), (20, 29, 0.10), (20, 10, 0.12),
+-- Bacalhau à Brás (id 21)
+(21, 31, 0.20), (21, 32, 0.15), (21, 14, 2.00), (21, 19, 0.02),
+-- Salada Mista (id 22)
+(22,  6, 0.12), (22,  7, 0.06), (22, 30, 0.05),
+-- Frango Assado (id 23)
+(23,  4, 0.30), (23,  8, 0.01), (23, 19, 0.02),
+-- Legumes Salteados (id 24)
+(24, 34, 0.20), (24, 19, 0.02),
+-- Coca-Cola (id 25)
+(25, 35, 0.33),
+-- Sumol (id 26)
+(26, 36, 0.33),
+-- Café (id 27)
+(27, 33, 0.01),
+-- Pão (id 28)
+(28, 17, 1.00);
+
+-- =========================================================================
+-- 7. NOVOS CLIENTES (NOMES VISÍVEIS NA IMAGEM DO KDS)
+-- =========================================================================
+
+INSERT INTO customers (id, name, email, phone, gender) VALUES
+(11, 'Ana Pereira',   'ana.pereira@dev.com',  '555-0111', 'Female'),
+(12, 'Carlos Silva',  'carlos@dev.com',        '555-0112', 'Male'),
+(13, 'Manuel Santos', 'manuel@dev.com',        '555-0113', 'Male'),
+(14, 'Mariana Costa', 'mariana@dev.com',       '555-0114', 'Female'),
+(15, 'Pedro Almeida', 'pedro@dev.com',         '555-0115', 'Male'),
+(16, 'Joana Martins', 'joana.martins@dev.com', '555-0116', 'Female');
+
+-- =========================================================================
+-- 8. RESERVAS
+-- =========================================================================
+
+INSERT INTO reservations (customer_id, table_id, reservation_date, party_size, status, phone, notes) VALUES
+(11, 11, '2026-05-30 19:00:00', 2, 'Confirmed', '555-0111', NULL),
+(12,  5, '2026-05-30 20:00:00', 4, 'Confirmed', '555-0112', NULL),
+(14, 14, '2026-05-30 20:30:00', 5, 'Confirmed', '555-0114', 'Sem glúten'),
+(15,  2, '2026-05-31 12:30:00', 2, 'Pending',   '555-0115', NULL),
+(16,  9, '2026-05-31 13:00:00', 1, 'Pending',   '555-0116', 'Mesa na esplanada'),
+( 1, 10, '2026-05-31 19:00:00', 8, 'Confirmed', '555-0108', 'Reunião de empresa'),
+( 2, 12, '2026-05-31 19:30:00', 3, 'Confirmed', '555-0101', NULL),
+( 3, 16, '2026-06-01 12:00:00', 2, 'Pending',   '555-0110', NULL),
+( 4,  7, '2026-06-01 20:00:00', 3, 'Pending',   '555-0102', NULL),
+( 5, 20, '2026-06-02 13:00:00', 9, 'Confirmed', '555-0109', 'Aniversário'),
+( 6, 19, '2026-06-02 19:00:00', 5, 'Confirmed', '555-0103', NULL),
+( 7,  3, '2026-05-28 19:00:00', 4, 'Completed', '555-0106', NULL),
+( 8, 15, '2026-05-29 20:00:00', 6, 'Completed', '555-0105', NULL),
+( 9,  4, '2026-05-29 19:00:00', 2, 'Completed', '555-0104', NULL),
+(10,  6, '2026-05-27 20:00:00', 5, 'Cancelled', '555-0107', 'Cancelado pelo cliente');
+
+-- =========================================================================
+-- 9. PEDIDOS KDS (AUTO_INCREMENT = 1023 para coincidir com a imagem)
+-- =========================================================================
+
+ALTER TABLE orders AUTO_INCREMENT = 1023;
+
+-- Inserção por ordem de ID: 1023 → 1035
+INSERT INTO orders (customer_id, table_id, service_type, allergy_restrictions, kitchen_sequence_json, order_status, created_at) VALUES
+-- #1023 · Joana Martins · Mesa 9 · A CAMINHO
+(16,  9, 'Table',    NULL, '["Grilled Salmon","Legumes Salteados","Sparkling Water"]',                        'Delivered',      '2026-05-30 12:33:00'),
+-- #1024 · Pedro Almeida · Mesa 2 · A CAMINHO
+(15,  2, 'Table',    NULL, '["Frango Assado","Craft Beer"]',                                                 'Delivered',      '2026-05-30 12:36:00'),
+-- #1025 · Mariana Costa · Mesa 12 · PRONTO
+(14, 12, 'Table',    NULL, '["Bruschetta","Sumol","Esparguete Bolonhesa","Caesar Salad","Chocolate Mousse"]', 'Ready',          '2026-05-30 10:37:00'),
+-- #1026 · Manuel Santos · Takeaway · EM PREPARAÇÃO
+(13, NULL,'Takeaway',NULL, '["Hamburguer Gourmet","Batatas Fritas","Sparkling Water"]',                       'In Preparation', '2026-05-30 12:40:00'),
+-- #1027 · Carlos Silva · Mesa 3 · PRONTO
+(12,  3, 'Table',    NULL, '["Bruschetta","Sumol"]',                                                         'Ready',          '2026-05-30 12:42:00'),
+-- #1028 · Ana Pereira · Mesa 7 · NOVO
+(11,  7, 'Table',    NULL, '["Bife à Casa","Arroz de Marisco","Batatas Fritas","Coca-Cola"]',                 'Pending',        '2026-05-30 12:45:00'),
+-- #1029 · Carlos Silva · Mesa 3 · NOVO
+(12,  3, 'Table',    NULL, '["Pizza Margherita","Sumol"]',                                                   'Pending',        '2026-05-30 12:46:00'),
+-- #1030 · Mariana Costa · Mesa 12 · EM PREPARAÇÃO
+(14, 12, 'Table',    NULL, '["Bacalhau à Brás","Salada Mista","Red Wine Glass","Pão","Café"]',                'In Preparation', '2026-05-30 12:47:00'),
+-- #1031 · Ana Silva · Mesa 5 · NOVO
+( 2,  5, 'Table',    NULL, '["Caesar Salad","Grilled Salmon","Orange Juice"]',                               'Pending',        '2026-05-30 12:48:00'),
+-- #1032 · Hugo Neto · Mesa 17 · EM PREPARAÇÃO
+( 1, 17, 'Table',    NULL, '["Esparguete Bolonhesa","Tiramisu"]',                                            'In Preparation', '2026-05-30 12:49:00'),
+-- #1033 · Joana Luz · Mesa 22 · PRONTO
+( 3, 22, 'Table',    NULL, '["Chicken Wings","Coca-Cola"]',                                                  'Ready',          '2026-05-30 12:38:00'),
+-- #1034 · Bruno Costa · Mesa 21 · NOVO
+( 4, 21, 'Table',    NULL, '["Creme Soup","Vegetarian Pasta","Cheesecake"]',                                 'Pending',        '2026-05-30 12:50:00'),
+-- #1035 · Igor Lima · Mesa 23 · EM PREPARAÇÃO
+( 5, 23, 'Table',    NULL, '["Chicken Parmigiana","Craft Beer","Tiramisu"]',                                 'In Preparation', '2026-05-30 12:51:00');
+
+-- =========================================================================
+-- 10. ORDER ITEMS (itens de cada pedido)
+-- =========================================================================
+
+INSERT INTO order_items (order_id, item_id, quantity) VALUES
+-- #1023 · Grilled Salmon, Legumes Salteados, Sparkling Water
+(1023,  7, 1), (1023, 24, 1), (1023, 16, 1),
+-- #1024 · Frango Assado, Craft Beer
+(1024, 23, 1), (1024, 14, 1),
+-- #1025 · Bruschetta, Sumol, Esparguete Bolonhesa, Caesar Salad, Chocolate Mousse
+(1025,  3, 1), (1025, 26, 1), (1025,  1, 1), (1025,  4, 1), (1025, 10, 1),
+-- #1026 · Hamburguer Gourmet, Batatas Fritas, Sparkling Water
+(1026,  2, 1), (1026, 19, 1), (1026, 16, 1),
+-- #1027 · Bruschetta, Sumol
+(1027,  3, 1), (1027, 26, 1),
+-- #1028 · Bife à Casa, Arroz de Marisco, Batatas Fritas, Coca-Cola
+(1028, 17, 1), (1028, 18, 1), (1028, 19, 1), (1028, 25, 1),
+-- #1029 · Pizza Margherita, Sumol
+(1029, 20, 1), (1029, 26, 1),
+-- #1030 · Bacalhau à Brás, Salada Mista, Red Wine Glass, Pão, Café
+(1030, 21, 1), (1030, 22, 1), (1030, 15, 1), (1030, 28, 1), (1030, 27, 1),
+-- #1031 · Caesar Salad, Grilled Salmon, Orange Juice
+(1031,  4, 1), (1031,  7, 1), (1031, 13, 1),
+-- #1032 · Esparguete Bolonhesa, Tiramisu
+(1032,  1, 1), (1032, 11, 1),
+-- #1033 · Chicken Wings, Coca-Cola
+(1033,  5, 1), (1033, 25, 1),
+-- #1034 · Creme Soup, Vegetarian Pasta, Cheesecake
+(1034,  6, 1), (1034,  9, 1), (1034, 12, 1),
+-- #1035 · Chicken Parmigiana, Craft Beer, Tiramisu
+(1035,  8, 1), (1035, 14, 1), (1035, 11, 1);

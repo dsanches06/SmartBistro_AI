@@ -20,9 +20,36 @@ export const getTableById = async (id) => {
   return r[0] ? mapTableDTOResponse(r[0]) : null;
 };
 
+export const getTableReservationById = async (id) => {
+  const [rows] = await db.query(
+    `SELECT r.id, r.reservation_date, r.party_size, r.status, r.phone, r.notes,
+            c.name AS customer_name
+     FROM reservations r
+     LEFT JOIN customers c ON c.id = r.customer_id
+     WHERE r.table_id = ? AND r.status IN ('Pending', 'Confirmed')
+     ORDER BY r.reservation_date ASC
+     LIMIT 1`,
+    [id],
+  );
+  return rows[0] ?? null;
+};
+
 export const getTableDetailsById = async (id) => {
   const [tableRows] = await db.query("SELECT * FROM tables WHERE id = ?", [id]);
   if (!tableRows[0]) return null;
+
+  const table = mapTableDTOResponse(tableRows[0]);
+
+  const [reservationRows] = await db.query(
+    `SELECT r.id, r.reservation_date, r.party_size, r.status, r.phone, r.notes,
+            c.name AS customer_name
+     FROM reservations r
+     LEFT JOIN customers c ON c.id = r.customer_id
+     WHERE r.table_id = ? AND r.status IN ('Pending', 'Confirmed')
+     ORDER BY r.reservation_date ASC
+     LIMIT 1`,
+    [id],
+  );
 
   const [orderRows] = await db.query(
     `SELECT o.*, c.name AS customer_name
@@ -34,12 +61,20 @@ export const getTableDetailsById = async (id) => {
     [id],
   );
 
-  const table = mapTableDTOResponse(tableRows[0]);
+  const activeReservation = reservationRows[0]
+    ? {
+        id: reservationRows[0].id,
+        customer_name: reservationRows[0].customer_name ?? "Cliente desconhecido",
+        reservation_date: reservationRows[0].reservation_date,
+        party_size: reservationRows[0].party_size,
+        status: reservationRows[0].status,
+        phone: reservationRows[0].phone ?? null,
+        notes: reservationRows[0].notes ?? null,
+      }
+    : null;
+
   if (!orderRows[0]) {
-    return {
-      ...table,
-      activeOrder: null,
-    };
+    return { ...table, activeOrder: null, activeReservation };
   }
 
   const order = orderRows[0];
@@ -55,6 +90,7 @@ export const getTableDetailsById = async (id) => {
 
   return {
     ...table,
+    activeReservation,
     activeOrder: {
       id: order.id,
       order_ref: `#${order.id}`,
