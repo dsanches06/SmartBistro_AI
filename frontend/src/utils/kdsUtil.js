@@ -8,10 +8,10 @@ export const KDS_CATEGORIES = [
 ];
 
 export const KDS_STATUS_COLUMNS = [
-  { status: "Pending", title: "Novos", accent: "bg-[#fef2f2] text-[#991b1b]" },
-  { status: "In Preparation", title: "Em preparação", accent: "bg-[#fffbeb] text-[#92400e]" },
-  { status: "Ready", title: "Prontos", accent: "bg-[#ecfdf5] text-[#166534]" },
-  { status: "Delivered", title: "A caminho", accent: "bg-[#eff6ff] text-[#1d4ed8]" },
+  { status: "Pending",        title: "Novos",         accent: "bg-[#fef2f2] text-[#991b1b]", bg: "#fef2f2", bgDark: "rgba(239,68,68,0.10)",   cardBorder: "#ef4444" },
+  { status: "In Preparation", title: "Em preparação", accent: "bg-[#fffbeb] text-[#92400e]", bg: "#fffbeb", bgDark: "rgba(245,158,11,0.10)",  cardBorder: "#f59e0b" },
+  { status: "Ready",          title: "Prontos",        accent: "bg-[#ecfdf5] text-[#166534]", bg: "#ecfdf5", bgDark: "rgba(34,197,94,0.10)",   cardBorder: "#22c55e" },
+  { status: "Delivered",      title: "Entregue",       accent: "bg-[#eff6ff] text-[#1d4ed8]", bg: "#eff6ff", bgDark: "rgba(59,130,246,0.10)",  cardBorder: "#3b82f6" },
 ];
 
 export function normalizeCategory(value) {

@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router";
 import { ThemeToggle } from "./ThemeToggle";
+import { NotificationButton } from "./NotificationButton.jsx";
 import { useTheme } from "../../context/ThemeContext";
 
 const navLinks = [
@@ -79,6 +80,7 @@ export function Header() {
 
         {/* Controls */}
         <div className="flex items-center gap-1 sm:gap-2">
+          <NotificationButton />
           <ThemeToggle />
 
           {/* Hamburger (mobile) */}

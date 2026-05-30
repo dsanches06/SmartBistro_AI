@@ -9,10 +9,12 @@ export default function MainLayout({ onBottomNavChange, bottomNavOpen, isMobile 
 
       {/* main: top padding = header height; bottom padding = bottom nav height on mobile */}
       <main
-        className="flex-1 min-h-0 overflow-auto pt-[56px] md:pt-[64px] pb-[calc(var(--safe-bottom)+3.25rem)] md:pb-0"
+        className="flex-1 min-h-0 overflow-auto pt-[56px] md:pt-[64px] md:pb-0"
         style={{
-          paddingBottom: isMobile && bottomNavOpen
-            ? `calc(${NAV_OPEN_H} + 1.25rem)`
+          paddingBottom: isMobile
+            ? bottomNavOpen
+              ? `calc(${NAV_OPEN_H} + 1.25rem)`
+              : `calc(var(--safe-bottom) + ${NAV_HANDLE_H})`
             : undefined,
         }}
       >

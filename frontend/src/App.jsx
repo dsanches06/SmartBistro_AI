@@ -69,7 +69,7 @@ function AppContent() {
             bottom: isMobile
               ? bottomNavOpen
                 ? `calc(${NAV_OPEN_H} + 1rem)`
-                : `calc(${NAV_HANDLE_H} + 1rem)`
+                : '0.75rem'
               : '1rem',
           }}
           aria-label="Abrir chat IA"

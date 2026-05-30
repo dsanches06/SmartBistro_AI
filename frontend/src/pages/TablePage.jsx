@@ -136,24 +136,28 @@ export default function TablePage() {
           label="Total Mesas"
           value={totals.total}
           icon="fa-solid fa-table-cells"
+          borderColor="#3b82f6"
           className="bg-surface"
         />
         <StatCard
           label="Ocupadas"
           value={totals.ocupada}
           icon="fa-solid fa-chair"
+          borderColor="#f59e0b"
           className="bg-surface"
         />
         <StatCard
           label="Livres"
           value={totals.livre}
           icon="fa-solid fa-check-circle"
+          borderColor="#22c55e"
           className="bg-surface"
         />
         <StatCard
           label="Reservadas"
           value={totals.reservada}
           icon="fa-solid fa-calendar-check"
+          borderColor="#8b5cf6"
           className="bg-surface"
         />
       </div>

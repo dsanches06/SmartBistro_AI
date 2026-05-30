@@ -1,42 +1,92 @@
 import { useEffect, useMemo, useState } from "react";
 import { PageSection } from "@/components";
-import { itemService, orderItemService, orderService } from "@/services";
-import {
-  KDS_CATEGORIES,
-  KDS_STATUS_COLUMNS,
-  normalizeCategory,
-  mapDisplayStatus,
-  formatTime,
-} from "@/utils";
+import { orderService } from "@/services";
+import { KDS_STATUS_COLUMNS, mapDisplayStatus, formatTime } from "@/utils";
+import { useTheme } from "@/context/ThemeContext";
 
+const STATUS_ICON = {
+  Pending:          "🆕",
+  "In Preparation": "🔄",
+  Ready:            "✅",
+  Delivered:        "🚀",
+};
+
+/* ── Order card ── */
+function OrderCard({ order, cardBorder }) {
+  const target = order.table_id ? `Mesa ${order.table_id}` : "Takeaway";
+
+  return (
+    <div
+      style={{
+        backgroundColor: "var(--surface-2)",
+        borderLeft: `4px solid ${cardBorder}`,
+        borderRadius: "0.5rem",
+        padding: "10px 12px",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+        transition: "transform 0.15s, box-shadow 0.15s",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "translateY(-2px)";
+        e.currentTarget.style.boxShadow = "0 4px 10px rgba(0,0,0,0.12)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "none";
+        e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.08)";
+      }}
+    >
+      {/* ID + Mesa */}
+      <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 2 }}>
+        #{order.id} · {target}
+      </p>
+
+      {/* Nome do cliente */}
+      <p style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", marginBottom: 8 }}>
+        Cliente {order.customer_id ?? "—"}
+      </p>
+
+      {/* Itens */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: 8 }}>
+        {order.kitchenItems.slice(0, 4).map((name, i) => (
+          <span key={i} style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+            1x {name}
+          </span>
+        ))}
+        {order.kitchenItems.length > 4 && (
+          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+            +{order.kitchenItems.length - 4} mais
+          </span>
+        )}
+      </div>
+
+      {/* Rodapé: status + hora */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: cardBorder }}>
+          {order.order_status}
+        </span>
+        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+          {formatTime(order.created_at)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/* ── KDS Page ── */
 export default function KdsPage() {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
   const [orders, setOrders] = useState([]);
-  const [orderItems, setOrderItems] = useState([]);
-  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState("all");
 
   useEffect(() => {
     async function loadData() {
       setLoading(true);
       setError(null);
-
       try {
-        const [ordersResponse, orderItemsResponse, itemsResponse] =
-          await Promise.all([
-            orderService.getAll(),
-            orderItemService.getAll(),
-            itemService.getAll(),
-          ]);
-
-        setOrders(
-          Array.isArray(ordersResponse.data) ? ordersResponse.data : [],
-        );
-        setOrderItems(
-          Array.isArray(orderItemsResponse.data) ? orderItemsResponse.data : [],
-        );
-        setItems(Array.isArray(itemsResponse.data) ? itemsResponse.data : []);
+        const res = await orderService.getAll();
+        setOrders(Array.isArray(res) ? res : []);
       } catch (err) {
         console.error(err);
         setError("Não foi possível carregar os pedidos. Tente novamente.");
@@ -44,193 +94,41 @@ export default function KdsPage() {
         setLoading(false);
       }
     }
-
     loadData();
   }, []);
 
-  const itemsMap = useMemo(
-    () =>
-      items.reduce((acc, item) => {
-        acc[item.id] = item;
-        return acc;
-      }, {}),
-    [items],
+  const ordersWithDetails = useMemo(() =>
+    orders
+      .filter((o) => o.order_status && o.order_status !== "Cancelled")
+      .map((o) => {
+        const kitchenItems = Array.isArray(o.kitchen_sequence_json)
+          ? o.kitchen_sequence_json
+          : (() => {
+              try { return JSON.parse(o.kitchen_sequence_json); }
+              catch { return []; }
+            })();
+        return { ...o, kitchenItems, displayStatus: mapDisplayStatus(o.order_status) };
+      }),
+    [orders],
   );
-
-  const ordersWithDetails = useMemo(() => {
-    const orderItemsByOrder = orderItems.reduce((acc, item) => {
-      if (!acc[item.order_id]) acc[item.order_id] = [];
-      acc[item.order_id].push(item);
-      return acc;
-    }, {});
-
-    return orders
-      .filter(
-        (order) => order.order_status && order.order_status !== "Cancelled",
-      )
-      .map((order) => {
-        const orderItemLines = (orderItemsByOrder[order.id] || []).map(
-          (orderItem) => {
-            const item = itemsMap[orderItem.item_id];
-            return {
-              ...orderItem,
-              item_name: item?.name || `Item ${orderItem.item_id}`,
-              category: normalizeCategory(item?.category),
-            };
-          },
-        );
-
-        const kitchenItems = Array.isArray(order.kitchen_sequence_json)
-          ? order.kitchen_sequence_json
-          : typeof order.kitchen_sequence_json === "string"
-            ? (() => {
-                try {
-                  return JSON.parse(order.kitchen_sequence_json);
-                } catch {
-                  return [];
-                }
-              })()
-            : [];
-
-        return {
-          ...order,
-          kitchenItems,
-          orderItemLines,
-          categories: [...new Set(orderItemLines.map((line) => line.category))],
-          displayStatus: mapDisplayStatus(order.order_status),
-        };
-      });
-  }, [orders, orderItems, itemsMap]);
-
-  const categoryCounts = useMemo(() => {
-    const summary = KDS_CATEGORIES.reduce((acc, category) => {
-      acc[category.id] = category.id === "all" ? ordersWithDetails.length : 0;
-      return acc;
-    }, {});
-
-    ordersWithDetails.forEach((order) => {
-      order.categories.forEach((category) => {
-        if (summary[category] !== undefined) summary[category] += 1;
-      });
-    });
-
-    return summary;
-  }, [ordersWithDetails]);
-
-  const filteredOrders = useMemo(() => {
-    if (selectedCategory === "all") return ordersWithDetails;
-    return ordersWithDetails.filter((order) =>
-      order.categories.includes(selectedCategory),
-    );
-  }, [ordersWithDetails, selectedCategory]);
 
   const groupedOrders = useMemo(
     () =>
-      KDS_STATUS_COLUMNS.reduce((acc, column) => {
-        acc[column.status] = filteredOrders.filter(
-          (order) => order.displayStatus === column.status,
-        );
+      KDS_STATUS_COLUMNS.reduce((acc, col) => {
+        acc[col.status] = ordersWithDetails.filter((o) => o.displayStatus === col.status);
         return acc;
       }, {}),
-    [filteredOrders],
+    [ordersWithDetails],
   );
 
-  const renderOrderCard = (order) => {
-    const target = order.table_id ? `Mesa ${order.table_id}` : "Takeaway";
-    const itemsToShow =
-      order.orderItemLines.length > 0
-        ? order.orderItemLines
-        : order.kitchenItems.map((name, index) => ({
-            item_name: name,
-            category: "Unknown",
-          }));
-
-    return (
-      <div
-        key={order.id}
-        className="rounded-[24px] border border-surface bg-surface-2 p-4 shadow-sm"
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-sm text-[var(--text-secondary)]">
-              #{order.id} · {target}
-            </p>
-            <p className="mt-1 text-lg font-semibold text-[var(--text)]">
-              {order.customer_id
-                ? `Cliente ${order.customer_id}`
-                : "Cliente desconhecido"}
-            </p>
-          </div>
-          <span className="rounded-full bg-surface px-3 py-1 text-xs text-[var(--text-secondary)]">
-            {formatTime(order.created_at)}
-          </span>
-        </div>
-
-        <div className="mt-4 space-y-2">
-          {itemsToShow.slice(0, 4).map((line, index) => (
-            <div
-              key={`${order.id}-${index}`}
-              className="flex items-center justify-between gap-3 rounded-2xl bg-surface p-3 text-sm"
-            >
-              <span>
-                {line.quantity ? `${line.quantity}x ` : ""}
-                {line.item_name}
-              </span>
-              {line.category && line.category !== "Unknown" && (
-                <span className="rounded-full bg-[var(--surface)] px-2 py-0.5 text-[var(--text-secondary)]">
-                  {line.category}
-                </span>
-              )}
-            </div>
-          ))}
-          {itemsToShow.length > 4 && (
-            <p className="text-xs text-[var(--text-secondary)]">
-              +{itemsToShow.length - 4} item(s) adicionais
-            </p>
-          )}
-        </div>
-
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <span className="rounded-full bg-surface px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
-            {order.order_status}
-          </span>
-          <span className="text-xs text-[var(--text-secondary)]">
-            {order.service_type}
-          </span>
-        </div>
-      </div>
-    );
-  };
-
   return (
-    <PageSection
-      title="KDS"
-      description="Visão da cozinha e pedidos em produção"
-    >
+    <PageSection title="KDS" description="Visão da cozinha e pedidos em produção">
       <div className="rounded-[32px] bg-surface p-6 shadow-sm">
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-xl font-semibold">KDS — Cozinha</h1>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">
-              Pedidos e estado atual carregados direto da base de dados.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {KDS_CATEGORIES.map((category) => (
-              <button
-                key={category.id}
-                type="button"
-                onClick={() => setSelectedCategory(category.id)}
-                className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                  selectedCategory === category.id
-                    ? "border-[var(--primary)] bg-[var(--primary)] text-white"
-                    : "border-surface bg-surface-2 text-[var(--text-secondary)] hover:bg-surface"
-                }`}
-              >
-                {category.label} ({categoryCounts[category.id] ?? 0})
-              </button>
-            ))}
-          </div>
+        <div className="mb-6">
+          <h1 className="text-xl font-semibold">KDS — Cozinha</h1>
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+            Pedidos e estado atual carregados direto da base de dados.
+          </p>
         </div>
 
         {loading ? (
@@ -242,35 +140,81 @@ export default function KdsPage() {
             {error}
           </div>
         ) : (
-          <div className="grid gap-4 xl:grid-cols-4">
-            {KDS_STATUS_COLUMNS.slice(0, 4).map((column) => (
-              <div key={column.status} className="space-y-4">
-                <div className={`rounded-3xl border p-4 ${column.accent}`}>
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-semibold uppercase tracking-[0.2em]">
-                        {column.title}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, width: "100%" }}>
+            {KDS_STATUS_COLUMNS.map((col) => {
+              const colOrders = groupedOrders[col.status] || [];
+              const colBg = isDark ? col.bgDark : col.bg;
+              const labelColor = isDark ? "var(--text)" : "#374151";
+              const emptyColor = isDark ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.18)";
+
+              return (
+                <div
+                  key={col.status}
+                  style={{
+                    flex: "1 1 220px",
+                    minWidth: 220,
+                    borderRadius: 12,
+                    overflow: "hidden",
+                    border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                  }}
+                >
+                  {/* Cabeçalho da coluna */}
+                  <div
+                    style={{
+                      backgroundColor: colBg,
+                      padding: "10px 12px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      borderBottom: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)",
+                    }}
+                  >
+                    <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", color: labelColor }}>
+                      {STATUS_ICON[col.status]} {col.title}
+                    </span>
+                    <span
+                      style={{
+                        backgroundColor: col.cardBorder,
+                        color: "#fff",
+                        borderRadius: "50%",
+                        width: 22,
+                        height: 22,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {colOrders.length}
+                    </span>
+                  </div>
+
+                  {/* Corpo da coluna */}
+                  <div
+                    style={{
+                      backgroundColor: colBg,
+                      padding: 8,
+                      minHeight: 160,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                    }}
+                  >
+                    {colOrders.map((order) => (
+                      <OrderCard key={order.id} order={order} cardBorder={col.cardBorder} />
+                    ))}
+                    {colOrders.length === 0 && (
+                      <p style={{ textAlign: "center", color: emptyColor, fontSize: 12, paddingTop: 20 }}>
+                        —
                       </p>
-                      <p className="mt-2 text-4xl font-bold">
-                        {groupedOrders[column.status]?.length ?? 0}
-                      </p>
-                    </div>
-                    <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-white/90 text-lg font-bold text-[var(--text)]">
-                      {groupedOrders[column.status]?.length ?? 0}
-                    </div>
+                    )}
                   </div>
                 </div>
-
-                <div className="space-y-4">
-                  {(groupedOrders[column.status] || []).map(renderOrderCard)}
-                  {(groupedOrders[column.status] || []).length === 0 && (
-                    <div className="rounded-3xl border border-dashed border-surface bg-surface-2 p-6 text-center text-[var(--text-secondary)]">
-                      Sem pedidos neste estado.
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
