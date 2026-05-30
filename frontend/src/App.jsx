@@ -15,6 +15,7 @@ const FaturacaoPage      = lazy(() => import("@/pages/FaturacaoPage"));
 const RelatoriosPage     = lazy(() => import("@/pages/RelatoriosPage"));
 const ClientesPage       = lazy(() => import("@/pages/ClientesPage"));
 const ConfiguracoesPage  = lazy(() => import("@/pages/ConfiguracoesPage"));
+const MenuPage           = lazy(() => import("@/pages/MenuPage"));
 const LoginPage          = lazy(() => import("@/pages/LoginPage"));
 
 function PageLoader() {
@@ -55,6 +56,7 @@ function AppContent() {
             <Route path="relatorios"    element={<RelatoriosPage />} />
             <Route path="clientes"      element={<ClientesPage />} />
             <Route path="configuracoes" element={<ConfiguracoesPage />} />
+            <Route path="menu"          element={<MenuPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

@@ -98,6 +98,7 @@ export const getTableDetailsById = async (id) => {
       items: summaryRows[0]?.items ?? 0,
       total_amount: Number(summaryRows[0]?.total_amount ?? 0),
       status: order.order_status,
+      kitchen_sequence_json: order.kitchen_sequence_json ?? '[]',
     },
   };
 };

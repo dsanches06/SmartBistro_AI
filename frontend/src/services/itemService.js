@@ -6,6 +6,6 @@ export const itemService = {
   getById:       (id)         => api.get(`/items/${id}`),
   create:        (data)       => api.post('/items', data),
   update:        (id, data)   => api.put(`/items/${id}`, data),
-  toggleActive:  (id)         => api.patch(`/items/${id}/active`),
+  toggleActive:  (id, active) => api.patch(`/items/${id}/active`, { is_active: active }),
   remove:        (id)         => api.delete(`/items/${id}`),
 };

@@ -35,33 +35,34 @@ INSERT INTO customers (id, name, email, phone, gender) VALUES
 (16, 'Joana Martins',  'joana.martins@dev.com',    '555-0116', 'Female');
 
 -- =========================================================================
--- 3. MESAS
+-- 3. MESAS  (id = posição na lista, 1-based)
+-- Occupied → tem pedido activo  |  Reserved → reserva futura  |  Available → livre
 -- =========================================================================
 INSERT INTO tables (table_number, capacity, status) VALUES
-('T01',  2, 'Available'),
-('T02',  4, 'Available'),
-('T03',  4, 'Available'),
-('T04',  4, 'Available'),
-('T05',  6, 'Available'),
-('T06',  6, 'Occupied'),
-('T07',  8, 'Available'),
-('T08',  8, 'Available'),
-('T09',  2, 'Available'),
-('T10', 10, 'Available'),
-('T11',  2, 'Reserved'),
-('T12',  4, 'Available'),
-('T13',  4, 'Occupied'),
-('T14',  6, 'Reserved'),
-('T15',  8, 'Available'),
-('T16',  2, 'Reserved'),
-('T17',  4, 'Available'),
-('T18',  4, 'Available'),
-('T19',  6, 'Reserved'),
-('T20', 10, 'Available'),
-('T21',  4, 'Available'),
-('T22',  4, 'Available'),
-('T23',  6, 'Available'),
-('T24',  8, 'Available');
+('T01',  2, 'Available'),   -- id=1
+('T02',  4, 'Available'),   -- id=2
+('T03',  4, 'Occupied'),    -- id=3  pedidos #125, #127
+('T04',  4, 'Available'),   -- id=4
+('T05',  6, 'Occupied'),    -- id=5  pedido  #129
+('T06',  6, 'Occupied'),    -- id=6  pedido  #134
+('T07',  8, 'Occupied'),    -- id=7  pedido  #126
+('T08',  8, 'Available'),   -- id=8
+('T09',  2, 'Available'),   -- id=9
+('T10', 10, 'Available'),   -- id=10
+('T11',  2, 'Reserved'),    -- id=11 reserva esta noite
+('T12',  4, 'Occupied'),    -- id=12 pedidos #123, #128
+('T13',  4, 'Occupied'),    -- id=13 pedido  #135
+('T14',  6, 'Reserved'),    -- id=14 reserva esta noite
+('T15',  8, 'Available'),   -- id=15
+('T16',  2, 'Reserved'),    -- id=16 reserva futura
+('T17',  4, 'Occupied'),    -- id=17 pedido  #130
+('T18',  4, 'Available'),   -- id=18
+('T19',  6, 'Reserved'),    -- id=19 reserva futura
+('T20', 10, 'Available'),   -- id=20
+('T21',  4, 'Occupied'),    -- id=21 pedido  #132
+('T22',  4, 'Occupied'),    -- id=22 pedido  #131
+('T23',  6, 'Occupied'),    -- id=23 pedido  #133
+('T24',  8, 'Available');   -- id=24
 
 -- =========================================================================
 -- 4. INGREDIENTES + STOCK
@@ -175,85 +176,89 @@ INSERT INTO recipe_items (item_id, ingredient_id, required_quantity) VALUES
 
 -- =========================================================================
 -- 6. RESERVAS
+-- Reservas futuras só em mesas Available ou Reserved (nunca Occupied)
 -- =========================================================================
 INSERT INTO reservations (customer_id, table_id, reservation_date, party_size, status, phone, notes) VALUES
-(11, 11, '2026-05-30 19:00:00', 2, 'Confirmed', '555-0111', NULL),
-(12,  5, '2026-05-30 20:00:00', 4, 'Confirmed', '555-0112', NULL),
-(14, 14, '2026-05-30 20:30:00', 5, 'Confirmed', '555-0114', 'Sem glúten'),
-(15,  2, '2026-05-31 12:30:00', 2, 'Pending',   '555-0115', NULL),
-(16,  9, '2026-05-31 13:00:00', 1, 'Pending',   '555-0116', 'Mesa na esplanada'),
-( 1, 10, '2026-05-31 19:00:00', 8, 'Confirmed', '555-0108', 'Reunião de empresa'),
-( 2, 12, '2026-05-31 19:30:00', 3, 'Confirmed', '555-0101', NULL),
-( 3, 16, '2026-06-01 12:00:00', 2, 'Pending',   '555-0110', NULL),
-( 4,  7, '2026-06-01 20:00:00', 3, 'Pending',   '555-0102', NULL),
-( 5, 20, '2026-06-02 13:00:00', 9, 'Confirmed', '555-0109', 'Aniversário'),
-( 6, 19, '2026-06-02 19:00:00', 5, 'Confirmed', '555-0103', NULL),
-( 7,  3, '2026-05-28 19:00:00', 4, 'Completed', '555-0106', NULL),
-( 8, 15, '2026-05-29 20:00:00', 6, 'Completed', '555-0105', NULL),
-( 9,  4, '2026-05-29 19:00:00', 2, 'Completed', '555-0104', NULL),
-(10,  6, '2026-05-27 20:00:00', 5, 'Cancelled', '555-0107', 'Cancelado pelo cliente');
+(11, 11, '2026-05-30 19:00:00', 2, 'Confirmed', '555-0111', NULL),           -- T11 Reserved ✓
+(12,  4, '2026-05-30 20:00:00', 4, 'Confirmed', '555-0112', NULL),           -- T04 Available ✓ (was T05 Occupied)
+(14, 14, '2026-05-30 20:30:00', 5, 'Confirmed', '555-0114', 'Sem glúten'),   -- T14 Reserved ✓
+(15,  2, '2026-05-31 12:30:00', 2, 'Pending',   '555-0115', NULL),           -- T02 Available ✓
+(16,  9, '2026-05-31 13:00:00', 1, 'Pending',   '555-0116', 'Mesa na esplanada'), -- T09 Available ✓
+( 1, 10, '2026-05-31 19:00:00', 8, 'Confirmed', '555-0108', 'Reunião de empresa'), -- T10 Available ✓
+( 2, 18, '2026-05-31 19:30:00', 3, 'Confirmed', '555-0101', NULL),           -- T18 Available ✓ (was T12 Occupied)
+( 3, 16, '2026-06-01 12:00:00', 2, 'Pending',   '555-0110', NULL),           -- T16 Reserved ✓
+( 4, 15, '2026-06-01 20:00:00', 3, 'Pending',   '555-0102', NULL),           -- T15 Available ✓ (was T07 Occupied)
+( 5, 20, '2026-06-02 13:00:00', 9, 'Confirmed', '555-0109', 'Aniversário'), -- T20 Available ✓
+( 6, 19, '2026-06-02 19:00:00', 5, 'Confirmed', '555-0103', NULL),           -- T19 Reserved ✓
+( 7,  3, '2026-05-28 19:00:00', 4, 'Completed', '555-0106', NULL),           -- T03 histórico Completed ✓
+( 8, 15, '2026-05-29 20:00:00', 6, 'Completed', '555-0105', NULL),           -- T15 histórico Completed ✓
+( 9,  4, '2026-05-29 19:00:00', 2, 'Completed', '555-0104', NULL),           -- T04 histórico Completed ✓
+(10,  6, '2026-05-27 20:00:00', 5, 'Cancelled', '555-0107', 'Cancelado pelo cliente'); -- T06 histórico Cancelled ✓
 
 -- =========================================================================
--- 7. PEDIDOS (KDS) — AUTO_INCREMENT = 1023
+-- 7. PEDIDOS (KDS)
+-- Mapeamento: #1-#13 = pedidos existentes  |  #14-#15 = novos (T06, T13)
 -- =========================================================================
-ALTER TABLE orders AUTO_INCREMENT = 1023;
-
 INSERT INTO orders (customer_id, table_id, service_type, allergy_restrictions, kitchen_sequence_json, order_status, created_at) VALUES
-(16,  9, 'Table',    NULL, '["Grilled Salmon","Legumes Salteados","Sparkling Water"]',                        'Delivered',      '2026-05-30 12:33:00'),
-(15,  2, 'Table',    NULL, '["Frango Assado","Craft Beer"]',                                                 'Delivered',      '2026-05-30 12:36:00'),
-(14, 12, 'Table',    NULL, '["Bruschetta","Sumol","Esparguete Bolonhesa","Caesar Salad","Chocolate Mousse"]', 'Ready',          '2026-05-30 10:37:00'),
-(13, NULL,'Takeaway',NULL, '["Hamburguer Gourmet","Batatas Fritas","Sparkling Water"]',                       'In Preparation', '2026-05-30 12:40:00'),
-(12,  3, 'Table',    NULL, '["Bruschetta","Sumol"]',                                                         'Ready',          '2026-05-30 12:42:00'),
-(11,  7, 'Table',    NULL, '["Bife à Casa","Arroz de Marisco","Batatas Fritas","Coca-Cola"]',                 'Pending',        '2026-05-30 12:45:00'),
-(12,  3, 'Table',    NULL, '["Pizza Margherita","Sumol"]',                                                   'Pending',        '2026-05-30 12:46:00'),
-(14, 12, 'Table',    NULL, '["Bacalhau à Brás","Salada Mista","Red Wine Glass","Pão","Café"]',                'In Preparation', '2026-05-30 12:47:00'),
-( 2,  5, 'Table',    NULL, '["Caesar Salad","Grilled Salmon","Orange Juice"]',                               'Pending',        '2026-05-30 12:48:00'),
-( 1, 17, 'Table',    NULL, '["Esparguete Bolonhesa","Tiramisu"]',                                            'In Preparation', '2026-05-30 12:49:00'),
-( 3, 22, 'Table',    NULL, '["Chicken Wings","Coca-Cola"]',                                                  'Ready',          '2026-05-30 12:38:00'),
-( 4, 21, 'Table',    NULL, '["Creme Soup","Vegetarian Pasta","Cheesecake"]',                                 'Pending',        '2026-05-30 12:50:00'),
-( 5, 23, 'Table',    NULL, '["Chicken Parmigiana","Craft Beer","Tiramisu"]',                                 'In Preparation', '2026-05-30 12:51:00');
+(16,  9, 'Table',    NULL, '["Grilled Salmon","Legumes Salteados","Sparkling Water"]',                        'Delivered',      '2026-05-30 12:33:00'), -- #1  T09
+(15,  2, 'Table',    NULL, '["Frango Assado","Craft Beer"]',                                                 'Delivered',      '2026-05-30 12:36:00'), -- #2  T02
+(14, 12, 'Table',    NULL, '["Bruschetta","Sumol","Esparguete Bolonhesa","Caesar Salad","Chocolate Mousse"]', 'Ready',          '2026-05-30 10:37:00'), -- #3  T12
+(13, NULL,'Takeaway',NULL, '["Hamburguer Gourmet","Batatas Fritas","Sparkling Water"]',                       'In Preparation', '2026-05-30 12:40:00'), -- #4  Takeaway
+(12,  3, 'Table',    NULL, '["Bruschetta","Sumol"]',                                                         'Ready',          '2026-05-30 12:42:00'), -- #5  T03
+(11,  7, 'Table',    NULL, '["Bife à Casa","Arroz de Marisco","Batatas Fritas","Coca-Cola"]',                 'Pending',        '2026-05-30 12:45:00'), -- #6  T07
+(12,  3, 'Table',    NULL, '["Pizza Margherita","Sumol"]',                                                   'Pending',        '2026-05-30 12:46:00'), -- #7  T03
+(14, 12, 'Table',    NULL, '["Bacalhau à Brás","Salada Mista","Red Wine Glass","Pão","Café"]',                'In Preparation', '2026-05-30 12:47:00'), -- #8  T12
+( 2,  5, 'Table',    NULL, '["Caesar Salad","Grilled Salmon","Orange Juice"]',                               'Pending',        '2026-05-30 12:48:00'), -- #9  T05
+( 1, 17, 'Table',    NULL, '["Esparguete Bolonhesa","Tiramisu"]',                                            'In Preparation', '2026-05-30 12:49:00'), -- #10 T17
+( 3, 22, 'Table',    NULL, '["Chicken Wings","Coca-Cola"]',                                                  'Ready',          '2026-05-30 12:38:00'), -- #11 T22
+( 4, 21, 'Table',    NULL, '["Creme Soup","Vegetarian Pasta","Cheesecake"]',                                 'Pending',        '2026-05-30 12:50:00'), -- #12 T21
+( 5, 23, 'Table',    NULL, '["Chicken Parmigiana","Craft Beer","Tiramisu"]',                                 'In Preparation', '2026-05-30 12:51:00'), -- #13 T23
+( 7,  6, 'Table',    NULL, '["Bife à Casa","Red Wine Glass"]',                                               'Pending',        '2026-05-30 12:52:00'), -- #14 T06 ←
+( 8, 13, 'Table',    NULL, '["Caesar Salad","Grilled Salmon","Craft Beer"]',                                 'In Preparation', '2026-05-30 12:53:00'); -- #15 T13 ←
 
 -- =========================================================================
--- 8. ORDER ITEMS
+-- 8. ORDER ITEMS  (order_id começa em 1)
 -- =========================================================================
 INSERT INTO order_items (order_id, item_id, quantity) VALUES
-(1023,  7, 1), (1023, 24, 1), (1023, 16, 1),
-(1024, 23, 1), (1024, 14, 1),
-(1025,  3, 1), (1025, 26, 1), (1025,  1, 1), (1025,  4, 1), (1025, 10, 1),
-(1026,  2, 1), (1026, 19, 1), (1026, 16, 1),
-(1027,  3, 1), (1027, 26, 1),
-(1028, 17, 1), (1028, 18, 1), (1028, 19, 1), (1028, 25, 1),
-(1029, 20, 1), (1029, 26, 1),
-(1030, 21, 1), (1030, 22, 1), (1030, 15, 1), (1030, 28, 1), (1030, 27, 1),
-(1031,  4, 1), (1031,  7, 1), (1031, 13, 1),
-(1032,  1, 1), (1032, 11, 1),
-(1033,  5, 1), (1033, 25, 1),
-(1034,  6, 1), (1034,  9, 1), (1034, 12, 1),
-(1035,  8, 1), (1035, 14, 1), (1035, 11, 1);
+( 1,  7, 1), ( 1, 24, 1), ( 1, 16, 1),                              -- #1:  Grilled Salmon, Legumes Salteados, Sparkling Water
+( 2, 23, 1), ( 2, 14, 1),                                            -- #2:  Frango Assado, Craft Beer
+( 3,  3, 1), ( 3, 26, 1), ( 3,  1, 1), ( 3,  4, 1), ( 3, 10, 1),   -- #3:  Bruschetta, Sumol, Esp.Bolonhesa, Caesar Salad, Choc.Mousse
+( 4,  2, 1), ( 4, 19, 1), ( 4, 16, 1),                              -- #4:  Hamburguer, Batatas Fritas, Sparkling Water
+( 5,  3, 1), ( 5, 26, 1),                                            -- #5:  Bruschetta, Sumol
+( 6, 17, 1), ( 6, 18, 1), ( 6, 19, 1), ( 6, 25, 1),                 -- #6:  Bife à Casa, Arroz de Marisco, Batatas Fritas, Coca-Cola
+( 7, 20, 1), ( 7, 26, 1),                                            -- #7:  Pizza Margherita, Sumol
+( 8, 21, 1), ( 8, 22, 1), ( 8, 15, 1), ( 8, 28, 1), ( 8, 27, 1),   -- #8:  Bacalhau à Brás, Salada Mista, Red Wine, Pão, Café
+( 9,  4, 1), ( 9,  7, 1), ( 9, 13, 1),                              -- #9:  Caesar Salad, Grilled Salmon, Orange Juice
+(10,  1, 1), (10, 11, 1),                                            -- #10: Esparguete Bolonhesa, Tiramisu
+(11,  5, 1), (11, 25, 1),                                            -- #11: Chicken Wings, Coca-Cola
+(12,  6, 1), (12,  9, 1), (12, 12, 1),                              -- #12: Creme Soup, Vegetarian Pasta, Cheesecake
+(13,  8, 1), (13, 14, 1), (13, 11, 1),                              -- #13: Chicken Parmigiana, Craft Beer, Tiramisu
+(14, 17, 1), (14, 15, 1),                                            -- #14: Bife à Casa, Red Wine Glass  (T06)
+(15,  4, 1), (15,  7, 1), (15, 14, 1);                              -- #15: Caesar Salad, Grilled Salmon, Craft Beer  (T13)
 
 -- =========================================================================
 -- 9. FATURAS (orders Delivered + Ready)
 -- IVA 13% (taxa intermédia restauração Portugal)
 -- =========================================================================
--- #1023 · subtotal=28.00 · tax=3.64 · total=31.64 · profit=27.48
+-- #1 · Grilled Salmon+Legumes+Água · subtotal=28.00 · tax=3.64 · total=31.64
 INSERT INTO invoices (order_id, subtotal_amount, tax_amount, total_amount, profit_margin, issued_at)
-VALUES (1023, 28.00, 3.64, 31.64, 27.48, '2026-05-30 12:54:00');
+VALUES (1, 28.00, 3.64, 31.64, 27.48, '2026-05-30 12:54:00');
 
--- #1024 · subtotal=19.00 · tax=2.47 · total=21.47 · profit=18.71
+-- #2 · Frango Assado+Craft Beer · subtotal=19.00 · tax=2.47 · total=21.47
 INSERT INTO invoices (order_id, subtotal_amount, tax_amount, total_amount, profit_margin, issued_at)
-VALUES (1024, 19.00, 2.47, 21.47, 18.71, '2026-05-30 12:57:00');
+VALUES (2, 19.00, 2.47, 21.47, 18.71, '2026-05-30 12:57:00');
 
--- #1025 · subtotal=37.00 · tax=4.81 · total=41.81 · profit=36.40
+-- #3 · Bruschetta+Sumol+EspBol+Caesar+ChoMousse · subtotal=37.00 · tax=4.81 · total=41.81
 INSERT INTO invoices (order_id, subtotal_amount, tax_amount, total_amount, profit_margin, issued_at)
-VALUES (1025, 37.00, 4.81, 41.81, 36.40, '2026-05-30 13:02:00');
+VALUES (3, 37.00, 4.81, 41.81, 36.40, '2026-05-30 13:02:00');
 
--- #1027 · subtotal=9.50 · tax=1.24 · total=10.74 · profit=9.68
+-- #5 · Bruschetta+Sumol · subtotal=9.50 · tax=1.24 · total=10.74
 INSERT INTO invoices (order_id, subtotal_amount, tax_amount, total_amount, profit_margin, issued_at)
-VALUES (1027, 9.50, 1.24, 10.74, 9.68, '2026-05-30 13:05:00');
+VALUES (5, 9.50, 1.24, 10.74, 9.68, '2026-05-30 13:05:00');
 
--- #1033 · subtotal=13.50 · tax=1.76 · total=15.26 · profit=13.03
+-- #11 · Chicken Wings+Coca-Cola · subtotal=13.50 · tax=1.76 · total=15.26
 INSERT INTO invoices (order_id, subtotal_amount, tax_amount, total_amount, profit_margin, issued_at)
-VALUES (1033, 13.50, 1.76, 15.26, 13.03, '2026-05-30 13:08:00');
+VALUES (11, 13.50, 1.76, 15.26, 13.03, '2026-05-30 13:08:00');
 
 -- =========================================================================
 -- 10. PAGAMENTOS

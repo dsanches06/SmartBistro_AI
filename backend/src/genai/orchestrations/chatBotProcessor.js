@@ -92,8 +92,8 @@ const ALL_DECLARATIONS = [
 const FUNCTION_HANDLERS = {
   get_customer: async (args) => {
     if (args.customer_id) return getCustomerById(args.customer_id);
-    if (args.email || args.phone) {
-      const term = args.email || args.phone;
+    const term = args.name || args.email || args.phone;
+    if (term) {
       const list = await getAllCustomers(term);
       return list[0] ?? null;
     }
@@ -102,11 +102,18 @@ const FUNCTION_HANDLERS = {
   create_customer: async (args) => createCustomer(args),
   get_table: async (args) => {
     if (args.table_id) return getTableById(args.table_id);
+    const tables = await getAllTables();
     if (args.table_number) {
-      const tables = await getAllTables();
-      return tables.find((t) => Number(t.table_number) === Number(args.table_number)) ?? null;
+      const num = String(args.table_number).replace(/^[Tt]/, '');
+      return tables.find((t) => String(t.table_number).replace(/^[Tt]/, '') === num) ?? null;
     }
-    return null;
+    // Pesquisa por status e/ou capacidade mínima
+    let filtered = tables;
+    if (args.status)       filtered = filtered.filter(t => t.status === args.status);
+    if (args.min_capacity) filtered = filtered.filter(t => t.capacity >= Number(args.min_capacity));
+    // Ordena por capacidade crescente para atribuir a mesa mais adequada
+    filtered.sort((a, b) => a.capacity - b.capacity);
+    return filtered[0] ?? null;
   },
   update_table_status: async (args) =>
     updateTableStatus(args.table_id, args.status),

@@ -161,6 +161,13 @@ function OrderCard({ order, cardBorder, now, firstSeenAt }) {
   );
 }
 
+// ── Stores de nível de módulo — persistem enquanto a app estiver aberta ──────
+// Sobrevivem a navegação (desmount/remount do componente), nunca são resetados
+const _firstSeenAt      = new Map();  // orderId → timestamp de 1ª aparição no KDS
+const _hiddenFromKanban = new Set();  // IDs removidos do kanban (não da DB)
+const _statusOverrides  = new Map();  // orderId → status local mais avançado
+const _autoAdvancing    = new Set();  // IDs em processo de auto-avanço
+
 /* ── KDS Page ── */
 export default function KdsPage() {
   const { theme } = useTheme();
@@ -170,14 +177,16 @@ export default function KdsPage() {
   const [loading,     setLoading]     = useState(true);
   const [error,       setError]       = useState(null);
   const [now,         setNow]         = useState(() => Date.now());
-  const [firstSeenAt, setFirstSeenAt] = useState(() => new Map());
   const [activityLog, setActivityLog] = useState([]);
 
-  const prevOrdersRef      = useRef([]);          // detectar mudanças entre refreshes
-  const isFirstLoad        = useRef(true);
-  const autoAdvancingRef   = useRef(new Set());   // IDs em processo de auto-avanço
-  const statusOverridesRef = useRef(new Map());   // orderId → status local mais avançado
-  const hiddenFromKanban   = useRef(new Set());   // IDs removidos do kanban (não da DB)
+  // Refs apontam para os stores de módulo → nunca resetam ao navegar
+  const firstSeenAt        = useRef(_firstSeenAt);
+  const hiddenFromKanban   = useRef(_hiddenFromKanban);
+  const statusOverridesRef = useRef(_statusOverrides);
+  const autoAdvancingRef   = useRef(_autoAdvancing);
+
+  const prevOrdersRef = useRef([]);
+  const isFirstLoad   = useRef(true);
 
   /* Tick global — 1 segundo */
   useEffect(() => {
@@ -206,14 +215,10 @@ export default function KdsPage() {
         })
         .filter(o => o.order_status !== "Delivered");
 
-      /* firstSeenAt — registar novos IDs */
-      setFirstSeenAt(prev => {
-        const next = new Map(prev);
-        for (const o of list) {
-          if (!next.has(o.id)) next.set(o.id, ts);
-        }
-        return next;
-      });
+      /* firstSeenAt — registar novos IDs (mutação directa, não reseta ao navegar) */
+      for (const o of list) {
+        if (!firstSeenAt.current.has(o.id)) firstSeenAt.current.set(o.id, ts);
+      }
 
       /* Gerar eventos de actividade */
       const prevMap = new Map(prevOrdersRef.current.map(o => [o.id, o]));
@@ -294,7 +299,7 @@ export default function KdsPage() {
     orders.forEach(o => {
       const tTarget = KDS_STATUS_TARGET_S[o.order_status];
       if (!tTarget || autoAdvancingRef.current.has(o.id)) return;
-      const elapsed = Math.floor((now - (firstSeenAt.get(o.id) ?? now)) / 1000);
+      const elapsed = Math.floor((now - (firstSeenAt.current.get(o.id) ?? now)) / 1000);
       if (elapsed < tTarget) return;
 
       if (o.order_status === "Delivered") {
@@ -319,15 +324,15 @@ export default function KdsPage() {
         const adv = toAdvance.find(a => a.id === o.id);
         return adv ? { ...o, order_status: adv.nextStatus, updated_at: new Date(ts).toISOString() } : o;
       }));
-      setFirstSeenAt(prev => {
-        const m = new Map(prev);
-        toAdvance.forEach(o => m.set(o.id, ts));
-        return m;
-      });
+      toAdvance.forEach(o => firstSeenAt.current.set(o.id, ts));
       toAdvance.forEach(order => {
         const evtType = KDS_STATUS_TO_EVENT[order.nextStatus];
         if (evtType) setActivityLog(prev => [makeKdsEvent(evtType, order), ...prev].slice(0, 100));
       });
+
+      // Notifica outras páginas (TablePage) que pedidos mudaram de status
+      window.dispatchEvent(new CustomEvent('orders:statusChanged'));
+
       toAdvance.forEach(order => {
         orderService.updateStatus(order.id, order.nextStatus)
           .catch(err => console.error("auto-advance:", order.id, "→", order.nextStatus, err))
@@ -344,7 +349,7 @@ export default function KdsPage() {
       });
       setOrders(prev => prev.filter(o => !hiddenFromKanban.current.has(o.id)));
     }
-  }, [now, orders, firstSeenAt]);
+  }, [now, orders]); // firstSeenAt é ref de módulo, não precisa de dep
 
   return (
     <PageSection>
@@ -426,7 +431,7 @@ export default function KdsPage() {
                   </div>
                   <div style={{ backgroundColor: colBg, padding: 8, minHeight: 160, display: "flex", flexDirection: "column", gap: 8 }}>
                     {colOrders.map(order => (
-                      <OrderCard key={order.id} order={order} cardBorder={col.cardBorder} now={now} firstSeenAt={firstSeenAt} />
+                      <OrderCard key={order.id} order={order} cardBorder={col.cardBorder} now={now} firstSeenAt={firstSeenAt.current} />
                     ))}
                     {colOrders.length === 0 && <p style={{ textAlign: "center", color: emptyColor, fontSize: 12, paddingTop: 20 }}>—</p>}
                   </div>

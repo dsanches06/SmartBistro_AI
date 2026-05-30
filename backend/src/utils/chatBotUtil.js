@@ -23,13 +23,17 @@ export const GEMINI_MODEL_QUEUE = [
 
 // ── Erros que justificam tentar o próximo modelo ──────────────────────────────
 // 429 = RESOURCE_EXHAUSTED (quota/rate limit)
+// 502 = Bad Gateway (proxy/Gemini overload, retryable)
 // 503 = Service Unavailable (modelo sobrecarregado)
 export function isRetryableGeminiError(error) {
   const msg    = (error?.message ?? "").toLowerCase();
   const status = Number(error?.status ?? error?.code ?? 0);
   return (
     status === 429 ||
+    status === 502 ||
     status === 503 ||
+    msg.includes("502") ||
+    msg.includes("bad gateway") ||
     msg.includes("quota") ||
     msg.includes("rate limit") ||
     msg.includes("resource_exhausted") ||

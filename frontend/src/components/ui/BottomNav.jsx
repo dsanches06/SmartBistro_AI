@@ -11,7 +11,7 @@ const menuLinks = [
   { to: '/faturacao',     label: 'Faturação',    icon: 'fa-solid fa-file-invoice-dollar'              },
   { to: '/relatorios',    label: 'Relatórios',   icon: 'fa-solid fa-chart-line'                       },
   { to: '/clientes',      label: 'Clientes',     icon: 'fa-solid fa-users'                            },
-  { to: '/configuracoes', label: 'Configurações',icon: 'fa-solid fa-gear'                             },
+  { to: '/menu',          label: 'Menu',          icon: 'fa-solid fa-utensils'                         },
 ];
 
 export const NAV_OPEN_H   = '15rem';

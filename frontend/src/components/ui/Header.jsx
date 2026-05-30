@@ -12,7 +12,7 @@ const navLinks = [
   { to: "/faturacao", label: "Faturação" },
   { to: "/relatorios", label: "Relatórios" },
   { to: "/clientes", label: "Clientes" },
-  { to: "/configuracoes", label: "Configurações" },
+  { to: "/menu", label: "Menu" },
 ];
 
 function isActive(pathname, to, exact) {

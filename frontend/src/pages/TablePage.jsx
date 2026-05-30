@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTheme } from "@/context/ThemeContext";
-import { reservationService, tableService } from "@/services";
+import { reservationService, tableService, orderService } from "@/services";
 import { STATUS_CONFIG } from "@/utils/tablePageUtils";
+import { getItemEmoji, formatMenuPrice } from "@/utils";
 import { PageSection, StatCard, TableCard } from "@/components";
 
 const formatTableLabel = (number) => `T${String(number).padStart(2, "0")}`;
@@ -10,6 +11,7 @@ export default function TablePage() {
   const [mesas, setMesas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [tableOccupancy, setTableOccupancy] = useState({});
   const [selectedTableId, setSelectedTableId] = useState(null);
   const [tableDetails, setTableDetails] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
@@ -42,7 +44,34 @@ export default function TablePage() {
     }
   }, []);
 
-  useEffect(() => { fetchMesas(); }, [fetchMesas]);
+  const fetchOccupancy = useCallback(async () => {
+    try {
+      const orders = await orderService.getAll();
+      const map = {};
+      for (const order of (Array.isArray(orders) ? orders : [])) {
+        if (!order.table_id) continue;
+        if (order.order_status === 'Cancelled') continue;
+        // Itens só visíveis quando o pedido foi entregue na mesa
+        if (order.order_status !== 'Delivered') continue;
+        const items = (() => {
+          try {
+            return Array.isArray(order.kitchen_sequence_json)
+              ? order.kitchen_sequence_json
+              : JSON.parse(order.kitchen_sequence_json || '[]');
+          } catch { return []; }
+        })();
+        const newEmojis = [...new Set(items.map(n => getItemEmoji(n)))];
+        if (!map[order.table_id]) {
+          map[order.table_id] = { emojis: newEmojis };
+        } else {
+          map[order.table_id].emojis = [...new Set([...map[order.table_id].emojis, ...newEmojis])];
+        }
+      }
+      setTableOccupancy(map);
+    } catch { /* silently ignore */ }
+  }, []);
+
+  useEffect(() => { fetchMesas(); fetchOccupancy(); }, [fetchMesas, fetchOccupancy]);
   useEffect(() => { fetchTableDetails(selectedTableId); }, [selectedTableId, fetchTableDetails]);
 
   // Actualiza mesas e detalhes quando o chatbot faz mutações (cancel/create reservation, update_table_status)
@@ -54,6 +83,19 @@ export default function TablePage() {
     window.addEventListener('table:refresh', onRefresh);
     return () => window.removeEventListener('table:refresh', onRefresh);
   }, [fetchMesas, fetchTableDetails, selectedTableId]);
+
+  // Re-fetch occupancy quando o KDS muda status de um pedido
+  useEffect(() => {
+    const onStatusChanged = () => fetchOccupancy();
+    window.addEventListener('orders:statusChanged', onStatusChanged);
+    return () => window.removeEventListener('orders:statusChanged', onStatusChanged);
+  }, [fetchOccupancy]);
+
+  // Auto-refresh de occupancy a cada 15 s (fallback quando TablePage está aberta sem KDS)
+  useEffect(() => {
+    const id = setInterval(fetchOccupancy, 15_000);
+    return () => clearInterval(id);
+  }, [fetchOccupancy]);
 
   const handleConfirmReservation = async () => {
     if (!activeReservation) return;
@@ -190,6 +232,7 @@ export default function TablePage() {
                     key={mesa.id}
                     mesa={mesa}
                     isSelected={mesa.id === selectedTableId}
+                    occupancy={tableOccupancy[mesa.id]}
                     onSelect={() =>
                       setSelectedTableId((previous) =>
                         previous === mesa.id ? null : mesa.id,
@@ -350,30 +393,33 @@ export default function TablePage() {
                     </div>
                   </div>
 
-                  <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                    <button
-                      className={`flex-1 rounded-full px-4 py-3 text-sm font-semibold text-white transition ${
-                        activeOrder
-                          ? "bg-[var(--primary)] hover:bg-[var(--primary-hover)]"
-                          : "bg-[var(--surface-2)] text-[var(--text-secondary)] cursor-not-allowed"
-                      }`}
-                      type="button"
-                      disabled={!activeOrder}
-                    >
-                      Ver pedido
-                    </button>
-                    <button
-                      className={`flex-1 rounded-full border border-[var(--border)] px-4 py-3 text-sm font-semibold transition ${
-                        activeOrder
-                          ? "bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-2)]"
-                          : "bg-[var(--surface-2)] text-[var(--text-secondary)] cursor-not-allowed"
-                      }`}
-                      type="button"
-                      disabled={!activeOrder}
-                    >
-                      Fechar conta
-                    </button>
-                  </div>
+                  {/* Card de itens pedidos */}
+                  {activeOrder && (() => {
+                    const items = (() => {
+                      try {
+                        const raw = activeOrder.kitchen_sequence_json;
+                        return Array.isArray(raw) ? raw : JSON.parse(raw || '[]');
+                      } catch { return []; }
+                    })();
+                    if (!items.length) return null;
+                    return (
+                      <div className="mt-4 rounded-3xl bg-surface-2 p-4">
+                        <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-secondary)] mb-3">
+                          Itens Pedidos
+                        </p>
+                        <div className="flex flex-col gap-2">
+                          {items.map((name, i) => (
+                            <div key={i} className="flex items-center gap-2.5 rounded-xl px-3 py-2"
+                              style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                              <span style={{ fontSize: 18 }}>{getItemEmoji(name)}</span>
+                              <span className="text-sm font-semibold flex-1" style={{ color: "var(--text)" }}>{name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                 </>
               )}
             </div>

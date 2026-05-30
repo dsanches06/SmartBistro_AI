@@ -134,11 +134,25 @@ export function ChatUI({ isOpen, onClose }) {
       results.some((r) => r.functionName === 'cancel_reservation' && r.result?.success) ||
       results.some((r) => r.functionName === 'create_reservation' && r.result?.id);
 
+    // Detecta items do menu em resultados de funções e mostra como cards
+    const MENU_FNS = ['get_items', 'get_active', 'getItems', 'getActive'];
+    const menuItems = results.flatMap(r => {
+      if (!MENU_FNS.includes(r.functionName)) return [];
+      const res = r.result;
+      if (Array.isArray(res)) return res.filter(i => i?.name && i?.price !== undefined);
+      return [];
+    });
+
     if (isDone || results.length) {
       setMessages((p) =>
         p.map((m) =>
           m.id === botMsgId
-            ? { ...m, done: isDone, functionResults: results }
+            ? {
+                ...m,
+                done: isDone,
+                functionResults: results,
+                ...(menuItems.length > 0 ? { menuItems } : {}),
+              }
             : m
         )
       );
@@ -239,6 +253,11 @@ export function ChatUI({ isOpen, onClose }) {
     await doSend(userMessage);
   };
 
+  const handleMenuOrder = (itemName) => {
+    if (loading) return;
+    doSend(`Quero pedir ${itemName}`);
+  };
+
   const handleRetry = async () => {
     if (!lastUserMessage || loading) return;
     setMessages((p) => {
@@ -334,7 +353,9 @@ export function ChatUI({ isOpen, onClose }) {
             <div className="flex-1 overflow-y-auto bg-surface-2 px-4 py-4 space-y-4">
               {messages.map((msg) => (
                 <div key={msg.id}>
-                  {msg.text && <ChatBubbleUI message={msg} sender={msg.sender} />}
+                  {(msg.text || msg.menuItems) && (
+                    <ChatBubbleUI message={msg} sender={msg.sender} onOrder={handleMenuOrder} />
+                  )}
                   {msg.providerError && (
                     <div className="flex justify-start mt-1">
                       <div className="max-w-[280px] w-full">

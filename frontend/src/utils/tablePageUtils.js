@@ -2,17 +2,17 @@ export const STATUS_CONFIG = {
   Available: {
     label: "Livre",
     mesa: "bg-[#bbf7d0] border-[#22c55e] text-[#166534]",
-    cadeira: "bg-[#22c55e] border-[#22c55e]",
+    cadeira: "bg-transparent border-[#22c55e]",       // hollow — cadeiras vazias
   },
   Occupied: {
     label: "Ocupada",
     mesa: "bg-[#fed7aa] border-[#f97316] text-[#9a3412]",
-    cadeira: "bg-[#f97316] border-[#f97316]",
+    cadeira: "bg-[#f97316] border-[#f97316]",          // preenchidas — ocupadas
   },
   Reserved: {
     label: "Reservada",
     mesa: "bg-[#ddd6fe] border-[#8b5cf6] text-[#4338ca]",
-    cadeira: "bg-[#8b5cf6] border-[#8b5cf6]",
+    cadeira: "bg-transparent border-[#8b5cf6]",        // hollow — reservadas mas vazias
   },
 };
 
