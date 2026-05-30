@@ -7,3 +7,5 @@ export { ThemeToggle } from './ui/ThemeToggle.jsx';
 export { StatCard }    from './ui/StatCard.jsx';
 export { TableCard }   from './ui/TableCard.jsx';
 export { default as TrophySpin } from './ui/TrophySpin.jsx';
+export { Pagination }            from './ui/Pagination.jsx';
+export { ListCard }              from './ui/ListCard.jsx';
