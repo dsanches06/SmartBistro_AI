@@ -14,7 +14,7 @@ export function synthesizeFallbackMessage(allChunks = [], allResults = []) {
     if (name === 'get_table') {
       const t = raw;
       if (!t) return 'Não encontrei nenhuma mesa disponível para esse número de pessoas.';
-      return `Encontrei a mesa ${t.table_number} (capacidade ${t.capacity}) — estado: ${t.status}. Deseja que eu a reserve ou a ocupe?`;
+      return `Encontrei a mesa ${t.table_number} (capacidade ${t.capacity}) — estado: ${t.status}. Posso ocupá-la para si e depois seguir com o pedido.`;
     }
 
     if (name === 'create_reservation') {
@@ -29,7 +29,7 @@ export function synthesizeFallbackMessage(allChunks = [], allResults = []) {
 
     if (name === 'update_table_status') {
       const ok = typeof raw === 'number' ? raw > 0 : raw?.success === true;
-      if (ok) return 'Estado da mesa actualizado com sucesso.';
+      if (ok) return 'Mesa ocupada com sucesso. Deseja que eu ajude a fazer o pedido agora?';
       return 'Não foi possível actualizar o estado da mesa.';
     }
 

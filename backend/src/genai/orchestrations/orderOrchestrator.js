@@ -144,9 +144,16 @@ RESPONDE EXACTAMENTE com este JSON (sem comentários, sem markdown):
 `.trim();
 }
 
-function buildChefMessage(validated) {
+function buildChefMessage(validated, menuItems) {
+  const menuInfo = menuItems
+    .map((i) => `  - id ${i.id}, ${i.name}, ${i.category ?? '—'}, €${Number(i.price).toFixed(2)}`)
+    .join('\n');
+
   return `
 Recebeste do Maître a fila de pedidos validada. Devolve APENAS JSON (sem texto, sem markdown).
+
+MENU ACTIVO:
+${menuInfo}
 
 TAREFA:
 1. Define a sequência de preparação óptima por secção da cozinha (grelhados, massas, entradas, etc.)
@@ -172,7 +179,7 @@ ${JSON.stringify(validated, null, 2)}
 `.trim();
 }
 
-function buildManagerMessage(sequenced, financials) {
+function buildManagerMessage(validated, sequenced, financials) {
   return `
 Recebeste do Chefe a sequência de preparação. Os totais financeiros já estão calculados em JS — NÃO RECALCULES.
 Devolve APENAS JSON (sem texto, sem markdown).
@@ -203,6 +210,9 @@ RESPONDE EXACTAMENTE com este JSON:
   },
   "notes": "<observações do Gerente>"
 }
+
+DADOS DO PEDIDO VALIDADOS (Maître):
+${JSON.stringify(validated, null, 2)}
 
 DADOS DA SEQUÊNCIA (Chefe):
 ${JSON.stringify(sequenced, null, 2)}
@@ -254,7 +264,7 @@ export async function runOrderPipeline(orderData) {
   // ── Fase 2 — Chefe ────────────────────────────────────────────────────────────
   console.log("[Pipeline] Fase 2 — Chefe a verificar stock e sequência...");
   const chef = new ChefAgent();
-  const sequencedText = await chef.sendMessage(buildChefMessage(validated));
+  const sequencedText = await chef.sendMessage(buildChefMessage(validated, menuItems));
   const sequenced = extractJSON(sequencedText, "Chefe");
   console.log(`[Pipeline] Chefe concluído — sequência: ${(sequenced.kitchen_sequence ?? []).join(" → ")}`);
 
@@ -275,8 +285,11 @@ export async function runOrderPipeline(orderData) {
   // ── Fase 3 — Gerente ──────────────────────────────────────────────────────────
   console.log("[Pipeline] Fase 3 — Gerente a formatar fatura...");
   const manager = new ManagerAgent();
-  const finalText = await manager.sendMessage(buildManagerMessage(sequenced, financials));
+  const finalText = await manager.sendMessage(buildManagerMessage(validated, sequenced, financials));
   const final = extractJSON(finalText, "Gerente");
+  if (!final || final.success !== true) {
+    throw new Error('Gerente devolveu um resultado inválido ou incompleto.');
+  }
   console.log("[Pipeline] Gerente concluído.");
 
   return { validated, sequenced, financials, final };

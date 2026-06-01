@@ -44,21 +44,108 @@ export async function processOrderPipeline(req, res) {
     console.log(`[Pipeline] A iniciar para customer_id=${orderData.customer_id} — "${msgPreview}"`);
 
     // ── Pipeline dos 3 agentes: Maître → Chefe → Gerente ─────────────────────
-    const { validated, sequenced, financials } = await runOrderPipeline(orderData);
+    const { validated, sequenced, financials, final } = await runOrderPipeline(orderData);
 
     console.log(`[Pipeline] Agentes concluídos — total calculado: €${financials.total}`);
 
     // ── Extrair e normalizar campos do pipeline ───────────────────────────────
     const customerId = Number(validated.customer_id ?? orderData.customer_id);
-    const tableId    = validated.table_id ?? null;   // atribuído pelo Maître, nunca pelo cliente
+    let tableId      = validated.table_id ?? null;   // atribuído pelo Maître, nunca pelo cliente
     const kitchenSeq = sequenced.kitchen_sequence ?? sequenced.kitchenSequence ?? [];
-    const items      = validated.items ?? orderData.items;
+
+    const stockStatus = String(sequenced.stock_status ?? sequenced.stockStatus ?? 'ok').toLowerCase();
+    const stockAlerts = sequenced.stock_alerts ?? sequenced.stockAlerts ?? [];
+    if (stockStatus !== 'ok' || (Array.isArray(stockAlerts) && stockAlerts.length > 0)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Stock insuficiente para preparar este pedido. Por favor escolha outro prato ou aguarde reposição.',
+        stage: 'stock_validation',
+        stock_status: stockStatus,
+        stock_alerts: stockAlerts,
+        pipeline: {
+          validated,
+          sequenced,
+        },
+      });
+    }
+
+    if (!final || final.success !== true) {
+      return res.status(500).json({
+        success: false,
+        error: 'Gerente devolveu um resultado inválido ou incompleto.',
+        stage: 'manager_validation',
+        pipeline: {
+          validated,
+          sequenced,
+          final,
+        },
+      });
+    }
+
+    const pipelineItems = Array.isArray(validated.items)
+      ? validated.items
+      : Array.isArray(orderData.items)
+      ? orderData.items
+      : [];
+
+    if (!pipelineItems.length) {
+      return res.status(400).json({
+        success: false,
+        error: 'O pedido não contém itens válidos. O Maître deve mapear os itens do menu antes de criar o pedido.',
+        stage: 'pipeline_validation',
+        pipeline: {
+          validated,
+          sequenced,
+          final,
+        },
+      });
+    }
+
+    const normalizedItems = pipelineItems.map((item) => ({
+      item_id: Number(item.item_id ?? item.id ?? item.itemId),
+      quantity: Number(item.quantity ?? item.qty ?? 1),
+    }));
+
+    const invalidItem = normalizedItems.find(
+      (item) => !Number.isFinite(item.item_id) || item.item_id <= 0,
+    );
+    if (invalidItem) {
+      return res.status(400).json({
+        success: false,
+        error: 'O pedido contém itens sem item_id válido. Verifique a resposta do pipeline do Maître/Chefe.',
+        stage: 'pipeline_validation',
+        pipeline: {
+          validated,
+          sequenced,
+          final,
+        },
+      });
+    }
 
     // Normaliza service_type para os valores exactos do ENUM MySQL ('Table' | 'Takeaway')
     const rawService = String(validated.service_type ?? '');
     const serviceType = /take.?away|para.?levar|para\s?fora|to.?go/i.test(rawService)
       ? 'Takeaway'
       : 'Table';
+
+    if (serviceType === 'Table') {
+      const resolvedTableId = Number(tableId ?? NaN);
+      if (!Number.isFinite(resolvedTableId) || resolvedTableId <= 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Pedido de serviço de mesa sem mesa atribuída. O Maître deve seleccionar uma mesa disponível.',
+          stage: 'table_assignment',
+          pipeline: {
+            validated,
+            sequenced,
+            final,
+          },
+        });
+      }
+      tableId = resolvedTableId;
+    } else {
+      tableId = null;
+    }
 
     // ── 1. Criar pedido ───────────────────────────────────────────────────────
     const order = await createOrder({
@@ -72,11 +159,11 @@ export async function processOrderPipeline(req, res) {
 
     // ── 2. Criar itens do pedido (em paralelo) ────────────────────────────────
     await Promise.all(
-      items.map((item) =>
+      normalizedItems.map((item) =>
         createOrderItem({
           order_id: order.id,
-          item_id:  Number(item.item_id),
-          quantity: Number(item.quantity ?? 1),
+          item_id:  item.item_id,
+          quantity: item.quantity,
         }),
       ),
     );
@@ -134,6 +221,7 @@ export async function processOrderPipeline(req, res) {
       pipeline: {
         validated,
         sequenced,
+        final,
       },
     });
 
