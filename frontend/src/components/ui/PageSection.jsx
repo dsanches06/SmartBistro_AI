@@ -2,7 +2,7 @@
 export function PageSection({ title, description, children }) {
   if (children) {
     return (
-      <div className="min-h-full p-6 bg-[var(--bg)] text-[var(--text)]">
+      <div className="min-h-full p-6 pb-16 md:pb-6 bg-[var(--bg)] text-[var(--text)]">
         <div className="mx-auto max-w-[1200px] space-y-6">
           {children}
         </div>

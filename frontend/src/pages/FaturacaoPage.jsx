@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { PageSection, Pagination } from "@/components";
+import { PageSection, Pagination, StatCard } from "@/components";
 import {
   invoiceService, orderService, paymentService,
   orderItemService, itemService,
@@ -15,7 +15,7 @@ import { useTheme } from "@/context/ThemeContext";
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 const TODAY = new Date().toISOString().slice(0, 10);
-const FIRST_OF_MONTH = `${TODAY.slice(0, 8)}01`;
+const THIRTY_DAYS_AGO = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
 function PayBadge({ status }) {
   const m = PAYMENT_STATUS_META[status] ?? PAYMENT_STATUS_META.none;
@@ -36,23 +36,13 @@ function PayBadge({ status }) {
   );
 }
 
-function KpiCard({ label, value, sub }) {
-  return (
-    <div className="rounded-[20px] bg-[var(--surface)] p-4 sm:p-5 shadow-sm">
-      <p className="text-[11px] sm:text-xs font-medium" style={{ color: "var(--text-muted)" }}>{label}</p>
-      <p className="text-lg sm:text-2xl font-bold mt-1 leading-tight truncate" style={{ color: "var(--text)" }}>{value}</p>
-      {sub && <p className="text-[11px] sm:text-xs mt-1" style={{ color: "var(--text-muted)" }}>{sub}</p>}
-    </div>
-  );
-}
-
 // ── main component ────────────────────────────────────────────────────────────
 
 export default function FaturacaoPage() {
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
-  const [dateFrom, setDateFrom]     = useState(FIRST_OF_MONTH);
+  const [dateFrom, setDateFrom]     = useState(THIRTY_DAYS_AGO);
   const [dateTo, setDateTo]         = useState(TODAY);
   const [page, setPage]             = useState(1);
   const [selectedInv, setSelectedInv] = useState(null);
@@ -185,10 +175,10 @@ export default function FaturacaoPage() {
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <KpiCard label="Faturação Total" value={fmtEur(kpis.total)} />
-        <KpiCard label="Nº Faturas"      value={kpis.count} />
-        <KpiCard label="Ticket Médio"    value={fmtEur(kpis.avgTicket)} />
-        <KpiCard label="IVA Total"       value={fmtEur(kpis.taxTotal)} />
+        <StatCard label="Faturação Total" value={fmtEur(kpis.total)} />
+        <StatCard label="Nº Faturas"      value={kpis.count} />
+        <StatCard label="Ticket Médio"    value={fmtEur(kpis.avgTicket)} />
+        <StatCard label="IVA Total"       value={fmtEur(kpis.taxTotal)} />
       </div>
 
       {/* Table + Detail */}

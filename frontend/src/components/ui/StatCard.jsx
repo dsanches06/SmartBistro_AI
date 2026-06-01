@@ -1,6 +1,6 @@
 import { useTheme } from "@/context/ThemeContext";
 
-export function StatCard({ label, value, icon, valueClassName, borderColor, className = "" }) {
+export function StatCard({ label, value, sub, icon, valueClassName, borderColor, className = "" }) {
   const { theme } = useTheme();
   const defaultValueClass = theme === "dark" ? "text-white" : "text-slate-900";
   const valueClass = valueClassName ?? defaultValueClass;
@@ -15,8 +15,9 @@ export function StatCard({ label, value, icon, valueClassName, borderColor, clas
           <i className={`${icon} text-lg`} aria-hidden="true" />
         </div>
       )}
-      <p className="text-sm uppercase tracking-[0.24em] text-[var(--text-secondary)]">{label}</p>
-      <p className={`mt-3 text-3xl font-bold ${valueClass}`}>{value}</p>
+      <p className="text-[11px] sm:text-sm uppercase tracking-[0.12em] sm:tracking-[0.24em] text-[var(--text-secondary)] leading-snug">{label}</p>
+      <p className={`mt-2 sm:mt-3 text-2xl sm:text-3xl font-bold ${valueClass}`}>{value}</p>
+      {sub && <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>{sub}</p>}
     </div>
   );
 }
