@@ -195,21 +195,34 @@ export class BaseChatProcessor {
   }
 
   // ── Helper: faz streaming de um único round, emite chunks via onChunk ─────────
-  async _streamRound(chat, message, onChunk) {
-    const stream = await chat.sendMessageStream({ message });
+  async _streamRound(chat, message, onChunk, timeoutMs = 25000) {
     const functionCalls = [];
     let roundText = '';
 
-    for await (const chunk of stream) {
-      // Chamadas de função chegam normalmente no último chunk (sem texto associado)
-      if (chunk.functionCalls?.length)
-        functionCalls.push(...chunk.functionCalls);
-      // Texto emitido imediatamente — streaming verdadeiro
-      if (chunk.text) {
-        roundText += chunk.text;
-        onChunk(chunk.text);
+    const makeTimeout = () => new Promise((_, reject) =>
+      setTimeout(
+        () => reject(Object.assign(
+          new Error('O assistente demorou demasiado tempo a responder. Tente novamente. ⏱️'),
+          { geminiType: 'TIMEOUT' }
+        )),
+        timeoutMs
+      )
+    );
+
+    // Cobre tanto a ligação inicial como a leitura do stream
+    const streamTask = async () => {
+      const stream = await chat.sendMessageStream({ message });
+      for await (const chunk of stream) {
+        if (chunk.functionCalls?.length)
+          functionCalls.push(...chunk.functionCalls);
+        if (chunk.text) {
+          roundText += chunk.text;
+          onChunk(chunk.text);
+        }
       }
-    }
+    };
+
+    await Promise.race([streamTask(), makeTimeout()]);
 
     return { functionCalls, roundText };
   }

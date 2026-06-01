@@ -13,12 +13,11 @@ export const MAX_AGENTIC_STEPS = 5;
 // Se o modelo principal (MODEL_NAME do .env) falhar por quota/indisponibilidade,
 // sendWithModelFallback percorre esta lista automaticamente.
 export const GEMINI_MODEL_QUEUE = [
-  "gemini-2.5-pro",           // pro — máxima capacidade de raciocínio e JSON estruturado
-  "gemini-3.1-pro-preview",   // pro preview — geração mais recente
-  "gemini-3.5-flash",         // flash mais recente — rápido e muito capaz
-  "gemini-3.1-flash-lite",    // flash lite 3.1 — boa velocidade
-  "gemini-2.5-flash",         // flash estável — equilíbrio comprovado
-  "gemini-2.5-flash-lite",    // último recurso — mais leve, maior disponibilidade
+  "gemini-2.5-flash",      // GA — rápido, estável, excelente para function calling
+  "gemini-3.5-flash",      // Stable/Frontier — última geração
+  "gemini-2.5-pro",        // GA — máxima capacidade (mais lento)
+  "gemini-2.0-flash",      // fallback secundário
+  "gemini-1.5-flash",      // último recurso
 ];
 
 // ── Erros que justificam tentar o próximo modelo ──────────────────────────────
@@ -29,9 +28,12 @@ export function isRetryableGeminiError(error) {
   const msg    = (error?.message ?? "").toLowerCase();
   const status = Number(error?.status ?? error?.code ?? 0);
   return (
+    error?.geminiType === 'TIMEOUT' ||
     status === 429 ||
     status === 502 ||
     status === 503 ||
+    msg.includes("timeout") ||
+    msg.includes("demorou demasiado") ||
     msg.includes("502") ||
     msg.includes("bad gateway") ||
     msg.includes("quota") ||
@@ -103,4 +105,30 @@ export async function sendWithModelFallback(
     // Erros não-retryable (INVALID_REQUEST, autenticação, etc.) são relançados imediatamente
     throw error;
   }
+}
+
+// ── SSE helpers ───────────────────────────────────────────────────────────────
+
+// Mapeia geminiType → nome do evento SSE enviado ao cliente
+export const SSE_ERROR_EVENT = {
+  RATE_LIMIT:      'rate_limit',
+  SERVICE_DOWN:    'service_unavailable',
+  AUTH_ERROR:      'auth_error',
+  NETWORK_ERROR:   'network_error',
+  INVALID_REQUEST: 'invalid_request',
+};
+
+export function sseErrorEvent(err) {
+  return SSE_ERROR_EVENT[err?.geminiType] ?? 'provider_error';
+}
+
+export function writeSseError(res, err) {
+  res.write(
+    `event: ${sseErrorEvent(err)}\ndata: ${JSON.stringify({
+      success:   false,
+      errorType: err?.geminiType ?? 'UNKNOWN',
+      message:   err.message,
+    })}\n\n`,
+  );
+  res.end();
 }

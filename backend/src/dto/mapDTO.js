@@ -115,7 +115,8 @@ export function mapOrderDTOResponse(data) {
     allergy_restrictions: data.allergy_restrictions,
     kitchen_sequence_json: data.kitchen_sequence_json,
     order_status: data.order_status,
-    created_at: data.created_at,
+    created_at:  data.created_at,
+    updated_at:  data.updated_at ?? null,
   };
 }
 

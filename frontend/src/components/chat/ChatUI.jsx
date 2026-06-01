@@ -27,7 +27,6 @@ export function ChatUI({ isOpen, onClose }) {
   const [conversations, setConversations]           = useState([]);
   const [showHistory, setShowHistory]               = useState(false);
   const [lastUserMessage, setLastUserMessage]       = useState(null);
-  const [pendingFile, setPendingFile]               = useState(null);
   const messagesEndRef   = useRef(null);
   const inputRef         = useRef(null);
   const messageIdCounter = useRef(1);
@@ -96,7 +95,6 @@ export function ChatUI({ isOpen, onClose }) {
     setMessages([{ ...createWelcomeMessage(), timestamp: new Date() }]);
     setConversationHistory([]);
     setLastUserMessage(null);
-    setPendingFile(null);
     setTimeout(() => inputRef.current?.focus(), 100);
   };
 
@@ -197,56 +195,11 @@ export function ChatUI({ isOpen, onClose }) {
     );
   };
 
-  // ── Send CSV file ─────────────────────────────────────────────────────────
-
-  const doSendFile = async (file, message) => {
-    const displayText = message ? `📎 ${file.name} — ${message}` : `📎 ${file.name}`;
-    const userMsgId = messageIdCounter.current++;
-    const botMsgId  = messageIdCounter.current++;
-
-    setMessages((p) => [
-      ...p,
-      { id: userMsgId, text: displayText, sender: "user", timestamp: new Date() },
-      { id: botMsgId,  text: "",          sender: "bot",  timestamp: new Date(), providerError: null },
-    ]);
-    setLoading(true);
-
-    await chatService.uploadCsv(
-      file,
-      message,
-      conversationId,
-      conversationHistory,
-      makeOnChunk(botMsgId),
-      (payload) => {
-        makeOnDone(botMsgId)(payload);
-        if (payload?.success && payload?.message) {
-          setConversationHistory((prev) => [
-            ...prev,
-            { role: "user",      content: displayText },
-            { role: "assistant", content: payload.message },
-          ]);
-        }
-      },
-    );
-  };
-
   // ── handleSend ────────────────────────────────────────────────────────────
 
   const handleSend = async (e) => {
     e.preventDefault();
-    if (loading) return;
-
-    if (pendingFile) {
-      const file    = pendingFile;
-      const message = input.trim();
-      setLastUserMessage(`📎 ${file.name}`);
-      setPendingFile(null);
-      setInput("");
-      await doSendFile(file, message);
-      return;
-    }
-
-    if (!input.trim()) return;
+    if (loading || !input.trim()) return;
     const userMessage = input.trim();
     setLastUserMessage(userMessage);
     setInput("");
@@ -266,9 +219,7 @@ export function ChatUI({ isOpen, onClose }) {
       const idx = p.length - 1 - lastBotIdx;
       return p.filter((_, i) => i !== idx && i !== idx - 1);
     });
-    if (!lastUserMessage.startsWith("📎")) {
-      await doSend(lastUserMessage);
-    }
+    await doSend(lastUserMessage);
   };
 
   if (!isOpen) return null;
@@ -383,9 +334,6 @@ export function ChatUI({ isOpen, onClose }) {
               onSubmit={handleSend}
               disabled={loading}
               inputRef={inputRef}
-              onFileSelect={setPendingFile}
-              selectedFile={pendingFile}
-              onRemoveFile={() => setPendingFile(null)}
             />
 
             {conversations.length > 0 && (

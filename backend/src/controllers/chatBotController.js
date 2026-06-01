@@ -1,30 +1,6 @@
-import { ROLE_USER, ROLE_ASSISTANT } from '../utils/index.js';
+import { ROLE_USER, ROLE_ASSISTANT, writeSseError } from '../utils/index.js';
 import { createConversation, createChatHistory } from '../services/index.js';
 import { processChatStream } from '../genai/orchestrations/index.js';
-
-// ── Mapeia geminiType → nome do evento SSE ────────────────────────────────────
-const ERROR_EVENT = {
-  RATE_LIMIT:      'rate_limit',
-  SERVICE_DOWN:    'service_unavailable',
-  AUTH_ERROR:      'auth_error',
-  NETWORK_ERROR:   'network_error',
-  INVALID_REQUEST: 'invalid_request',
-};
-
-function sseErrorEvent(err) {
-  return ERROR_EVENT[err?.geminiType] ?? 'provider_error';
-}
-
-function writeSseError(res, err) {
-  res.write(
-    `event: ${sseErrorEvent(err)}\ndata: ${JSON.stringify({
-      success:   false,
-      errorType: err?.geminiType ?? 'UNKNOWN',
-      message:   err.message,
-    })}\n\n`,
-  );
-  res.end();
-}
 
 // ── Envia mensagem ao bot com resposta em stream SSE ─────────────────────────
 export async function sendMessageToBotStream(req, res) {
@@ -41,14 +17,14 @@ export async function sendMessageToBotStream(req, res) {
   const ping = setInterval(() => res.write('event: ping\ndata: {}\n\n'), 20000);
 
   try {
-    // Criar conversa se não existe
     let convId = conversationId;
     if (!convId) {
       const conv = await createConversation({ customer_id, title: message.slice(0, 50) });
       convId = conv.id;
     }
 
-    // Guardar mensagem do utilizador
+    console.log(`\n[Bot] conv=${convId} ← "${message}"`);
+
     await createChatHistory({ conversation_id: convId, role_id: ROLE_USER, content: message });
 
     let fullText = '';
@@ -60,6 +36,7 @@ export async function sendMessageToBotStream(req, res) {
       },
       onDone: async (_, functionResults = []) => {
         clearInterval(ping);
+        console.log(`[Bot] done — fns:[${functionResults.map(f => f.functionName).join(', ')}]`);
         await createChatHistory({ conversation_id: convId, role_id: ROLE_ASSISTANT, content: fullText });
         res.write(
           `event: done\ndata: ${JSON.stringify({

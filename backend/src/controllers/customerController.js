@@ -1,6 +1,6 @@
 import {
   getAllCustomers,
-  getCustomerById,
+  getCustomerById,  // alias de getById em customerService
   createCustomer,
   updateCustomer,
   deleteCustomer,
@@ -21,13 +21,7 @@ export const getAll = async (req, res) => {
 
 // GET /customers/:id
 export const getById = async (req, res) => {
-  try {
-    const customer = await getCustomerById(req.params.id);
-    if (!customer) return res.status(404).json({ error: "Cliente não encontrado" });
-    res.json(customer);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  res.json(req.customer);
 };
 
 // POST /customers
@@ -61,8 +55,7 @@ export const update = async (req, res) => {
     if (phone && await phoneExists(phone, id))
       return res.status(409).json({ error: "Já existe um cliente com esse telefone" });
 
-    const affected = await updateCustomer(id, { name, phone });
-    if (!affected) return res.status(404).json({ error: "Cliente não encontrado" });
+    await updateCustomer(id, { name, phone });
     res.json({ message: "Cliente actualizado com sucesso" });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -75,8 +68,7 @@ export const toggleActive = async (req, res) => {
     const { active } = req.body;
     if (active === undefined)
       return res.status(400).json({ error: "Campo active é obrigatório" });
-    const affected = await toggleCustomerActive(req.params.id, active);
-    if (!affected) return res.status(404).json({ error: "Cliente não encontrado" });
+    await toggleCustomerActive(req.params.id, active);
     res.json({ message: `Cliente ${active ? "activado" : "desactivado"} com sucesso` });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -86,8 +78,7 @@ export const toggleActive = async (req, res) => {
 // DELETE /customers/:id
 export const remove = async (req, res) => {
   try {
-    const affected = await deleteCustomer(req.params.id);
-    if (!affected) return res.status(404).json({ error: "Cliente não encontrado" });
+    await deleteCustomer(req.params.id);
     res.json({ message: "Cliente eliminado com sucesso" });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -1,11 +1,669 @@
-import { PageSection } from "@/components";
+import { useState, useEffect } from "react";
+import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler } from "chart.js";
+import { Doughnut, Line } from "react-chartjs-2";
+import { customerService }  from "@/services/customerService.js";
+import { orderService }     from "@/services/orderService.js";
+import { invoiceService }   from "@/services/invoiceService.js";
+import { orderItemService } from "@/services/orderItemService.js";
+import { itemService }      from "@/services/itemService.js";
+import TrophySpin from "@/components/ui/TrophySpin";
+import CustomerCard, { getPalette, getInitials, formatDate } from "@/components/customers/CustomerCard.jsx";
 
-export default function ClientesPage() {
+ChartJS.register(ArcElement, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler);
+
+// ── Stat card (filterable) ─────────────────────────────────────────────────────
+function FilterStatCard({ label, value, icon, filter, currentFilter, onFilter }) {
+  const isSelected = filter && currentFilter === filter;
   return (
-    <PageSection title="Clientes" description="Lista de clientes e informações de contacto">
-      <div className="rounded-[32px] bg-surface p-6 shadow-sm">
-        <h1 className="text-xl font-semibold">Clientes — em construção</h1>
+    <button
+      type="button"
+      onClick={() => filter && onFilter(filter)}
+      className={[
+        "flex items-center gap-3 rounded-2xl sm:rounded-3xl p-2 text-left transition-all",
+        filter ? "cursor-pointer hover:bg-surface-2 active:scale-95" : "cursor-default",
+        isSelected ? "bg-surface-2 border border-surface" : "bg-surface",
+      ].join(" ")}
+    >
+      <span className="w-8 h-8 rounded-full flex items-center justify-center text-base flex-shrink-0 bg-surface-2 text-[var(--primary)]">
+        <i className={icon} aria-hidden="true" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-[10px] text-muted uppercase tracking-[0.06em] leading-tight">{label}</p>
+        <p className="text-base font-semibold text-main">{value}</p>
       </div>
-    </PageSection>
+    </button>
+  );
+}
+
+// ── Delete confirmation modal ──────────────────────────────────────────────────
+function DeleteConfirm({ customer, onCancel, onConfirm }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-surface rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-surface animate-fadeInUp">
+        <h3 className="text-base font-semibold text-main mb-2">Remover cliente</h3>
+        <p className="text-sm text-muted mb-5">
+          Tem a certeza que deseja remover{" "}
+          <span className="font-semibold text-main">{customer.name}</span>? Esta ação não pode ser
+          desfeita.
+        </p>
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-2 text-sm rounded-lg border border-surface bg-surface-2 text-muted hover:bg-surface transition-colors cursor-pointer"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="px-4 py-2 text-sm rounded-lg bg-[#B91C1C] text-white hover:bg-[#991B1B] transition-colors cursor-pointer"
+          >
+            Remover
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const ORDER_STATUS_STYLE = {
+  "Pending":        { bg: "#FFF7ED", tx: "#C2410C" },
+  "In Preparation": { bg: "#EFF6FF", tx: "#1D4ED8" },
+  "Ready":          { bg: "#F0FDF4", tx: "#166534" },
+  "Done":           { bg: "#F5F3FF", tx: "#6D28D9" },
+  "Delivered":      { bg: "#ECFEFF", tx: "#0E7490" },
+  "Cancelled":      { bg: "#FEF2F2", tx: "#B91C1C" },
+};
+
+function fmt(v) {
+  return v != null ? `${Number(v).toFixed(2)} €` : "—";
+}
+
+const ORDERS_PER_PAGE = 5;
+const NOTIFS_PER_PAGE = 5;
+
+const CAT_COLORS = {
+  "Appetizer":   { bg: "rgba(245,158,11,0.7)",  border: "#F59E0B" },
+  "Main Course": { bg: "rgba(59,130,246,0.7)",  border: "#3B82F6" },
+  "Dessert":     { bg: "rgba(236,72,153,0.7)",  border: "#EC4899" },
+  "Beverage":    { bg: "rgba(16,185,129,0.7)",  border: "#10B981" },
+};
+const CAT_FALLBACK = { bg: "rgba(107,114,128,0.7)", border: "#6B7280" };
+
+// ── Customer detail panel ──────────────────────────────────────────────────────
+function CustomerDetail({ customer, onBack }) {
+  const c = getPalette(customer.id);
+
+  const [notifications, setNotifications] = useState([]);
+  const [loadingNotifs, setLoadingNotifs] = useState(true);
+  const [markingId,     setMarkingId]     = useState(null);
+
+  const [orders,        setOrders]        = useState([]);
+  const [invoiceMap,    setInvoiceMap]    = useState({});
+  const [loadingOrders, setLoadingOrders] = useState(true);
+  const [orderPage,     setOrderPage]     = useState(1);
+  const [notifPage,     setNotifPage]     = useState(1);
+
+  const [categoryData,  setCategoryData]  = useState({});
+  const [loadingCharts, setLoadingCharts] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    customerService.getNotifications(customer.id)
+      .then((d) => { if (!cancelled) setNotifications(Array.isArray(d) ? d : []); })
+      .catch(() => { if (!cancelled) setNotifications([]); })
+      .finally(() => { if (!cancelled) setLoadingNotifs(false); });
+
+    // orders → invoices → order items → category breakdown
+    Promise.all([
+      orderService.getByCustomer(customer.id).catch(() => []),
+      itemService.getAll().catch(() => []),
+    ]).then(async ([orderList, allItems]) => {
+      if (cancelled) return;
+      const rows    = Array.isArray(orderList) ? orderList : [];
+      const itemMap = Object.fromEntries((Array.isArray(allItems) ? allItems : []).map((i) => [i.id, i]));
+      setOrders(rows);
+
+      const [invoicePairs, orderItemsPairs] = await Promise.all([
+        Promise.all(rows.map((o) =>
+          invoiceService.getByOrder(o.id).then((inv) => [o.id, inv]).catch(() => [o.id, null])
+        )),
+        Promise.all(rows.map((o) =>
+          orderItemService.getByOrder(o.id).then((items) => [o.id, items]).catch(() => [o.id, []])
+        )),
+      ]);
+
+      if (cancelled) return;
+      setInvoiceMap(Object.fromEntries(invoicePairs));
+
+      // compute spending per category using item.price × quantity
+      const catTotals = {};
+      orderItemsPairs.forEach(([, items]) => {
+        (Array.isArray(items) ? items : []).forEach((oi) => {
+          const item = itemMap[oi.item_id];
+          if (!item) return;
+          const cat = item.category || "Other";
+          catTotals[cat] = (catTotals[cat] || 0) + Number(item.price) * Number(oi.quantity);
+        });
+      });
+      setCategoryData(catTotals);
+    }).finally(() => {
+      if (!cancelled) { setLoadingOrders(false); setLoadingCharts(false); }
+    });
+
+    return () => { cancelled = true; };
+  }, [customer.id]);
+
+  async function markRead(notifId) {
+    if (markingId) return;
+    setMarkingId(notifId);
+    try {
+      await customerService.markNotificationRead(customer.id, notifId);
+      setNotifications((prev) => prev.map((n) => (n.id === notifId ? { ...n, is_read: true } : n)));
+    } catch {/* silent */} finally { setMarkingId(null); }
+  }
+
+  const unread     = notifications.filter((n) => !n.is_read).length;
+  const totalSpent = orders.reduce((sum, o) => {
+    const inv = invoiceMap[o.id];
+    return sum + (inv?.total_amount ? Number(inv.total_amount) : 0);
+  }, 0);
+
+  // orders pagination
+  const totalPages    = Math.max(1, Math.ceil(orders.length / ORDERS_PER_PAGE));
+  const pagedOrders   = orders.slice((orderPage - 1) * ORDERS_PER_PAGE, orderPage * ORDERS_PER_PAGE);
+
+  // notifications pagination
+  const notifTotal  = Math.max(1, Math.ceil(notifications.length / NOTIFS_PER_PAGE));
+  const pagedNotifs = notifications.slice((notifPage - 1) * NOTIFS_PER_PAGE, notifPage * NOTIFS_PER_PAGE);
+
+  // chart data
+  const catLabels  = Object.keys(categoryData);
+  const catValues  = catLabels.map((k) => +categoryData[k].toFixed(2));
+  const catBgs     = catLabels.map((k) => (CAT_COLORS[k] || CAT_FALLBACK).bg);
+  const catBorders = catLabels.map((k) => (CAT_COLORS[k] || CAT_FALLBACK).border);
+
+  const doughnutData = {
+    labels: catLabels,
+    datasets: [{ data: catValues, backgroundColor: catBgs, borderColor: catBorders, borderWidth: 2 }],
+  };
+  const lineData = {
+    labels: catLabels,
+    datasets: [{
+      label: "Gasto (€)",
+      data: catValues,
+      backgroundColor: "rgba(99,102,241,0.15)",
+      borderColor: "#6366F1",
+      borderWidth: 2,
+      pointBackgroundColor: catBorders,
+      pointBorderColor: "#fff",
+      pointBorderWidth: 2,
+      pointRadius: 6,
+      tension: 0.4,
+      fill: true,
+    }],
+  };
+  const chartTextColor = "rgba(150,150,170,0.9)";
+  const doughnutOpts = {
+    responsive: true,
+    plugins: {
+      legend: { position: "bottom", labels: { color: chartTextColor, font: { size: 11 }, padding: 12 } },
+      tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${fmt(ctx.parsed)}` } },
+    },
+  };
+  const lineOpts = {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: (ctx) => ` ${fmt(ctx.parsed.y)}` } },
+    },
+    scales: {
+      x: { ticks: { color: chartTextColor, font: { size: 11 } }, grid: { display: false } },
+      y: { ticks: { color: chartTextColor, font: { size: 11 }, callback: (v) => `${v} €` }, grid: { color: "rgba(150,150,170,0.1)" } },
+    },
+  };
+
+  return (
+    <div className="w-full max-w-[1200px] mx-auto px-4 sm:px-6 py-4 sm:py-6 animate-fadeInUp space-y-4">
+
+      {/* ── Header ── */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <button onClick={onBack} className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-main transition-colors cursor-pointer">
+          ← Voltar
+        </button>
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold" style={{ background: c.bg, color: c.tx }}>
+            {getInitials(customer.name)}
+          </div>
+          <div>
+            <p className="text-sm font-bold text-main leading-tight">{customer.name}</p>
+            <p className="text-[11px] text-muted">{customer.phone || "sem telefone"}</p>
+          </div>
+        </div>
+        <span className={`ml-auto text-xs px-3 py-1 rounded-full font-semibold ${customer.active ? "bg-[#EAF3DE] text-[#3B6D11]" : "bg-[#FCEBEB] text-[#A32D2D]"}`}>
+          {customer.active ? "Ativo" : "Inativo"}
+        </span>
+      </div>
+
+      {/* ── Info card ── */}
+      <div className="rounded-2xl bg-surface border border-surface p-5 shadow-sm">
+        <h3 className="text-sm font-semibold text-main mb-3">Informação do cliente</h3>
+        <ul className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+          {[
+            { label: "ID",          value: `#${customer.id}` },
+            { label: "Telefone",    value: customer.phone || "—" },
+            { label: "Criado em",   value: formatDate(customer.created_at) },
+            { label: "Total gasto", value: loadingOrders ? "…" : fmt(totalSpent) },
+          ].map(({ label, value }) => (
+            <li key={label}>
+              <p className="text-muted uppercase tracking-wide mb-0.5">{label}</p>
+              <p className="font-semibold text-main">{value}</p>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* ── Row 1: Notificações + Histórico ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+        {/* Notificações */}
+        <div className="rounded-2xl bg-surface border border-surface shadow-sm overflow-hidden flex flex-col">
+          <div className="flex items-center gap-2 px-5 py-3 border-b border-surface">
+            <i className="fas fa-bell text-sm text-muted" />
+            <h3 className="text-sm font-semibold text-main flex-1">Notificações</h3>
+            {unread > 0 && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#ef4444] text-white">
+                {unread} não {unread === 1 ? "lida" : "lidas"}
+              </span>
+            )}
+          </div>
+          <div className="divide-y divide-surface flex-1">
+            {loadingNotifs ? (
+              <p className="text-center py-8 text-muted text-sm">A carregar…</p>
+            ) : notifications.length === 0 ? (
+              <p className="text-center py-8 text-muted text-sm">Sem notificações.</p>
+            ) : pagedNotifs.map((n) => (
+              <div key={n.id} onClick={() => !n.is_read && markRead(n.id)}
+                className={`flex gap-3 px-5 py-3 transition-colors ${n.is_read ? "opacity-50 cursor-default" : "cursor-pointer hover:bg-surface-2"}`}>
+                <span className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${n.is_read ? "bg-transparent" : "bg-[#ef4444]"}`} />
+                <div className="min-w-0 flex-1">
+                  <p className={`text-sm leading-snug ${n.is_read ? "font-normal text-muted" : "font-semibold text-main"}`}>{n.title || "Notificação"}</p>
+                  {n.message && <p className="text-xs text-muted mt-0.5 line-clamp-2">{n.message}</p>}
+                </div>
+                {!n.is_read && <span className="text-[10px] text-muted self-start mt-1 flex-shrink-0">{markingId === n.id ? "…" : "marcar lida"}</span>}
+              </div>
+            ))}
+          </div>
+          {notifTotal > 1 && (
+            <div className="flex items-center justify-between px-5 py-2 border-t border-surface">
+              <button disabled={notifPage === 1} onClick={() => setNotifPage((p) => p - 1)}
+                className="text-xs text-muted disabled:opacity-30 hover:text-main transition-colors cursor-pointer disabled:cursor-default">
+                ← Anterior
+              </button>
+              <span className="text-xs text-muted">{notifPage} / {notifTotal}</span>
+              <button disabled={notifPage === notifTotal} onClick={() => setNotifPage((p) => p + 1)}
+                className="text-xs text-muted disabled:opacity-30 hover:text-main transition-colors cursor-pointer disabled:cursor-default">
+                Próxima →
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Histórico de ordens com paginação */}
+        <div className="rounded-2xl bg-surface border border-surface shadow-sm overflow-hidden flex flex-col">
+          <div className="flex items-center gap-2 px-5 py-3 border-b border-surface">
+            <i className="fas fa-receipt text-sm text-muted" />
+            <h3 className="text-sm font-semibold text-main flex-1">Histórico de ordens</h3>
+            <span className="text-[10px] text-muted">{orders.length} pedido{orders.length !== 1 ? "s" : ""}</span>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            {loadingOrders ? (
+              <p className="text-center py-8 text-muted text-sm">A carregar…</p>
+            ) : orders.length === 0 ? (
+              <p className="text-center py-8 text-muted text-sm">Sem pedidos registados.</p>
+            ) : (
+              <>
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-surface">
+                      <th className="text-left px-5 py-2 text-muted font-medium">Data</th>
+                      <th className="text-left px-3 py-2 text-muted font-medium">Estado</th>
+                      <th className="text-left px-3 py-2 text-muted font-medium">Tipo</th>
+                      <th className="text-right px-5 py-2 text-muted font-medium">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-surface">
+                    {pagedOrders.map((o) => {
+                      const inv = invoiceMap[o.id];
+                      const st  = ORDER_STATUS_STYLE[o.order_status] || { bg: "#F3F4F6", tx: "#6B7280" };
+                      return (
+                        <tr key={o.id} className="hover:bg-surface-2 transition-colors">
+                          <td className="px-5 py-2.5 text-muted whitespace-nowrap">{formatDate(o.created_at)}</td>
+                          <td className="px-3 py-2.5">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{ backgroundColor: st.bg, color: st.tx }}>
+                              {o.order_status}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2.5 text-muted">{o.service_type || "—"}</td>
+                          <td className="px-5 py-2.5 text-right font-semibold text-main">{inv ? fmt(inv.total_amount) : "—"}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-surface">
+                      <td colSpan={3} className="px-5 py-2.5 text-xs font-semibold text-muted">Total gasto</td>
+                      <td className="px-5 py-2.5 text-right text-sm font-bold text-main">{fmt(totalSpent)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between px-5 py-2 border-t border-surface">
+                    <button
+                      disabled={orderPage === 1}
+                      onClick={() => setOrderPage((p) => p - 1)}
+                      className="text-xs text-muted disabled:opacity-30 hover:text-main transition-colors cursor-pointer disabled:cursor-default"
+                    >
+                      ← Anterior
+                    </button>
+                    <span className="text-xs text-muted">{orderPage} / {totalPages}</span>
+                    <button
+                      disabled={orderPage === totalPages}
+                      onClick={() => setOrderPage((p) => p + 1)}
+                      className="text-xs text-muted disabled:opacity-30 hover:text-main transition-colors cursor-pointer disabled:cursor-default"
+                    >
+                      Próxima →
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Row 2: Charts ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+        {/* Doughnut */}
+        <div className="rounded-2xl bg-surface border border-surface shadow-sm p-5">
+          <h3 className="text-sm font-semibold text-main mb-4">
+            <i className="fas fa-chart-pie text-muted mr-2" />
+            Gastos por categoria
+          </h3>
+          {loadingCharts ? (
+            <p className="text-center py-8 text-muted text-sm">A carregar…</p>
+          ) : catLabels.length === 0 ? (
+            <p className="text-center py-8 text-muted text-sm">Sem dados suficientes.</p>
+          ) : (
+            <div className="flex justify-center" style={{ maxHeight: 260 }}>
+              <Doughnut data={doughnutData} options={doughnutOpts} />
+            </div>
+          )}
+        </div>
+
+        {/* Line */}
+        <div className="rounded-2xl bg-surface border border-surface shadow-sm p-5">
+          <h3 className="text-sm font-semibold text-main mb-4">
+            <i className="fas fa-chart-line text-muted mr-2" />
+            Valor por categoria (€)
+          </h3>
+          {loadingCharts ? (
+            <p className="text-center py-8 text-muted text-sm">A carregar…</p>
+          ) : catLabels.length === 0 ? (
+            <p className="text-center py-8 text-muted text-sm">Sem dados suficientes.</p>
+          ) : (
+            <div style={{ maxHeight: 260 }}>
+              <Line data={lineData} options={lineOpts} />
+            </div>
+          )}
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// ── Main page ──────────────────────────────────────────────────────────────────
+export default function ClientesPage() {
+  const [customers,          setCustomers]          = useState([]);
+  const [loading,            setLoading]            = useState(true);
+  const [error,              setError]              = useState(null);
+  const [search,             setSearch]             = useState("");
+  const [showSearch,         setShowSearch]         = useState(false);
+  const [statusFilter,       setStatusFilter]       = useState("ALL");
+  const [sortDirection,      setSortDirection]      = useState("NONE");
+  const [activeDetail,       setActiveDetail]       = useState(null);
+  const [confirmDeleteId,    setConfirmDeleteId]    = useState(null);
+
+  const loadCustomers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await customerService.getAll();
+      setCustomers(
+        data.map((c) => ({ ...c, active: c.active === true || c.active === 1 }))
+      );
+    } catch (err) {
+      setError(err.message || "Falha ao conectar ao servidor");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadCustomers(); }, []);
+
+  // ── Derivations ──
+  const filtered = customers.filter((c) => {
+    const q = search.toLowerCase();
+    const matchesText =
+      c.name.toLowerCase().includes(q) ||
+      (c.phone || "").toLowerCase().includes(q);
+    const matchesStatus =
+      statusFilter === "ALL"      ? true :
+      statusFilter === "ACTIVE"   ? c.active :
+      statusFilter === "INACTIVE" ? !c.active : true;
+    return matchesText && matchesStatus;
+  });
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortDirection === "ASC")  return a.name.localeCompare(b.name);
+    if (sortDirection === "DESC") return b.name.localeCompare(a.name);
+    return 0;
+  });
+
+  const activeCount   = customers.filter((c) => c.active).length;
+  const inactiveCount = customers.filter((c) => !c.active).length;
+  const activePct     = customers.length > 0
+    ? ((activeCount / customers.length) * 100).toFixed(1)
+    : "0.0";
+
+  const statCards = [
+    { label: "Clientes",  value: customers.length,  icon: "fas fa-users",        filter: "ALL"      },
+    { label: "Ativos",    value: activeCount,        icon: "fas fa-user-check",   filter: "ACTIVE"   },
+    { label: "Inativos",  value: inactiveCount,      icon: "fas fa-user-slash",   filter: "INACTIVE" },
+    { label: "Filtrados", value: filtered.length,    icon: "fas fa-filter",       filter: null       },
+    { label: "Ativos %",  value: `${activePct}%`,    icon: "fas fa-percentage",   filter: null       },
+  ];
+
+  // ── Actions ──
+  async function toggleActive(id) {
+    const current = customers.find((c) => c.id === id);
+    if (!current) return;
+    const newActive = !current.active;
+    setCustomers((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, active: newActive } : c))
+    );
+    try {
+      await customerService.toggleActive(id, newActive);
+    } catch {
+      setCustomers((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, active: current.active } : c))
+      );
+    }
+  }
+
+  async function deleteCustomer(id) {
+    setCustomers((prev) => prev.filter((c) => c.id !== id));
+    setConfirmDeleteId(null);
+    if (activeDetail?.id === id) setActiveDetail(null);
+    try {
+      await customerService.remove(id);
+    } catch {
+      loadCustomers();
+    }
+  }
+
+  // ── Loading / error states ──
+  if (loading) {
+    return (
+      <div className="min-h-full p-6 pb-16 md:pb-6 bg-[var(--bg)] text-[var(--text)]">
+        <div className="mx-auto max-w-[1200px]">
+          <h2 className="text-2xl sm:text-3xl font-bold text-main mb-1">Clientes</h2>
+          <p className="text-muted text-sm mb-6">Gerencie os clientes do restaurante.</p>
+          <div className="flex flex-col items-center gap-4 rounded-3xl border border-surface bg-surface p-6 text-center max-w-md mx-auto">
+            <TrophySpin message="A carregar clientes..." />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-full p-6 pb-16 md:pb-6 bg-[var(--bg)] text-[var(--text)]">
+        <div className="mx-auto max-w-[1200px]">
+          <h2 className="text-2xl sm:text-3xl font-bold text-main mb-6">Clientes</h2>
+          <div className="flex flex-col items-center gap-4 rounded-3xl border border-surface bg-surface p-6 text-center max-w-md mx-auto">
+            <TrophySpin message="Servidor indisponível" />
+            <button
+              type="button"
+              onClick={loadCustomers}
+              className="rounded-full border border-surface bg-surface-2 px-4 py-2 text-sm font-semibold text-main cursor-pointer"
+            >
+              ↺ Recarregar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Detail view ──
+  if (activeDetail) {
+    const live = customers.find((c) => c.id === activeDetail.id) || activeDetail;
+    return (
+      <div className="min-h-full p-6 pb-16 md:pb-6 bg-[var(--bg)] text-[var(--text)]">
+        <CustomerDetail customer={live} onBack={() => setActiveDetail(null)} />
+      </div>
+    );
+  }
+
+  const filterLabel =
+    statusFilter === "ALL"      ? "Todos" :
+    statusFilter === "ACTIVE"   ? "Ativos" : "Inativos";
+
+  const confirmDeleteCustomer = confirmDeleteId !== null
+    ? customers.find((c) => c.id === confirmDeleteId)
+    : null;
+
+  return (
+    <div className="min-h-full p-6 pb-16 md:pb-6 bg-[var(--bg)] text-[var(--text)]">
+      <div className="mx-auto max-w-[1200px] space-y-5">
+
+        {/* ── Header ── */}
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-main mb-0.5">Gestão de Clientes</h2>
+          <p className="text-muted text-sm">Lista de clientes registados no restaurante.</p>
+        </div>
+
+        {/* ── Toolbar ── */}
+        <div className="flex flex-col gap-3">
+
+          {/* Mobile: 2+2+1 layout */}
+          <div className="sm:hidden space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              {statCards.slice(0, 2).map((c) => (
+                <FilterStatCard key={c.label} {...c} currentFilter={statusFilter} onFilter={setStatusFilter} />
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {statCards.slice(2, 4).map((c) => (
+                <FilterStatCard key={c.label} {...c} currentFilter={statusFilter} onFilter={setStatusFilter} />
+              ))}
+            </div>
+            <FilterStatCard {...statCards[4]} currentFilter={statusFilter} onFilter={setStatusFilter} />
+          </div>
+
+          {/* Desktop: 5 in one row */}
+          <div className="hidden sm:grid sm:grid-cols-5 gap-2">
+            {statCards.map((c) => (
+              <FilterStatCard key={c.label} {...c} currentFilter={statusFilter} onFilter={setStatusFilter} />
+            ))}
+          </div>
+
+          {/* Filter controls */}
+          <div className="ml-auto flex items-center gap-2">
+            {showSearch && (
+              <input
+                autoFocus
+                className="h-8 bg-surface border border-surface rounded-lg px-3 text-sm text-main placeholder:text-muted focus:outline-none focus:border-[var(--primary)] flex-1 min-w-0 sm:w-48 sm:flex-none"
+                placeholder="Procurar cliente…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            )}
+            <span className="hidden sm:inline-flex text-xs text-muted px-3 py-1 rounded-full border border-surface bg-surface-2">
+              Filtro: {filterLabel}
+            </span>
+            <button
+              type="button"
+              onClick={() => { setShowSearch((s) => !s); setSearch(""); }}
+              className="w-8 h-8 rounded-lg border border-surface bg-surface flex items-center justify-center text-muted hover:bg-surface-2 cursor-pointer"
+            >
+              ⌕
+            </button>
+            <button
+              type="button"
+              onClick={() => setSortDirection((d) => d === "NONE" ? "ASC" : d === "ASC" ? "DESC" : "NONE")}
+              className="w-8 h-8 rounded-lg border border-surface bg-surface flex items-center justify-center text-muted hover:bg-surface-2 cursor-pointer"
+            >
+              {sortDirection === "ASC" ? "⬆" : sortDirection === "DESC" ? "⬇" : "⇅"}
+            </button>
+          </div>
+        </div>
+
+        {/* ── Customer grid ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+          {sorted.map((c, i) => (
+            <CustomerCard
+              key={c.id}
+              customer={c}
+              onDetail={setActiveDetail}
+              onToggle={toggleActive}
+              onDelete={(id) => setConfirmDeleteId(id)}
+              delay={i * 70}
+            />
+          ))}
+          {sorted.length === 0 && (
+            <p className="col-span-full text-center py-16 text-muted text-sm">
+              Nenhum cliente encontrado.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* ── Modals ── */}
+      {confirmDeleteId !== null && confirmDeleteCustomer && (
+        <DeleteConfirm
+          customer={confirmDeleteCustomer}
+          onCancel={() => setConfirmDeleteId(null)}
+          onConfirm={() => deleteCustomer(confirmDeleteId)}
+        />
+      )}
+    </div>
   );
 }

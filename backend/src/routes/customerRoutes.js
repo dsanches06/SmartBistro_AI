@@ -1,14 +1,17 @@
 import { Router } from "express";
 import { customerController, notificationController } from "../controllers/index.js";
+import { checkCustomerExists } from "../middlewares/index.js";
 
 const router = Router();
 
-router.get("/", customerController.getAll);
-router.get("/:id", customerController.getById);
-router.post("/", customerController.create);
-router.put("/:id", customerController.update);
-router.delete("/:id", customerController.remove);
-router.patch("/:id/active", customerController.toggleActive);
+router.get("/",       customerController.getAll);
+router.post("/",      customerController.create);
+
+// Rotas com :id — middleware valida a existência antes de chegar ao controller
+router.get("/:id",           checkCustomerExists, customerController.getById);
+router.put("/:id",           checkCustomerExists, customerController.update);
+router.delete("/:id",        checkCustomerExists, customerController.remove);
+router.patch("/:id/active",  checkCustomerExists, customerController.toggleActive);
 
 // Rotas de notificações aninhadas — mais específicas antes da geral
 router.get("/:id/notifications/unread", (req, res) => {

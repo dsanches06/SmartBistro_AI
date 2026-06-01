@@ -5,6 +5,7 @@ import { classifyGeminiError, calculateInvoiceTotals, calculateProfitMargin } fr
 import {
   createCustomerFunctionDeclaration,
   getCustomerFunctionDeclaration,
+  findOrCreateCustomerFunctionDeclaration,
 } from "../functions/customers/index.js";
 import {
   getTableFunctionDeclaration,
@@ -41,10 +42,12 @@ import {
 } from "../functions/reservations/index.js";
 
 // ── Services (operações reais na BD) ──────────────────────────────────────────
+import { getChatHistoryByConversationId } from "../../services/index.js";
 import {
   getCustomerById,
   getAllCustomers,
   createCustomer,
+  findOrCreateCustomer,
   getTableById,
   getAllTables,
   updateTableStatus,
@@ -71,6 +74,7 @@ import {
 
 // ── Todas as declarações de ferramentas do pipeline ───────────────────────────
 const ALL_DECLARATIONS = [
+  findOrCreateCustomerFunctionDeclaration,
   getCustomerFunctionDeclaration,
   getTableFunctionDeclaration,
   updateTableStatusFunctionDeclaration,
@@ -95,9 +99,12 @@ const ALL_DECLARATIONS = [
 
 // ── Handlers: recebem os args do Gemini e executam operações na BD ─────────────
 export const FUNCTION_HANDLERS = {
+  find_or_create_customer: async (args) =>
+    findOrCreateCustomer(args.name, args.phone ?? null),
+
   get_customer: async (args) => {
     if (args.customer_id) return getCustomerById(args.customer_id);
-    const term = args.name || args.email || args.phone;
+    const term = args.name || args.phone;
     if (term) {
       const list = await getAllCustomers(term);
       return list[0] ?? null;
@@ -236,11 +243,25 @@ class SmartBistroChatProcessor extends BaseChatProcessor {
 // ── Sessões por conversationId ────────────────────────────────────────────────
 const sessions = new Map();
 
-function getOrCreateSession(conversationId) {
-  if (!sessions.has(conversationId)) {
-    sessions.set(conversationId, new SmartBistroChatProcessor());
+// ROLE_USER=2, ROLE_ASSISTANT=3 (igual ao chatHistoryService)
+async function getOrCreateSession(conversationId) {
+  if (sessions.has(conversationId)) return sessions.get(conversationId);
+
+  const processor = new SmartBistroChatProcessor();
+
+  // Carrega histórico da BD para restaurar contexto após reinício do servidor
+  try {
+    const rows = await getChatHistoryByConversationId(conversationId);
+    processor.history = rows.map((r) => ({
+      role:    r.role_id === 2 ? "user" : "assistant",
+      content: r.content,
+    }));
+  } catch {
+    // Sem histórico ou erro — começa em limpo
   }
-  return sessions.get(conversationId);
+
+  sessions.set(conversationId, processor);
+  return processor;
 }
 
 /**
@@ -252,7 +273,7 @@ export async function processChatStream(
   conversationId,
   { onChunk, onDone, onError },
 ) {
-  const processor = getOrCreateSession(String(conversationId));
+  const processor = await getOrCreateSession(String(conversationId));
   try {
     const result = await processor.chat(message, onChunk);
     if (onDone) onDone(result.message || "", result.functionResults ?? []);

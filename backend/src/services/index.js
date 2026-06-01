@@ -1,4 +1,5 @@
 export * from "./customerService.js";
+export { getById as getCustomerById } from "./customerService.js";
 export * from "./roleService.js";
 export * from "./tableService.js";
 export * from "./itemService.js";

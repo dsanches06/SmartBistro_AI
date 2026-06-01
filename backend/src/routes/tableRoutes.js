@@ -1,15 +1,17 @@
 import { Router } from "express";
 import { tableController } from "../controllers/index.js";
+import { checkTableExists } from "../middlewares/index.js";
 
 const router = Router();
 
-router.get("/", tableController.getAll);
-router.get("/:id/details", tableController.getDetails);
-router.get("/:id/reservation", tableController.getReservation);
-router.get("/:id", tableController.getById);
+router.get("/",  tableController.getAll);
 router.post("/", tableController.create);
-router.put("/:id", tableController.update);
-router.patch("/:id/status", tableController.updateStatus);
-router.delete("/:id", tableController.remove);
+
+router.get("/:id/details",    checkTableExists, tableController.getDetails);
+router.get("/:id/reservation",checkTableExists, tableController.getReservation);
+router.get("/:id",            checkTableExists, tableController.getById);
+router.put("/:id",            checkTableExists, tableController.update);
+router.patch("/:id/status",   checkTableExists, tableController.updateStatus);
+router.delete("/:id",         checkTableExists, tableController.remove);
 
 export default router;

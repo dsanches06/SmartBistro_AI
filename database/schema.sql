@@ -135,6 +135,7 @@ CREATE TABLE orders (
     kitchen_sequence_json JSON NOT NULL,
     order_status ENUM('Pending','In Preparation','Ready','Done','Delivered','Cancelled') DEFAULT 'Pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL,
     FOREIGN KEY (table_id) REFERENCES tables(id) ON DELETE SET NULL
 );

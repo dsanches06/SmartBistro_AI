@@ -16,7 +16,7 @@ export const getAllCustomers = async (search, sort) => {
 };
 
 // Devolve um cliente pelo ID ou null se não existir
-export const getCustomerById = async (id) => {
+export const getById = async (id) => {
   const [r] = await db.query("SELECT * FROM customers WHERE id = ?", [id]);
   return r[0] ? mapCustomerDTOResponse(r[0]) : null;
 };

@@ -6,16 +6,16 @@ class GetCustomerFunction extends BaseFunction {
     super({
       functionName: 'get_customer',
       description:
-        'Consulta um cliente existente por ID, email ou telefone. ' +
-        'Usa para verificar se o cliente já está registado antes de criar um novo.',
+        'Procura um cliente existente por nome, telefone ou ID. ' +
+        'Usa sempre que o cliente fornecer o nome — passa o nome completo no campo name.',
       properties: {
         customer_id: {
           type: Type.INTEGER,
           description: 'ID do cliente (opcional)',
         },
-        email: {
+        name: {
           type: Type.STRING,
-          description: 'Email do cliente (opcional)',
+          description: 'Nome completo do cliente (ex: "Danilson Sanches")',
         },
         phone: {
           type: Type.STRING,
@@ -29,8 +29,8 @@ class GetCustomerFunction extends BaseFunction {
   mapValues(args = {}) {
     return {
       customer_id: args.customer_id ? this.parseNumber(args.customer_id, 0) : null,
-      email:       args.email       ? this.parseString(args.email)          : null,
-      phone:       args.phone       ? this.parseString(args.phone)          : null,
+      name:        args.name        ? this.parseString(args.name)            : null,
+      phone:       args.phone       ? this.parseString(args.phone)           : null,
     };
   }
 }
