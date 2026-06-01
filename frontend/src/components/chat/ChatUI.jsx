@@ -286,10 +286,14 @@ export function ChatUI({ isOpen, onClose }) {
       <div
         className={[
           "fixed z-50 flex flex-col bg-page border border-surface shadow-2xl overflow-hidden",
-          "inset-x-0 top-14 bottom-0 rounded-none",
+          "inset-x-0 bottom-0 h-[60vh] rounded-t-3xl",
           "md:inset-auto md:bottom-6 md:right-6 md:w-[340px] md:h-[80vh] md:min-h-[420px] md:rounded-3xl",
         ].join(" ")}
       >
+        {/* Drag handle — mobile only */}
+        <div className="md:hidden flex justify-center pt-2.5 pb-1 flex-shrink-0">
+          <div className="w-10 h-1 rounded-full bg-[var(--border-strong)]" />
+        </div>
         <ChatHeaderUI onClose={onClose} />
 
         {/* ── History overlay ── */}
