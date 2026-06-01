@@ -1,6 +1,32 @@
 import { db } from "../db.js";
 import { mapOrderDTOResponse } from "../dto/mapDTO.js";
 
+const ORDER_STATUS_OPTIONS = [
+  "Pending",
+  "In Preparation",
+  "Ready",
+  "Done",
+  "Delivered",
+  "Cancelled",
+];
+
+const normalizeOrderStatus = (orderStatus) => {
+  if (typeof orderStatus !== "string") return "Pending";
+  const normalized = orderStatus.trim();
+  const exactMatch = ORDER_STATUS_OPTIONS.find(
+    (option) => option.toLowerCase() === normalized.toLowerCase(),
+  );
+  if (exactMatch) return exactMatch;
+  const lower = normalized.toLowerCase();
+  if (lower.includes("pending")) return "Pending";
+  if (lower.includes("in preparation") || lower.includes("preparation")) return "In Preparation";
+  if (lower.includes("ready")) return "Ready";
+  if (lower.includes("done")) return "Done";
+  if (lower.includes("deliver")) return "Delivered";
+  if (lower.includes("cancel")) return "Cancelled";
+  return "Pending";
+};
+
 // Devolve todos os pedidos; suporta filtragem por status e service_type
 export const getAllOrders = async (status, serviceType) => {
   let q = "SELECT * FROM orders";
@@ -47,6 +73,7 @@ export const getPendingOrders = async () => {
 
 // Cria um novo pedido e devolve o registo criado
 export const createOrder = async (data) => {
+  const orderStatus = normalizeOrderStatus(data.order_status ?? "Pending");
   const [result] = await db.query(
     `INSERT INTO orders
       (customer_id, table_id, service_type, allergy_restrictions, kitchen_sequence_json, order_status)
@@ -57,7 +84,7 @@ export const createOrder = async (data) => {
       data.service_type,
       data.allergy_restrictions ?? null,
       JSON.stringify(data.kitchen_sequence_json),
-      data.order_status ?? "Pending",
+      orderStatus,
     ],
   );
   return mapOrderDTOResponse({
@@ -67,7 +94,7 @@ export const createOrder = async (data) => {
     service_type: data.service_type,
     allergy_restrictions: data.allergy_restrictions ?? null,
     kitchen_sequence_json: data.kitchen_sequence_json,
-    order_status: data.order_status ?? "Pending",
+    order_status: orderStatus,
     created_at: new Date(),
   });
 };
@@ -82,7 +109,7 @@ export const updateOrder = async (id, data) => {
     };
   if (data.allergy_restrictions !== undefined) add("allergy_restrictions", data.allergy_restrictions);
   if (data.kitchen_sequence_json !== undefined) add("kitchen_sequence_json", JSON.stringify(data.kitchen_sequence_json));
-  if (data.order_status !== undefined) add("order_status", data.order_status);
+  if (data.order_status !== undefined) add("order_status", normalizeOrderStatus(data.order_status));
   if (!fields.length) return 0;
   values.push(id);
   const [r] = await db.query(
@@ -96,7 +123,7 @@ export const updateOrder = async (id, data) => {
 export const updateOrderStatus = async (id, orderStatus) => {
   const [r] = await db.query(
     "UPDATE orders SET order_status = ? WHERE id = ?",
-    [orderStatus, id],
+    [normalizeOrderStatus(orderStatus), id],
   );
   return r.affectedRows;
 };

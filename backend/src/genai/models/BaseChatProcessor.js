@@ -3,7 +3,14 @@
  */
 
 import { createGeminiChat, FunctionCallingConfigMode, CHATBOT_SYSTEM_PROMPT } from '../config/index.js';
-import { MAX_AGENTIC_STEPS } from "../../utils/index.js"
+import { MAX_AGENTIC_STEPS, synthesizeFallbackMessage, GEMINI_MODEL_QUEUE, isRetryableGeminiError } from "../../utils/index.js"
+
+// Gemini functionResponse.response deve ser um objeto — arrays são inválidos
+function toResponsePayload(result) {
+  if (Array.isArray(result)) return { items: result };
+  if (result !== null && typeof result === 'object') return result;
+  return { result: result ?? null };
+}
 
 // Constrói o config Gemini para o chat com suporte a function calling
 function buildChatConfig(tools = []) {
@@ -34,6 +41,56 @@ export class BaseChatProcessor {
       role: item.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: item.content }],
     }));
+  }
+
+  async _createChat(conversationHistory = [], model = null) {
+    return createGeminiChat(
+      buildChatConfig(this.toolConfig),
+      this.buildHistory(conversationHistory),
+      null,
+      model,
+    );
+  }
+
+  async _sendMessageWithFallback(conversationHistory, message) {
+    let lastError;
+    for (const model of GEMINI_MODEL_QUEUE) {
+      try {
+        const chat = await this._createChat(conversationHistory, model);
+        const response = await chat.sendMessage({ message });
+        if (model !== process.env.MODEL_NAME) {
+          console.log(`[ChatProcessor] fallback para modelo ${model}`);
+        }
+        return response;
+      } catch (error) {
+        if (!isRetryableGeminiError(error)) throw error;
+        lastError = error;
+        console.warn(
+          `[ChatProcessor] modelo ${model} indisponível — ${error.message}. A tentar próximo modelo...`,
+        );
+      }
+    }
+    throw lastError;
+  }
+
+  async _streamRoundWithFallback(conversationHistory, message, onChunk) {
+    let lastError;
+    for (const model of GEMINI_MODEL_QUEUE) {
+      try {
+        const chat = await this._createChat(conversationHistory, model);
+        if (model !== process.env.MODEL_NAME) {
+          console.log(`[ChatProcessor] fallback stream para modelo ${model}`);
+        }
+        return await this._streamRound(chat, message, onChunk);
+      } catch (error) {
+        if (!isRetryableGeminiError(error)) throw error;
+        lastError = error;
+        console.warn(
+          `[ChatProcessor] modelo ${model} indisponível no stream — ${error.message}. A tentar próximo modelo...`,
+        );
+      }
+    }
+    throw lastError;
   }
 
   // ── Executar uma chamada de função ────────────────────────────────────────────
@@ -74,9 +131,7 @@ export class BaseChatProcessor {
   async processChatMessage(userMessage, conversationHistory = []) {
     try {
       const history = this.buildHistory(conversationHistory);
-      const chat = createGeminiChat(buildChatConfig(this.toolConfig), history);
-
-      let response = await chat.sendMessage({ message: userMessage });
+      let response = await this._sendMessageWithFallback(conversationHistory, userMessage);
       const allResults = [];
       let step = 0;
 
@@ -94,13 +149,11 @@ export class BaseChatProcessor {
         allResults.push(...execResults);
 
         // Devolve todos os resultados ao modelo numa única mensagem
-        response = await chat.sendMessage({
-          message: {
-            role: 'tool',
-            parts: execResults.map(({ name, result }) => ({
-              functionResponse: { name, response: result },
-            })),
-          },
+        response = await this._sendMessageWithFallback(conversationHistory, {
+          role: 'tool',
+          parts: execResults.map(({ name, result }) => ({
+            functionResponse: { name, response: toResponsePayload(result) },
+          })),
         });
       }
 
@@ -167,7 +220,6 @@ export class BaseChatProcessor {
   // na ronda final onde o modelo gera a resposta textual.
   async processChatMessageStream(userMessage, conversationHistory = [], onChunk) {
     const history = this.buildHistory(conversationHistory);
-    const chat = createGeminiChat(buildChatConfig(this.toolConfig), history);
     const allResults = [];
     const allChunks = []; // acumula todo o texto para o campo message do retorno
 
@@ -177,7 +229,7 @@ export class BaseChatProcessor {
     };
 
     // Primeira ronda — pode ser resposta directa ou chamada de função
-    let { functionCalls } = await this._streamRound(chat, userMessage, emit);
+    let { functionCalls } = await this._streamRoundWithFallback(conversationHistory, userMessage, emit);
     let step = 0;
 
     while (functionCalls.length && step < MAX_AGENTIC_STEPS) {
@@ -194,12 +246,12 @@ export class BaseChatProcessor {
       allResults.push(...execResults);
 
       // Devolver resultados ao modelo e fazer streaming da resposta
-      ({ functionCalls } = await this._streamRound(
-        chat,
+      ({ functionCalls } = await this._streamRoundWithFallback(
+        conversationHistory,
         {
           role: 'tool',
           parts: execResults.map(({ name, result }) => ({
-            functionResponse: { name, response: result },
+            functionResponse: { name, response: toResponsePayload(result) },
           })),
         },
         emit,
@@ -208,7 +260,7 @@ export class BaseChatProcessor {
 
     return {
       success: true,
-      message: allChunks.join(''),
+      message: synthesizeFallbackMessage(allChunks, allResults),
       functionResults: allResults.map(
         ({ name, args, result, functionCall }) => ({
           functionName: name,

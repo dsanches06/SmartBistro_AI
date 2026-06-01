@@ -35,13 +35,13 @@ class CreateReservationFunction extends BaseFunction {
           description: 'Notas especiais (alergias, ocasião especial, etc.) — opcional',
         },
       },
-      required: ['customer_id', 'table_id', 'reservation_date', 'party_size'],
+      required: ['table_id', 'reservation_date', 'party_size'],
     });
   }
 
   mapValues(args = {}) {
     return {
-      customer_id:      this.parseNumber(args.customer_id, 0),
+      customer_id:      args.customer_id != null ? this.parseNumber(args.customer_id, 0) : null,
       table_id:         this.parseNumber(args.table_id, 0),
       reservation_date: this.parseString(args.reservation_date),
       party_size:       this.parseNumber(args.party_size, 1),

@@ -1,0 +1,1208 @@
+﻿
+╔══════════════════════════════════════════════╗
+║     SMARTBISTRO AI — TESTES DE API REST      ║
+╚══════════════════════════════════════════════╝
+  Base URL : http://localhost:3000
+  Random   : 7279
+
+─── HEALTH CHECK ───────────────────────────────
+
+TEST 00 : GET / (health check)
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"status":"OK","message":"SERVER API is running","timestamp":"2026-06-01T08:31:16.371Z","port":"3000"}
+
+─── ROLES ───────────────────────────────────────
+
+TEST 01 : GET /roles
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/roles
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+[{"id":1,"name":"ADMIN","flow_order":1},{"id":2,"name":"USER","flow_order":2},{"id":3,"name":"MODEL","flow_order":3}]
+
+TEST 02 : GET /roles/:id
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/roles/1
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"id":1,"name":"ADMIN","flow_order":1}
+
+─── CUSTOMERS ───────────────────────────────────
+
+TEST 03 : POST /customers (criar)
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/customers
+  [REQUEST BODY]
+    {
+    "email":  "cliente7279@test.com",
+    "gender":  "Male",
+    "name":  "Cliente Teste 7279",
+    "phone":  "912345678"
+}
+  [STATUS] 201 OK
+  [RESPONSE JSON]
+{"id":104,"name":"Cliente Teste 7279","email":"cliente7279@test.com","phone":"912345678","gender":"Male"}
+
+TEST 04 : GET /customers
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/customers
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+[{"id":1,"name":"Hugo Neto","email":"hugo@dev.com","phone":"555-0108","gender":"Male","role_id":2,"active":1,"created_at":"2026-06-01T08:14:11.000Z"},{"id":2,"name":"Ana Silva","email":"ana@dev.com","phone":"555-0101","gender":"Female","role_id":2,"active":1,"created_at":"2026-06-01T08:14:11.000Z"},{"id":3,"name":"Joana Luz","email":"joana@dev.com","phone":"555-0110","gender":"Female","role_id":2,"active":1,"created_at":"2026-06-01T08:14:11.000Z"},{"id":4,"name":"Bruno Costa","email":"bruno@dev.com","phone":"555-0102","gender":"Male","role_id":2,"active":1,"created_at":"2026-06-01T08:14:11.000Z"},{"id":5,"name":"Igor Lima","email":"igor@dev.com","phone":"555-0109","gender":"Male","role_id":2,"active":1,"created_at":"2026-06-01T08:14:11.000Z"},{"id":6,"name":"Carla Dias","email":"carla@dev.com","phone":"555-0103","gender":"Female","role_id":2,"active":1,"created_at":"2026-06-01T08:14:11.000Z"},{"id":7,"name":"Filipe Gil","email":"filipe@dev.com","phone":"555-0106","gender":"Male","role_id":2,"active":1,"created_at":"2026-06-01T08:14:11.000Z"},{"id":8,"name":"Elena Vaz","email":"elena@dev.com","phone":"555-0105","gender":"Female","role_id":2,"active":1,"created_at":"2026-06-01T08:14:11.000Z"},{"id":9,"name":"David Reas","email":"david@dev.com","phone":"555-0104","gender":"Male","role_id":2,"active":1,"created_at":"2026-06-01T08:14:11.000Z"},{"id":10,"name":"Gina Rosa","email":"gina@dev.com","phone":"555-0107","gender":"Female","role_id":2,"active":1,"created_at":"2026-06-01T08:14:11.000Z"},{"id":11,"name":"Ana Pereira","email":"ana.pereira@dev.com","phone":"555-0111","gender":"Female","role_id":2,"active":1,"created_at":"2026-06-01T08:14:11.000Z"},{"id":12,"name":"Carlos Silva","email":"carlos@dev.com","phone":"555-0112","gender":"Male","role_id":2,"active":1,"created_at":"2026-06-01T08:14:11.000Z"},{"id":13,"name":"Manuel Santos","email":"manuel@dev.com","phone":"555-0113","gender":"Male","role_id":2,"active":1,"created_at":"2026-06-01T08:14:11.000Z"},{"id":14,"name":"Mariana Costa","email":"mariana@dev.com","phone":"555-0114","gender":"Female","role_id":2,"active":1,"created_at":"2026-06-01T08:14:11.000Z"},{"id":15,"name":"Pedro Almeida","email":"pedro@dev.com","phone":"555-0115","gender":"Male","role_id":2,"active":1,"created_at":"2026-06-01T08:14:11.000Z"},{"id":16,"name":"Joana Martins","email":"joana.martins@dev.com","phone":"555-0116","gender":"Female","role_id":2,"active":1,"created_at":"2026-06-01T08:14:11.000Z"},{"id":100,"name":"Cliente Anónimo","email":"anonymous@smartbistro.local","phone":"","gender":"Not specified","role_id":2,"active":1,"created_at":"2026-06-01T08:14:11.000Z"},{"id":104,"name":"Cliente Teste 7279","email":"cliente7279@test.com","phone":"912345678","gender":"Male","role_id":2,"active":1,"created_at":"2026-06-01T08:31:17.000Z"}]
+
+TEST 05 : GET /customers/:id
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/customers/104
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"id":104,"name":"Cliente Teste 7279","email":"cliente7279@test.com","phone":"912345678","gender":"Male","role_id":2,"active":1,"created_at":"2026-06-01T08:31:17.000Z"}
+
+TEST 06 : PUT /customers/:id (actualizar)
+  [HEADERS]
+    Method : PUT
+    URI    : http://localhost:3000/customers/104
+  [REQUEST BODY]
+    {
+    "email":  "upd7279@test.com",
+    "gender":  "Female",
+    "name":  "Cliente Actualizado 7279",
+    "phone":  "999888777"
+}
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Cliente actualizado com sucesso"}
+
+TEST 07 : PATCH /customers/:id/active (desactivar)
+  [HEADERS]
+    Method : PATCH
+    URI    : http://localhost:3000/customers/104/active
+  [REQUEST BODY]
+    {
+    "active":  0
+}
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Cliente desactivado com sucesso"}
+
+TEST 08 : PATCH /customers/:id/active (reactivar)
+  [HEADERS]
+    Method : PATCH
+    URI    : http://localhost:3000/customers/104/active
+  [REQUEST BODY]
+    {
+    "active":  1
+}
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Cliente activado com sucesso"}
+
+TEST 09 : POST /customers (email duplicado → 409)
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/customers
+  [REQUEST BODY]
+    {
+    "email":  "upd7279@test.com",
+    "name":  "Dup"
+}
+  [ESPERADO] 409 Conflict
+  [STATUS] 409 (esperado)
+  [INFO] Email duplicado rejeitado corretamente
+
+TEST 10 : GET /customers/9999 (não existe → 404)
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/customers/9999
+  [ESPERADO] 404 Not Found
+  [STATUS] 404 (esperado)
+  [INFO] Cliente inexistente rejeitado corretamente
+
+─── TABLES ──────────────────────────────────────
+
+TEST 11 : POST /tables (criar)
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/tables
+  [REQUEST BODY]
+    {
+    "capacity":  4,
+    "status":  "Available",
+    "table_number":  7279
+}
+  [STATUS] 201 OK
+  [RESPONSE JSON]
+{"id":28,"table_number":7279,"capacity":4,"status":"Available"}
+
+TEST 12 : GET /tables
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/tables
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+[{"id":28,"table_number":"7279","capacity":4,"status":"Available"},{"id":1,"table_number":"T01","capacity":2,"status":"Occupied"},{"id":2,"table_number":"T02","capacity":4,"status":"Occupied"},{"id":3,"table_number":"T03","capacity":4,"status":"Occupied"},{"id":4,"table_number":"T04","capacity":4,"status":"Available"},{"id":5,"table_number":"T05","capacity":6,"status":"Occupied"},{"id":6,"table_number":"T06","capacity":6,"status":"Occupied"},{"id":7,"table_number":"T07","capacity":8,"status":"Occupied"},{"id":8,"table_number":"T08","capacity":8,"status":"Available"},{"id":9,"table_number":"T09","capacity":2,"status":"Occupied"},{"id":10,"table_number":"T10","capacity":10,"status":"Available"},{"id":11,"table_number":"T11","capacity":2,"status":"Reserved"},{"id":12,"table_number":"T12","capacity":4,"status":"Occupied"},{"id":13,"table_number":"T13","capacity":4,"status":"Occupied"},{"id":14,"table_number":"T14","capacity":6,"status":"Reserved"},{"id":15,"table_number":"T15","capacity":8,"status":"Available"},{"id":16,"table_number":"T16","capacity":2,"status":"Reserved"},{"id":17,"table_number":"T17","capacity":4,"status":"Occupied"},{"id":18,"table_number":"T18","capacity":4,"status":"Available"},{"id":19,"table_number":"T19","capacity":6,"status":"Reserved"},{"id":20,"table_number":"T20","capacity":10,"status":"Available"},{"id":21,"table_number":"T21","capacity":4,"status":"Occupied"},{"id":22,"table_number":"T22","capacity":4,"status":"Occupied"},{"id":23,"table_number":"T23","capacity":6,"status":"Occupied"},{"id":24,"table_number":"T24","capacity":8,"status":"Available"}]
+
+TEST 13 : GET /tables/:id
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/tables/28
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"id":28,"table_number":"7279","capacity":4,"status":"Available"}
+
+TEST 14 : PUT /tables/:id (actualizar)
+  [HEADERS]
+    Method : PUT
+    URI    : http://localhost:3000/tables/28
+  [REQUEST BODY]
+    {
+    "capacity":  6,
+    "status":  "Available",
+    "table_number":  7279
+}
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Mesa actualizada com sucesso"}
+
+TEST 15 : PATCH /tables/:id/status
+  [HEADERS]
+    Method : PATCH
+    URI    : http://localhost:3000/tables/28/status
+  [REQUEST BODY]
+    {
+    "status":  "Occupied"
+}
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Status da mesa actualizado para Occupied"}
+
+TEST 16 : POST /tables (table_number duplicado → 409)
+  [ESPERADO] 409 Conflict
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/tables
+  [REQUEST BODY]
+    {
+    "table_number":  7279,
+    "capacity":  2
+}
+  [STATUS] 409 (esperado)
+  [INFO] Número de mesa duplicado rejeitado corretamente
+
+─── INGREDIENTS ─────────────────────────────────
+
+TEST 17 : POST /ingredients (criar)
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/ingredients
+  [REQUEST BODY]
+    {
+    "name":  "Ingrediente 7279",
+    "measurement_unit":  "kg"
+}
+  [STATUS] 201 OK
+  [RESPONSE JSON]
+{"id":40,"name":"Ingrediente 7279","measurement_unit":"kg"}
+
+TEST 18 : GET /ingredients
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/ingredients
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+[{"id":25,"name":"Beef Steak","measurement_unit":"kg"},{"id":3,"name":"Brioche Burger Bun","measurement_unit":"units"},{"id":12,"name":"Butter","measurement_unit":"kg"},{"id":7,"name":"Cherry Tomatoes","measurement_unit":"kg"},{"id":4,"name":"Chicken Breast","measurement_unit":"kg"},{"id":35,"name":"Coca-Cola","measurement_unit":"L"},{"id":31,"name":"Cod Fish","measurement_unit":"kg"},{"id":33,"name":"Coffee Beans","measurement_unit":"kg"},{"id":23,"name":"Craft Beer","measurement_unit":"L"},{"id":30,"name":"Cucumber","measurement_unit":"kg"},{"id":20,"name":"Dark Chocolate","measurement_unit":"kg"},{"id":14,"name":"Eggs","measurement_unit":"units"},{"id":18,"name":"French Fries","measurement_unit":"kg"},{"id":8,"name":"Garlic","measurement_unit":"kg"},{"id":13,"name":"Heavy Cream","measurement_unit":"L"},{"id":40,"name":"Ingrediente 7279","measurement_unit":"kg"},{"id":9,"name":"Lemon","measurement_unit":"units"},{"id":1,"name":"Long Italian Pasta","measurement_unit":"kg"},{"id":2,"name":"Minced Beef Meat","measurement_unit":"kg"},{"id":6,"name":"Mixed Lettuce","measurement_unit":"kg"},{"id":34,"name":"Mixed Vegetables","measurement_unit":"kg"},{"id":10,"name":"Mozzarella Cheese","measurement_unit":"kg"},{"id":19,"name":"Olive Oil","measurement_unit":"L"},{"id":22,"name":"Orange Juice","measurement_unit":"L"},{"id":11,"name":"Parmesan Cheese","measurement_unit":"kg"},{"id":28,"name":"Pizza Dough","measurement_unit":"units"},{"id":32,"name":"Potatoes","measurement_unit":"kg"},{"id":24,"name":"Red Wine","measurement_unit":"L"},{"id":26,"name":"Rice","measurement_unit":"kg"},{"id":5,"name":"Salmon Fillet","measurement_unit":"kg"},{"id":27,"name":"Seafood Mix","measurement_unit":"kg"},{"id":17,"name":"Sourdough Bread","measurement_unit":"units"},{"id":21,"name":"Sparkling Water","measurement_unit":"L"},{"id":16,"name":"Sugar","measurement_unit":"kg"},{"id":36,"name":"Sumol","measurement_unit":"L"},{"id":29,"name":"Tomato Sauce","measurement_unit":"kg"},{"id":15,"name":"Wheat Flour","measurement_unit":"kg"}]
+
+TEST 19 : GET /ingredients/:id
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/ingredients/40
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"id":40,"name":"Ingrediente 7279","measurement_unit":"kg"}
+
+TEST 20 : PUT /ingredients/:id (actualizar)
+  [HEADERS]
+    Method : PUT
+    URI    : http://localhost:3000/ingredients/40
+  [REQUEST BODY]
+    {
+    "name":  "Ingrediente Upd 7279",
+    "measurement_unit":  "g"
+}
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Ingrediente actualizado com sucesso"}
+
+TEST 21 : POST /ingredients (campos em falta → 400)
+  [ESPERADO] 400 Bad Request
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/ingredients
+  [REQUEST BODY]
+    {
+    "name":  "SemUnidade"
+}
+  [STATUS] 400 (esperado)
+  [INFO] Campos obrigatórios ausentes rejeitados corretamente
+
+─── STOCK ───────────────────────────────────────
+
+TEST 22 : POST /stock (criar)
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/stock
+  [REQUEST BODY]
+    {
+    "unit_cost":  2.5,
+    "available_quantity":  100,
+    "ingredient_id":  40
+}
+  [STATUS] 201 OK
+  [RESPONSE JSON]
+{"id":40,"ingredient_id":40,"available_quantity":100,"unit_cost":2.5,"updated_at":"2026-06-01T08:31:18.484Z"}
+
+TEST 23 : GET /stock
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/stock
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+[{"id":1,"ingredient_id":1,"available_quantity":"20.00","unit_cost":"1.5000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":2,"ingredient_id":2,"available_quantity":"15.00","unit_cost":"7.5000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":3,"ingredient_id":3,"available_quantity":"50.00","unit_cost":"0.4000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":4,"ingredient_id":4,"available_quantity":"10.00","unit_cost":"5.5000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":5,"ingredient_id":5,"available_quantity":"8.00","unit_cost":"12.0000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":6,"ingredient_id":6,"available_quantity":"5.00","unit_cost":"2.5000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":7,"ingredient_id":7,"available_quantity":"4.00","unit_cost":"3.0000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":8,"ingredient_id":8,"available_quantity":"5.00","unit_cost":"4.0000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":9,"ingredient_id":9,"available_quantity":"30.00","unit_cost":"0.1500","updated_at":"2026-06-01T08:14:11.000Z"},{"id":10,"ingredient_id":10,"available_quantity":"6.00","unit_cost":"8.0000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":11,"ingredient_id":11,"available_quantity":"4.00","unit_cost":"15.0000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":12,"ingredient_id":12,"available_quantity":"5.00","unit_cost":"6.0000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":13,"ingredient_id":13,"available_quantity":"4.00","unit_cost":"2.8000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":14,"ingredient_id":14,"available_quantity":"100.00","unit_cost":"0.2500","updated_at":"2026-06-01T08:14:11.000Z"},{"id":15,"ingredient_id":15,"available_quantity":"15.00","unit_cost":"0.8000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":16,"ingredient_id":16,"available_quantity":"8.00","unit_cost":"1.2000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":17,"ingredient_id":17,"available_quantity":"40.00","unit_cost":"0.6000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":18,"ingredient_id":18,"available_quantity":"10.00","unit_cost":"1.5000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":19,"ingredient_id":19,"available_quantity":"10.00","unit_cost":"3.5000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":20,"ingredient_id":20,"available_quantity":"3.00","unit_cost":"9.0000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":21,"ingredient_id":21,"available_quantity":"50.00","unit_cost":"0.5000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":22,"ingredient_id":22,"available_quantity":"20.00","unit_cost":"1.2000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":23,"ingredient_id":23,"available_quantity":"15.00","unit_cost":"2.0000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":24,"ingredient_id":24,"available_quantity":"12.00","unit_cost":"4.5000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":25,"ingredient_id":25,"available_quantity":"12.00","unit_cost":"14.0000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":26,"ingredient_id":26,"available_quantity":"20.00","unit_cost":"0.8000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":27,"ingredient_id":27,"available_quantity":"8.00","unit_cost":"10.0000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":28,"ingredient_id":28,"available_quantity":"30.00","unit_cost":"0.5000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":29,"ingredient_id":29,"available_quantity":"10.00","unit_cost":"1.5000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":30,"ingredient_id":30,"available_quantity":"10.00","unit_cost":"1.0000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":31,"ingredient_id":31,"available_quantity":"10.00","unit_cost":"12.0000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":32,"ingredient_id":32,"available_quantity":"15.00","unit_cost":"0.6000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":33,"ingredient_id":33,"available_quantity":"5.00","unit_cost":"15.0000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":34,"ingredient_id":34,"available_quantity":"10.00","unit_cost":"2.0000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":35,"ingredient_id":35,"available_quantity":"40.00","unit_cost":"0.8000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":36,"ingredient_id":36,"available_quantity":"30.00","unit_cost":"0.7000","updated_at":"2026-06-01T08:14:11.000Z"},{"id":40,"ingredient_id":40,"available_quantity":"100.00","unit_cost":"2.5000","updated_at":"2026-06-01T08:31:18.000Z"}]
+
+TEST 24 : GET /stock/:id
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/stock/40
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"id":40,"ingredient_id":40,"available_quantity":"100.00","unit_cost":"2.5000","updated_at":"2026-06-01T08:31:18.000Z"}
+
+TEST 25 : GET /stock/ingredient/:ingredientId
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/stock/ingredient/40
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"id":40,"ingredient_id":40,"available_quantity":"100.00","unit_cost":"2.5000","updated_at":"2026-06-01T08:31:18.000Z"}
+
+TEST 26 : PUT /stock/:id (actualizar)
+  [HEADERS]
+    Method : PUT
+    URI    : http://localhost:3000/stock/40
+  [REQUEST BODY]
+    {
+    "available_quantity":  200,
+    "unit_cost":  3
+}
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Stock actualizado com sucesso"}
+
+TEST 27 : PATCH /stock/ingredient/:ingredientId/adjust (delta=+50)
+  [HEADERS]
+    Method : PATCH
+    URI    : http://localhost:3000/stock/ingredient/40/adjust
+  [REQUEST BODY]
+    {
+    "delta":  50
+}
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Quantidade ajustada em 50 unidades"}
+
+TEST 28 : POST /stock (ingrediente duplicado → 409)
+  [ESPERADO] 409 Conflict
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/stock
+  [REQUEST BODY]
+    {
+    "available_quantity":  5,
+    "ingredient_id":  40
+}
+  [STATUS] 409 (esperado)
+  [INFO] Stock duplicado para ingrediente rejeitado corretamente
+
+─── ITEMS ───────────────────────────────────────
+
+TEST 29 : POST /items (criar)
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/items
+  [REQUEST BODY]
+    {
+    "price":  12.5,
+    "category":  "Main Course",
+    "name":  "Prato 7279",
+    "is_active":  true
+}
+  [STATUS] 201 OK
+  [RESPONSE JSON]
+{"id":32,"name":"Prato 7279","category":"Main Course","price":12.5,"is_active":true}
+
+TEST 30 : GET /items
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/items
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+[{"id":1,"name":"Esparguete Bolonhesa","category":"Main Course","price":"12.50","is_active":1},{"id":2,"name":"Hamburguer Gourmet","category":"Main Course","price":"14.00","is_active":1},{"id":3,"name":"Bruschetta","category":"Appetizer","price":"7.50","is_active":1},{"id":4,"name":"Caesar Salad","category":"Appetizer","price":"9.00","is_active":1},{"id":5,"name":"Chicken Wings","category":"Appetizer","price":"11.00","is_active":1},{"id":6,"name":"Creme Soup","category":"Appetizer","price":"6.50","is_active":1},{"id":7,"name":"Grilled Salmon","category":"Main Course","price":"18.50","is_active":1},{"id":8,"name":"Chicken Parmigiana","category":"Main Course","price":"15.00","is_active":1},{"id":9,"name":"Vegetarian Pasta","category":"Main Course","price":"13.00","is_active":1},{"id":10,"name":"Chocolate Mousse","category":"Dessert","price":"6.00","is_active":1},{"id":11,"name":"Tiramisu","category":"Dessert","price":"7.00","is_active":1},{"id":12,"name":"Cheesecake","category":"Dessert","price":"6.50","is_active":1},{"id":13,"name":"Orange Juice","category":"Beverage","price":"3.50","is_active":1},{"id":14,"name":"Craft Beer","category":"Beverage","price":"4.50","is_active":1},{"id":15,"name":"Red Wine Glass","category":"Beverage","price":"5.50","is_active":1},{"id":16,"name":"Sparkling Water","category":"Beverage","price":"2.00","is_active":1},{"id":17,"name":"Bife à Casa","category":"Main Course","price":"16.00","is_active":1},{"id":18,"name":"Arroz de Marisco","category":"Main Course","price":"19.50","is_active":1},{"id":19,"name":"Batatas Fritas","category":"Appetizer","price":"4.00","is_active":1},{"id":20,"name":"Pizza Margherita","category":"Main Course","price":"14.50","is_active":1},{"id":21,"name":"Bacalhau à Brás","category":"Main Course","price":"17.00","is_active":1},{"id":22,"name":"Salada Mista","category":"Appetizer","price":"6.00","is_active":1},{"id":23,"name":"Frango Assado","category":"Main Course","price":"14.50","is_active":1},{"id":24,"name":"Legumes Salteados","category":"Appetizer","price":"7.50","is_active":1},{"id":25,"name":"Coca-Cola","category":"Beverage","price":"2.50","is_active":1},{"id":26,"name":"Sumol","category":"Beverage","price":"2.00","is_active":1},{"id":27,"name":"Café","category":"Beverage","price":"1.50","is_active":1},{"id":28,"name":"Pão","category":"Appetizer","price":"2.50","is_active":1},{"id":32,"name":"Prato 7279","category":"Main Course","price":"12.50","is_active":1}]
+
+TEST 31 : GET /items/active
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/items/active
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+[{"id":19,"name":"Batatas Fritas","category":"Appetizer","price":"4.00","is_active":1},{"id":3,"name":"Bruschetta","category":"Appetizer","price":"7.50","is_active":1},{"id":4,"name":"Caesar Salad","category":"Appetizer","price":"9.00","is_active":1},{"id":5,"name":"Chicken Wings","category":"Appetizer","price":"11.00","is_active":1},{"id":6,"name":"Creme Soup","category":"Appetizer","price":"6.50","is_active":1},{"id":24,"name":"Legumes Salteados","category":"Appetizer","price":"7.50","is_active":1},{"id":28,"name":"Pão","category":"Appetizer","price":"2.50","is_active":1},{"id":22,"name":"Salada Mista","category":"Appetizer","price":"6.00","is_active":1},{"id":18,"name":"Arroz de Marisco","category":"Main Course","price":"19.50","is_active":1},{"id":21,"name":"Bacalhau à Brás","category":"Main Course","price":"17.00","is_active":1},{"id":17,"name":"Bife à Casa","category":"Main Course","price":"16.00","is_active":1},{"id":8,"name":"Chicken Parmigiana","category":"Main Course","price":"15.00","is_active":1},{"id":1,"name":"Esparguete Bolonhesa","category":"Main Course","price":"12.50","is_active":1},{"id":23,"name":"Frango Assado","category":"Main Course","price":"14.50","is_active":1},{"id":7,"name":"Grilled Salmon","category":"Main Course","price":"18.50","is_active":1},{"id":2,"name":"Hamburguer Gourmet","category":"Main Course","price":"14.00","is_active":1},{"id":20,"name":"Pizza Margherita","category":"Main Course","price":"14.50","is_active":1},{"id":32,"name":"Prato 7279","category":"Main Course","price":"12.50","is_active":1},{"id":9,"name":"Vegetarian Pasta","category":"Main Course","price":"13.00","is_active":1},{"id":12,"name":"Cheesecake","category":"Dessert","price":"6.50","is_active":1},{"id":10,"name":"Chocolate Mousse","category":"Dessert","price":"6.00","is_active":1},{"id":11,"name":"Tiramisu","category":"Dessert","price":"7.00","is_active":1},{"id":27,"name":"Café","category":"Beverage","price":"1.50","is_active":1},{"id":25,"name":"Coca-Cola","category":"Beverage","price":"2.50","is_active":1},{"id":14,"name":"Craft Beer","category":"Beverage","price":"4.50","is_active":1},{"id":13,"name":"Orange Juice","category":"Beverage","price":"3.50","is_active":1},{"id":15,"name":"Red Wine Glass","category":"Beverage","price":"5.50","is_active":1},{"id":16,"name":"Sparkling Water","category":"Beverage","price":"2.00","is_active":1},{"id":26,"name":"Sumol","category":"Beverage","price":"2.00","is_active":1}]
+
+TEST 32 : GET /items/:id
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/items/32
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"id":32,"name":"Prato 7279","category":"Main Course","price":"12.50","is_active":1}
+
+TEST 33 : PUT /items/:id (actualizar)
+  [HEADERS]
+    Method : PUT
+    URI    : http://localhost:3000/items/32
+  [REQUEST BODY]
+    {
+    "price":  9.99,
+    "category":  "Main Course",
+    "name":  "Prato Upd 7279"
+}
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Item actualizado com sucesso"}
+
+TEST 34 : PATCH /items/:id/active (desactivar)
+  [HEADERS]
+    Method : PATCH
+    URI    : http://localhost:3000/items/32/active
+  [REQUEST BODY]
+    {
+    "is_active":  false
+}
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Item desactivado com sucesso"}
+
+TEST 35 : PATCH /items/:id/active (reactivar)
+  [HEADERS]
+    Method : PATCH
+    URI    : http://localhost:3000/items/32/active
+  [REQUEST BODY]
+    {
+    "is_active":  true
+}
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Item activado com sucesso"}
+
+TEST 36 : POST /items (campos em falta → 400)
+  [ESPERADO] 400 Bad Request
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/items
+  [REQUEST BODY]
+    {
+    "name":  "SemPreco"
+}
+  [STATUS] 400 (esperado)
+  [INFO] Campos obrigatórios ausentes rejeitados corretamente
+
+─── RECIPE ITEMS ────────────────────────────────
+
+TEST 37 : POST /recipe-items (criar)
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/recipe-items
+  [REQUEST BODY]
+    {
+    "item_id":  32,
+    "required_quantity":  0.5,
+    "ingredient_id":  40
+}
+  [STATUS] 201 OK
+  [RESPONSE JSON]
+{"id":83,"item_id":32,"ingredient_id":40,"required_quantity":0.5}
+
+TEST 38 : GET /recipe-items
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/recipe-items
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+[{"id":1,"item_id":1,"ingredient_id":1,"required_quantity":"0.12"},{"id":2,"item_id":1,"ingredient_id":2,"required_quantity":"0.15"},{"id":3,"item_id":2,"ingredient_id":3,"required_quantity":"1.00"},{"id":4,"item_id":2,"ingredient_id":2,"required_quantity":"0.18"},{"id":5,"item_id":3,"ingredient_id":17,"required_quantity":"0.15"},{"id":6,"item_id":3,"ingredient_id":7,"required_quantity":"0.05"},{"id":7,"item_id":3,"ingredient_id":8,"required_quantity":"0.01"},{"id":8,"item_id":3,"ingredient_id":19,"required_quantity":"0.02"},{"id":9,"item_id":3,"ingredient_id":10,"required_quantity":"0.06"},{"id":10,"item_id":4,"ingredient_id":6,"required_quantity":"0.15"},{"id":11,"item_id":4,"ingredient_id":11,"required_quantity":"0.04"},{"id":12,"item_id":4,"ingredient_id":19,"required_quantity":"0.02"},{"id":13,"item_id":4,"ingredient_id":9,"required_quantity":"0.50"},{"id":14,"item_id":4,"ingredient_id":14,"required_quantity":"1.00"},{"id":15,"item_id":5,"ingredient_id":4,"required_quantity":"0.35"},{"id":16,"item_id":5,"ingredient_id":8,"required_quantity":"0.01"},{"id":17,"item_id":6,"ingredient_id":13,"required_quantity":"0.15"},{"id":18,"item_id":6,"ingredient_id":12,"required_quantity":"0.02"},{"id":19,"item_id":6,"ingredient_id":15,"required_quantity":"0.03"},{"id":20,"item_id":6,"ingredient_id":8,"required_quantity":"0.01"},{"id":21,"item_id":7,"ingredient_id":5,"required_quantity":"0.25"},{"id":22,"item_id":7,"ingredient_id":9,"required_quantity":"1.00"},{"id":23,"item_id":7,"ingredient_id":19,"required_quantity":"0.02"},{"id":24,"item_id":7,"ingredient_id":18,"required_quantity":"0.15"},{"id":25,"item_id":8,"ingredient_id":4,"required_quantity":"0.25"},{"id":26,"item_id":8,"ingredient_id":10,"required_quantity":"0.08"},{"id":27,"item_id":8,"ingredient_id":15,"required_quantity":"0.05"},{"id":28,"item_id":8,"ingredient_id":14,"required_quantity":"1.00"},{"id":29,"item_id":8,"ingredient_id":19,"required_quantity":"0.02"},{"id":30,"item_id":9,"ingredient_id":1,"required_quantity":"0.15"},{"id":31,"item_id":9,"ingredient_id":7,"required_quantity":"0.08"},{"id":32,"item_id":9,"ingredient_id":8,"required_quantity":"0.01"},{"id":33,"item_id":9,"ingredient_id":19,"required_quantity":"0.03"},{"id":34,"item_id":9,"ingredient_id":11,"required_quantity":"0.03"},{"id":35,"item_id":10,"ingredient_id":20,"required_quantity":"0.08"},{"id":36,"item_id":10,"ingredient_id":14,"required_quantity":"2.00"},{"id":37,"item_id":10,"ingredient_id":16,"required_quantity":"0.04"},{"id":38,"item_id":10,"ingredient_id":13,"required_quantity":"0.10"},{"id":39,"item_id":10,"ingredient_id":12,"required_quantity":"0.02"},{"id":40,"item_id":11,"ingredient_id":14,"required_quantity":"2.00"},{"id":41,"item_id":11,"ingredient_id":16,"required_quantity":"0.05"},{"id":42,"item_id":11,"ingredient_id":13,"required_quantity":"0.12"},{"id":43,"item_id":11,"ingredient_id":20,"required_quantity":"0.03"},{"id":44,"item_id":11,"ingredient_id":15,"required_quantity":"0.05"},{"id":45,"item_id":12,"ingredient_id":14,"required_quantity":"2.00"},{"id":46,"item_id":12,"ingredient_id":16,"required_quantity":"0.06"},{"id":47,"item_id":12,"ingredient_id":12,"required_quantity":"0.05"},{"id":48,"item_id":12,"ingredient_id":13,"required_quantity":"0.15"},{"id":49,"item_id":12,"ingredient_id":15,"required_quantity":"0.06"},{"id":50,"item_id":13,"ingredient_id":22,"required_quantity":"0.30"},{"id":51,"item_id":14,"ingredient_id":23,"required_quantity":"0.50"},{"id":52,"item_id":15,"ingredient_id":24,"required_quantity":"0.15"},{"id":53,"item_id":16,"ingredient_id":21,"required_quantity":"0.50"},{"id":54,"item_id":17,"ingredient_id":25,"required_quantity":"0.25"},{"id":55,"item_id":17,"ingredient_id":18,"required_quantity":"0.15"},{"id":56,"item_id":18,"ingredient_id":27,"required_quantity":"0.20"},{"id":57,"item_id":18,"ingredient_id":26,"required_quantity":"0.15"},{"id":58,"item_id":18,"ingredient_id":19,"required_quantity":"0.02"},{"id":59,"item_id":19,"ingredient_id":18,"required_quantity":"0.20"},{"id":60,"item_id":19,"ingredient_id":19,"required_quantity":"0.02"},{"id":61,"item_id":20,"ingredient_id":28,"required_quantity":"1.00"},{"id":62,"item_id":20,"ingredient_id":29,"required_quantity":"0.10"},{"id":63,"item_id":20,"ingredient_id":10,"required_quantity":"0.12"},{"id":64,"item_id":21,"ingredient_id":31,"required_quantity":"0.20"},{"id":65,"item_id":21,"ingredient_id":32,"required_quantity":"0.15"},{"id":66,"item_id":21,"ingredient_id":14,"required_quantity":"2.00"},{"id":67,"item_id":21,"ingredient_id":19,"required_quantity":"0.02"},{"id":68,"item_id":22,"ingredient_id":6,"required_quantity":"0.12"},{"id":69,"item_id":22,"ingredient_id":7,"required_quantity":"0.06"},{"id":70,"item_id":22,"ingredient_id":30,"required_quantity":"0.05"},{"id":71,"item_id":23,"ingredient_id":4,"required_quantity":"0.30"},{"id":72,"item_id":23,"ingredient_id":8,"required_quantity":"0.01"},{"id":73,"item_id":23,"ingredient_id":19,"required_quantity":"0.02"},{"id":74,"item_id":24,"ingredient_id":34,"required_quantity":"0.20"},{"id":75,"item_id":24,"ingredient_id":19,"required_quantity":"0.02"},{"id":76,"item_id":25,"ingredient_id":35,"required_quantity":"0.33"},{"id":77,"item_id":26,"ingredient_id":36,"required_quantity":"0.33"},{"id":78,"item_id":27,"ingredient_id":33,"required_quantity":"0.01"},{"id":79,"item_id":28,"ingredient_id":17,"required_quantity":"1.00"},{"id":83,"item_id":32,"ingredient_id":40,"required_quantity":"0.50"}]
+
+TEST 39 : GET /recipe-items/item/:itemId
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/recipe-items/item/32
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"id":83,"item_id":32,"ingredient_id":40,"required_quantity":"0.50"}
+
+TEST 40 : GET /recipe-items/ingredient/:ingredientId
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/recipe-items/ingredient/40
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"id":83,"item_id":32,"ingredient_id":40,"required_quantity":"0.50"}
+
+TEST 41 : GET /recipe-items/:id
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/recipe-items/83
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"id":83,"item_id":32,"ingredient_id":40,"required_quantity":"0.50"}
+
+TEST 42 : PUT /recipe-items/:id (actualizar)
+  [HEADERS]
+    Method : PUT
+    URI    : http://localhost:3000/recipe-items/83
+  [REQUEST BODY]
+    {
+    "item_id":  32,
+    "required_quantity":  1,
+    "ingredient_id":  40
+}
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Ficha técnica actualizada com sucesso"}
+
+─── ORDERS ──────────────────────────────────────
+
+TEST 43 : POST /orders (criar)
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/orders
+  [REQUEST BODY]
+    {
+    "allergy_restrictions":  "nenhuma",
+    "table_id":  28,
+    "service_type":  "Table",
+    "customer_id":  104,
+    "order_status":  "Pending in Kitchen",
+    "kitchen_sequence_json":  [
+                                  {
+                                      "item":  "Prato Upd 7279",
+                                      "step":  1
+                                  }
+                              ]
+}
+  [ERRO] O servidor remoto devolveu um erro: (500) Erro interno de servidor.
+
+TEST 44 : GET /orders
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/orders
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+[{"id":19,"customer_id":2,"table_id":2,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Bruschetta","Esparguete Bolonhesa","Hamburguer Gourmet"],"order_status":"Pending","created_at":"2026-06-01T08:24:25.000Z"},{"id":18,"customer_id":3,"table_id":null,"service_type":"Takeaway","allergy_restrictions":null,"kitchen_sequence_json":["Esparguete Bolonhesa"],"order_status":"Pending","created_at":"2026-06-01T08:22:49.000Z"},{"id":17,"customer_id":1,"table_id":9,"service_type":"Table","allergy_restrictions":"glúten","kitchen_sequence_json":["Bruschetta (Sem Glúten)"],"order_status":"Pending","created_at":"2026-06-01T08:21:47.000Z"},{"id":16,"customer_id":2,"table_id":1,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Esparguete Bolonhesa","Hamburguer Gourmet"],"order_status":"Pending","created_at":"2026-06-01T08:20:59.000Z"},{"id":15,"customer_id":8,"table_id":13,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Caesar Salad","Grilled Salmon","Craft Beer"],"order_status":"In Preparation","created_at":"2026-05-30T11:53:00.000Z"},{"id":14,"customer_id":7,"table_id":6,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Bife à Casa","Red Wine Glass"],"order_status":"Pending","created_at":"2026-05-30T11:52:00.000Z"},{"id":13,"customer_id":5,"table_id":23,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Chicken Parmigiana","Craft Beer","Tiramisu"],"order_status":"In Preparation","created_at":"2026-05-30T11:51:00.000Z"},{"id":12,"customer_id":4,"table_id":21,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Creme Soup","Vegetarian Pasta","Cheesecake"],"order_status":"Pending","created_at":"2026-05-30T11:50:00.000Z"},{"id":10,"customer_id":1,"table_id":17,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Esparguete Bolonhesa","Tiramisu"],"order_status":"In Preparation","created_at":"2026-05-30T11:49:00.000Z"},{"id":9,"customer_id":2,"table_id":5,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Caesar Salad","Grilled Salmon","Orange Juice"],"order_status":"Pending","created_at":"2026-05-30T11:48:00.000Z"},{"id":8,"customer_id":14,"table_id":12,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Bacalhau à Brás","Salada Mista","Red Wine Glass","Pão","Café"],"order_status":"In Preparation","created_at":"2026-05-30T11:47:00.000Z"},{"id":7,"customer_id":12,"table_id":3,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Pizza Margherita","Sumol"],"order_status":"Pending","created_at":"2026-05-30T11:46:00.000Z"},{"id":6,"customer_id":11,"table_id":7,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Bife à Casa","Arroz de Marisco","Batatas Fritas","Coca-Cola"],"order_status":"Pending","created_at":"2026-05-30T11:45:00.000Z"},{"id":5,"customer_id":12,"table_id":3,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Bruschetta","Sumol"],"order_status":"Ready","created_at":"2026-05-30T11:42:00.000Z"},{"id":4,"customer_id":13,"table_id":null,"service_type":"Takeaway","allergy_restrictions":null,"kitchen_sequence_json":["Hamburguer Gourmet","Batatas Fritas","Sparkling Water"],"order_status":"In Preparation","created_at":"2026-05-30T11:40:00.000Z"},{"id":11,"customer_id":3,"table_id":22,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Chicken Wings","Coca-Cola"],"order_status":"Ready","created_at":"2026-05-30T11:38:00.000Z"},{"id":2,"customer_id":15,"table_id":2,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Frango Assado","Craft Beer"],"order_status":"Delivered","created_at":"2026-05-30T11:36:00.000Z"},{"id":1,"customer_id":16,"table_id":9,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Grilled Salmon","Legumes Salteados","Sparkling Water"],"order_status":"Delivered","created_at":"2026-05-30T11:33:00.000Z"},{"id":3,"customer_id":14,"table_id":12,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Bruschetta","Sumol","Esparguete Bolonhesa","Caesar Salad","Chocolate Mousse"],"order_status":"Ready","created_at":"2026-05-30T09:37:00.000Z"}]
+
+TEST 45 : GET /orders/pending
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/orders/pending
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+[{"id":6,"customer_id":11,"table_id":7,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Bife à Casa","Arroz de Marisco","Batatas Fritas","Coca-Cola"],"order_status":"Pending","created_at":"2026-05-30T11:45:00.000Z"},{"id":7,"customer_id":12,"table_id":3,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Pizza Margherita","Sumol"],"order_status":"Pending","created_at":"2026-05-30T11:46:00.000Z"},{"id":9,"customer_id":2,"table_id":5,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Caesar Salad","Grilled Salmon","Orange Juice"],"order_status":"Pending","created_at":"2026-05-30T11:48:00.000Z"},{"id":12,"customer_id":4,"table_id":21,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Creme Soup","Vegetarian Pasta","Cheesecake"],"order_status":"Pending","created_at":"2026-05-30T11:50:00.000Z"},{"id":14,"customer_id":7,"table_id":6,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Bife à Casa","Red Wine Glass"],"order_status":"Pending","created_at":"2026-05-30T11:52:00.000Z"},{"id":16,"customer_id":2,"table_id":1,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Esparguete Bolonhesa","Hamburguer Gourmet"],"order_status":"Pending","created_at":"2026-06-01T08:20:59.000Z"},{"id":17,"customer_id":1,"table_id":9,"service_type":"Table","allergy_restrictions":"glúten","kitchen_sequence_json":["Bruschetta (Sem Glúten)"],"order_status":"Pending","created_at":"2026-06-01T08:21:47.000Z"},{"id":18,"customer_id":3,"table_id":null,"service_type":"Takeaway","allergy_restrictions":null,"kitchen_sequence_json":["Esparguete Bolonhesa"],"order_status":"Pending","created_at":"2026-06-01T08:22:49.000Z"},{"id":19,"customer_id":2,"table_id":2,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Bruschetta","Esparguete Bolonhesa","Hamburguer Gourmet"],"order_status":"Pending","created_at":"2026-06-01T08:24:25.000Z"}]
+
+TEST 46 : GET /orders/customer/:customerId
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/orders/customer/104
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+
+
+TEST 47 : GET /orders/:id
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/orders/
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+[{"id":19,"customer_id":2,"table_id":2,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Bruschetta","Esparguete Bolonhesa","Hamburguer Gourmet"],"order_status":"Pending","created_at":"2026-06-01T08:24:25.000Z"},{"id":18,"customer_id":3,"table_id":null,"service_type":"Takeaway","allergy_restrictions":null,"kitchen_sequence_json":["Esparguete Bolonhesa"],"order_status":"Pending","created_at":"2026-06-01T08:22:49.000Z"},{"id":17,"customer_id":1,"table_id":9,"service_type":"Table","allergy_restrictions":"glúten","kitchen_sequence_json":["Bruschetta (Sem Glúten)"],"order_status":"Pending","created_at":"2026-06-01T08:21:47.000Z"},{"id":16,"customer_id":2,"table_id":1,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Esparguete Bolonhesa","Hamburguer Gourmet"],"order_status":"Pending","created_at":"2026-06-01T08:20:59.000Z"},{"id":15,"customer_id":8,"table_id":13,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Caesar Salad","Grilled Salmon","Craft Beer"],"order_status":"In Preparation","created_at":"2026-05-30T11:53:00.000Z"},{"id":14,"customer_id":7,"table_id":6,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Bife à Casa","Red Wine Glass"],"order_status":"Pending","created_at":"2026-05-30T11:52:00.000Z"},{"id":13,"customer_id":5,"table_id":23,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Chicken Parmigiana","Craft Beer","Tiramisu"],"order_status":"In Preparation","created_at":"2026-05-30T11:51:00.000Z"},{"id":12,"customer_id":4,"table_id":21,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Creme Soup","Vegetarian Pasta","Cheesecake"],"order_status":"Pending","created_at":"2026-05-30T11:50:00.000Z"},{"id":10,"customer_id":1,"table_id":17,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Esparguete Bolonhesa","Tiramisu"],"order_status":"In Preparation","created_at":"2026-05-30T11:49:00.000Z"},{"id":9,"customer_id":2,"table_id":5,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Caesar Salad","Grilled Salmon","Orange Juice"],"order_status":"Pending","created_at":"2026-05-30T11:48:00.000Z"},{"id":8,"customer_id":14,"table_id":12,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Bacalhau à Brás","Salada Mista","Red Wine Glass","Pão","Café"],"order_status":"In Preparation","created_at":"2026-05-30T11:47:00.000Z"},{"id":7,"customer_id":12,"table_id":3,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Pizza Margherita","Sumol"],"order_status":"Pending","created_at":"2026-05-30T11:46:00.000Z"},{"id":6,"customer_id":11,"table_id":7,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Bife à Casa","Arroz de Marisco","Batatas Fritas","Coca-Cola"],"order_status":"Pending","created_at":"2026-05-30T11:45:00.000Z"},{"id":5,"customer_id":12,"table_id":3,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Bruschetta","Sumol"],"order_status":"Ready","created_at":"2026-05-30T11:42:00.000Z"},{"id":4,"customer_id":13,"table_id":null,"service_type":"Takeaway","allergy_restrictions":null,"kitchen_sequence_json":["Hamburguer Gourmet","Batatas Fritas","Sparkling Water"],"order_status":"In Preparation","created_at":"2026-05-30T11:40:00.000Z"},{"id":11,"customer_id":3,"table_id":22,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Chicken Wings","Coca-Cola"],"order_status":"Ready","created_at":"2026-05-30T11:38:00.000Z"},{"id":2,"customer_id":15,"table_id":2,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Frango Assado","Craft Beer"],"order_status":"Delivered","created_at":"2026-05-30T11:36:00.000Z"},{"id":1,"customer_id":16,"table_id":9,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Grilled Salmon","Legumes Salteados","Sparkling Water"],"order_status":"Delivered","created_at":"2026-05-30T11:33:00.000Z"},{"id":3,"customer_id":14,"table_id":12,"service_type":"Table","allergy_restrictions":null,"kitchen_sequence_json":["Bruschetta","Sumol","Esparguete Bolonhesa","Caesar Salad","Chocolate Mousse"],"order_status":"Ready","created_at":"2026-05-30T09:37:00.000Z"}]
+
+TEST 48 : PUT /orders/:id (actualizar)
+  [HEADERS]
+    Method : PUT
+    URI    : http://localhost:3000/orders/
+  [REQUEST BODY]
+    {
+    "order_status":  "Pending in Kitchen",
+    "allergy_restrictions":  "glúten",
+    "kitchen_sequence_json":  [
+                                  {
+                                      "item":  "Prato Upd 7279",
+                                      "step":  1
+                                  }
+                              ]
+}
+  [ERRO] O servidor remoto devolveu um erro: (404) Não encontrado.
+
+TEST 49 : PATCH /orders/:id/status (→ N/A)
+  [HEADERS]
+    Method : PATCH
+    URI    : http://localhost:3000/orders//status
+  [REQUEST BODY]
+    {
+    "order_status":  "N/A"
+}
+  [ERRO] O servidor remoto devolveu um erro: (404) Não encontrado.
+
+TEST 50 : POST /orders (campos em falta → 400)
+  [ESPERADO] 400 Bad Request
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/orders
+  [REQUEST BODY]
+    {
+    "customer_id":  104
+}
+  [STATUS] 400 (esperado)
+  [INFO] Campos obrigatórios ausentes rejeitados corretamente
+
+─── ORDER ITEMS ─────────────────────────────────
+
+TEST 51 : POST /order-items (criar)
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/order-items
+  [REQUEST BODY]
+    {
+    "quantity":  2,
+    "item_id":  32,
+    "order_id":  null
+}
+  [ERRO] O servidor remoto devolveu um erro: (400) Pedido incorrecto.
+
+TEST 52 : POST /order-items/bulk (criar em massa)
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/order-items/bulk
+  [REQUEST BODY]
+    {
+    "items":  [
+                  {
+                      "quantity":  3,
+                      "item_id":  32
+                  }
+              ],
+    "order_id":  null
+}
+  [ERRO] O servidor remoto devolveu um erro: (400) Pedido incorrecto.
+
+TEST 53 : GET /order-items
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/order-items
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+[{"id":1,"order_id":1,"item_id":7,"quantity":1},{"id":2,"order_id":1,"item_id":24,"quantity":1},{"id":3,"order_id":1,"item_id":16,"quantity":1},{"id":4,"order_id":2,"item_id":23,"quantity":1},{"id":5,"order_id":2,"item_id":14,"quantity":1},{"id":6,"order_id":3,"item_id":3,"quantity":1},{"id":7,"order_id":3,"item_id":26,"quantity":1},{"id":8,"order_id":3,"item_id":1,"quantity":1},{"id":9,"order_id":3,"item_id":4,"quantity":1},{"id":10,"order_id":3,"item_id":10,"quantity":1},{"id":11,"order_id":4,"item_id":2,"quantity":1},{"id":12,"order_id":4,"item_id":19,"quantity":1},{"id":13,"order_id":4,"item_id":16,"quantity":1},{"id":14,"order_id":5,"item_id":3,"quantity":1},{"id":15,"order_id":5,"item_id":26,"quantity":1},{"id":16,"order_id":6,"item_id":17,"quantity":1},{"id":17,"order_id":6,"item_id":18,"quantity":1},{"id":18,"order_id":6,"item_id":19,"quantity":1},{"id":19,"order_id":6,"item_id":25,"quantity":1},{"id":20,"order_id":7,"item_id":20,"quantity":1},{"id":21,"order_id":7,"item_id":26,"quantity":1},{"id":22,"order_id":8,"item_id":21,"quantity":1},{"id":23,"order_id":8,"item_id":22,"quantity":1},{"id":24,"order_id":8,"item_id":15,"quantity":1},{"id":25,"order_id":8,"item_id":28,"quantity":1},{"id":26,"order_id":8,"item_id":27,"quantity":1},{"id":27,"order_id":9,"item_id":4,"quantity":1},{"id":28,"order_id":9,"item_id":7,"quantity":1},{"id":29,"order_id":9,"item_id":13,"quantity":1},{"id":30,"order_id":10,"item_id":1,"quantity":1},{"id":31,"order_id":10,"item_id":11,"quantity":1},{"id":32,"order_id":11,"item_id":5,"quantity":1},{"id":33,"order_id":11,"item_id":25,"quantity":1},{"id":34,"order_id":12,"item_id":6,"quantity":1},{"id":35,"order_id":12,"item_id":9,"quantity":1},{"id":36,"order_id":12,"item_id":12,"quantity":1},{"id":37,"order_id":13,"item_id":8,"quantity":1},{"id":38,"order_id":13,"item_id":14,"quantity":1},{"id":39,"order_id":13,"item_id":11,"quantity":1},{"id":40,"order_id":14,"item_id":17,"quantity":1},{"id":41,"order_id":14,"item_id":15,"quantity":1},{"id":42,"order_id":15,"item_id":4,"quantity":1},{"id":43,"order_id":15,"item_id":7,"quantity":1},{"id":44,"order_id":15,"item_id":14,"quantity":1},{"id":45,"order_id":16,"item_id":1,"quantity":1},{"id":46,"order_id":16,"item_id":2,"quantity":1},{"id":47,"order_id":17,"item_id":3,"quantity":2},{"id":48,"order_id":18,"item_id":1,"quantity":2},{"id":49,"order_id":19,"item_id":1,"quantity":2},{"id":50,"order_id":19,"item_id":2,"quantity":1},{"id":51,"order_id":19,"item_id":3,"quantity":1}]
+
+TEST 54 : GET /order-items/order/:orderId
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/order-items/order/
+  [ERRO] O servidor remoto devolveu um erro: (404) Não encontrado.
+
+TEST 55 : GET /order-items/:id
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/order-items/
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+[{"id":1,"order_id":1,"item_id":7,"quantity":1},{"id":2,"order_id":1,"item_id":24,"quantity":1},{"id":3,"order_id":1,"item_id":16,"quantity":1},{"id":4,"order_id":2,"item_id":23,"quantity":1},{"id":5,"order_id":2,"item_id":14,"quantity":1},{"id":6,"order_id":3,"item_id":3,"quantity":1},{"id":7,"order_id":3,"item_id":26,"quantity":1},{"id":8,"order_id":3,"item_id":1,"quantity":1},{"id":9,"order_id":3,"item_id":4,"quantity":1},{"id":10,"order_id":3,"item_id":10,"quantity":1},{"id":11,"order_id":4,"item_id":2,"quantity":1},{"id":12,"order_id":4,"item_id":19,"quantity":1},{"id":13,"order_id":4,"item_id":16,"quantity":1},{"id":14,"order_id":5,"item_id":3,"quantity":1},{"id":15,"order_id":5,"item_id":26,"quantity":1},{"id":16,"order_id":6,"item_id":17,"quantity":1},{"id":17,"order_id":6,"item_id":18,"quantity":1},{"id":18,"order_id":6,"item_id":19,"quantity":1},{"id":19,"order_id":6,"item_id":25,"quantity":1},{"id":20,"order_id":7,"item_id":20,"quantity":1},{"id":21,"order_id":7,"item_id":26,"quantity":1},{"id":22,"order_id":8,"item_id":21,"quantity":1},{"id":23,"order_id":8,"item_id":22,"quantity":1},{"id":24,"order_id":8,"item_id":15,"quantity":1},{"id":25,"order_id":8,"item_id":28,"quantity":1},{"id":26,"order_id":8,"item_id":27,"quantity":1},{"id":27,"order_id":9,"item_id":4,"quantity":1},{"id":28,"order_id":9,"item_id":7,"quantity":1},{"id":29,"order_id":9,"item_id":13,"quantity":1},{"id":30,"order_id":10,"item_id":1,"quantity":1},{"id":31,"order_id":10,"item_id":11,"quantity":1},{"id":32,"order_id":11,"item_id":5,"quantity":1},{"id":33,"order_id":11,"item_id":25,"quantity":1},{"id":34,"order_id":12,"item_id":6,"quantity":1},{"id":35,"order_id":12,"item_id":9,"quantity":1},{"id":36,"order_id":12,"item_id":12,"quantity":1},{"id":37,"order_id":13,"item_id":8,"quantity":1},{"id":38,"order_id":13,"item_id":14,"quantity":1},{"id":39,"order_id":13,"item_id":11,"quantity":1},{"id":40,"order_id":14,"item_id":17,"quantity":1},{"id":41,"order_id":14,"item_id":15,"quantity":1},{"id":42,"order_id":15,"item_id":4,"quantity":1},{"id":43,"order_id":15,"item_id":7,"quantity":1},{"id":44,"order_id":15,"item_id":14,"quantity":1},{"id":45,"order_id":16,"item_id":1,"quantity":1},{"id":46,"order_id":16,"item_id":2,"quantity":1},{"id":47,"order_id":17,"item_id":3,"quantity":2},{"id":48,"order_id":18,"item_id":1,"quantity":2},{"id":49,"order_id":19,"item_id":1,"quantity":2},{"id":50,"order_id":19,"item_id":2,"quantity":1},{"id":51,"order_id":19,"item_id":3,"quantity":1}]
+
+TEST 56 : PATCH /order-items/:id (actualizar quantidade)
+  [HEADERS]
+    Method : PATCH
+    URI    : http://localhost:3000/order-items/
+  [REQUEST BODY]
+    {
+    "quantity":  5
+}
+  [ERRO] O servidor remoto devolveu um erro: (404) Não encontrado.
+
+─── INVOICES ────────────────────────────────────
+
+TEST 57 : POST /invoices (criar)
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/invoices
+  [REQUEST BODY]
+    {
+    "tax_amount":  4.6,
+    "subtotal_amount":  20,
+    "total_amount":  24.6,
+    "order_id":  null,
+    "profit_margin":  0.35
+}
+  [ERRO] O servidor remoto devolveu um erro: (400) Pedido incorrecto.
+
+TEST 58 : GET /invoices
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/invoices
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+[{"id":9,"order_id":19,"subtotal_amount":"46.50","tax_amount":"5.44","total_amount":"47.29","profit_margin":"47.29","issued_at":"2026-06-01T08:24:25.000Z"},{"id":8,"order_id":18,"subtotal_amount":"25.00","tax_amount":"3.25","total_amount":"28.25","profit_margin":"28.25","issued_at":"2026-06-01T08:22:49.000Z"},{"id":7,"order_id":17,"subtotal_amount":"15.00","tax_amount":"1.95","total_amount":"16.95","profit_margin":"16.95","issued_at":"2026-06-01T08:21:47.000Z"},{"id":6,"order_id":16,"subtotal_amount":"26.50","tax_amount":"3.45","total_amount":"29.95","profit_margin":"29.95","issued_at":"2026-06-01T08:20:59.000Z"},{"id":5,"order_id":11,"subtotal_amount":"13.50","tax_amount":"1.76","total_amount":"15.26","profit_margin":"13.03","issued_at":"2026-05-30T12:08:00.000Z"},{"id":4,"order_id":5,"subtotal_amount":"9.50","tax_amount":"1.24","total_amount":"10.74","profit_margin":"9.68","issued_at":"2026-05-30T12:05:00.000Z"},{"id":3,"order_id":3,"subtotal_amount":"37.00","tax_amount":"4.81","total_amount":"41.81","profit_margin":"36.40","issued_at":"2026-05-30T12:02:00.000Z"},{"id":2,"order_id":2,"subtotal_amount":"19.00","tax_amount":"2.47","total_amount":"21.47","profit_margin":"18.71","issued_at":"2026-05-30T11:57:00.000Z"},{"id":1,"order_id":1,"subtotal_amount":"28.00","tax_amount":"3.64","total_amount":"31.64","profit_margin":"27.48","issued_at":"2026-05-30T11:54:00.000Z"}]
+
+TEST 59 : GET /invoices/:id
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/invoices/
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+[{"id":9,"order_id":19,"subtotal_amount":"46.50","tax_amount":"5.44","total_amount":"47.29","profit_margin":"47.29","issued_at":"2026-06-01T08:24:25.000Z"},{"id":8,"order_id":18,"subtotal_amount":"25.00","tax_amount":"3.25","total_amount":"28.25","profit_margin":"28.25","issued_at":"2026-06-01T08:22:49.000Z"},{"id":7,"order_id":17,"subtotal_amount":"15.00","tax_amount":"1.95","total_amount":"16.95","profit_margin":"16.95","issued_at":"2026-06-01T08:21:47.000Z"},{"id":6,"order_id":16,"subtotal_amount":"26.50","tax_amount":"3.45","total_amount":"29.95","profit_margin":"29.95","issued_at":"2026-06-01T08:20:59.000Z"},{"id":5,"order_id":11,"subtotal_amount":"13.50","tax_amount":"1.76","total_amount":"15.26","profit_margin":"13.03","issued_at":"2026-05-30T12:08:00.000Z"},{"id":4,"order_id":5,"subtotal_amount":"9.50","tax_amount":"1.24","total_amount":"10.74","profit_margin":"9.68","issued_at":"2026-05-30T12:05:00.000Z"},{"id":3,"order_id":3,"subtotal_amount":"37.00","tax_amount":"4.81","total_amount":"41.81","profit_margin":"36.40","issued_at":"2026-05-30T12:02:00.000Z"},{"id":2,"order_id":2,"subtotal_amount":"19.00","tax_amount":"2.47","total_amount":"21.47","profit_margin":"18.71","issued_at":"2026-05-30T11:57:00.000Z"},{"id":1,"order_id":1,"subtotal_amount":"28.00","tax_amount":"3.64","total_amount":"31.64","profit_margin":"27.48","issued_at":"2026-05-30T11:54:00.000Z"}]
+
+TEST 60 : GET /invoices/order/:orderId
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/invoices/order/
+  [ERRO] O servidor remoto devolveu um erro: (404) Não encontrado.
+
+TEST 61 : PUT /invoices/:id (actualizar)
+  [HEADERS]
+    Method : PUT
+    URI    : http://localhost:3000/invoices/
+  [REQUEST BODY]
+    {
+    "tax_amount":  5.06,
+    "subtotal_amount":  22,
+    "total_amount":  27.06,
+    "profit_margin":  0.4
+}
+  [ERRO] O servidor remoto devolveu um erro: (404) Não encontrado.
+
+TEST 62 : POST /invoices (fatura duplicada para order → 409)
+  [ESPERADO] 409 Conflict
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/invoices
+  [REQUEST BODY]
+    {
+    "tax_amount":  2,
+    "subtotal_amount":  10,
+    "total_amount":  12,
+    "order_id":  null,
+    "profit_margin":  0.2
+}
+  [ERRO] Status inesperado: 400
+
+─── PAYMENTS ────────────────────────────────────
+
+TEST 63 : POST /payments (criar)
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/payments
+  [REQUEST BODY]
+    {
+    "invoice_id":  null,
+    "customer_id":  104,
+    "amount":  27.06,
+    "payment_status":  "Pending",
+    "payment_method":  "Cash"
+}
+  [ERRO] O servidor remoto devolveu um erro: (400) Pedido incorrecto.
+
+TEST 64 : GET /payments
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/payments
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+[{"id":2,"invoice_id":2,"customer_id":15,"amount":"21.47","payment_method":"Cash","payment_status":"Completed","processed_at":"2026-05-30T11:59:00.000Z"},{"id":1,"invoice_id":1,"customer_id":16,"amount":"31.64","payment_method":"MB Way","payment_status":"Completed","processed_at":"2026-05-30T11:56:00.000Z"},{"id":3,"invoice_id":3,"customer_id":14,"amount":"41.81","payment_method":"Multibanco","payment_status":"Pending","processed_at":null},{"id":4,"invoice_id":4,"customer_id":12,"amount":"10.74","payment_method":"MB Way","payment_status":"Pending","processed_at":null},{"id":5,"invoice_id":5,"customer_id":3,"amount":"15.26","payment_method":"Credit Card","payment_status":"Pending","processed_at":null},{"id":6,"invoice_id":6,"customer_id":2,"amount":"29.95","payment_method":"MB Way","payment_status":"Pending","processed_at":null},{"id":7,"invoice_id":7,"customer_id":1,"amount":"16.95","payment_method":"Cash","payment_status":"Pending","processed_at":null},{"id":8,"invoice_id":8,"customer_id":3,"amount":"28.25","payment_method":"MB Way","payment_status":"Pending","processed_at":null},{"id":9,"invoice_id":9,"customer_id":2,"amount":"47.29","payment_method":"Credit Card","payment_status":"Pending","processed_at":null}]
+
+TEST 65 : GET /payments/:id
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/payments/
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+[{"id":2,"invoice_id":2,"customer_id":15,"amount":"21.47","payment_method":"Cash","payment_status":"Completed","processed_at":"2026-05-30T11:59:00.000Z"},{"id":1,"invoice_id":1,"customer_id":16,"amount":"31.64","payment_method":"MB Way","payment_status":"Completed","processed_at":"2026-05-30T11:56:00.000Z"},{"id":3,"invoice_id":3,"customer_id":14,"amount":"41.81","payment_method":"Multibanco","payment_status":"Pending","processed_at":null},{"id":4,"invoice_id":4,"customer_id":12,"amount":"10.74","payment_method":"MB Way","payment_status":"Pending","processed_at":null},{"id":5,"invoice_id":5,"customer_id":3,"amount":"15.26","payment_method":"Credit Card","payment_status":"Pending","processed_at":null},{"id":6,"invoice_id":6,"customer_id":2,"amount":"29.95","payment_method":"MB Way","payment_status":"Pending","processed_at":null},{"id":7,"invoice_id":7,"customer_id":1,"amount":"16.95","payment_method":"Cash","payment_status":"Pending","processed_at":null},{"id":8,"invoice_id":8,"customer_id":3,"amount":"28.25","payment_method":"MB Way","payment_status":"Pending","processed_at":null},{"id":9,"invoice_id":9,"customer_id":2,"amount":"47.29","payment_method":"Credit Card","payment_status":"Pending","processed_at":null}]
+
+TEST 66 : GET /payments/invoice/:invoiceId
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/payments/invoice/
+  [ERRO] O servidor remoto devolveu um erro: (404) Não encontrado.
+
+TEST 67 : GET /payments/customer/:customerId
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/payments/customer/104
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+
+
+TEST 68 : PUT /payments/:id (actualizar método)
+  [HEADERS]
+    Method : PUT
+    URI    : http://localhost:3000/payments/
+  [REQUEST BODY]
+    {
+    "payment_method":  "Cash",
+    "payment_status":  "Pending"
+}
+  [ERRO] O servidor remoto devolveu um erro: (404) Não encontrado.
+
+TEST 69 : PATCH /payments/:id/process (processar)
+  [HEADERS]
+    Method : PATCH
+    URI    : http://localhost:3000/payments//process
+  [ERRO] O servidor remoto devolveu um erro: (404) Não encontrado.
+
+TEST 70 : PATCH /payments/:id/fail (marcar como falhado)
+  [HEADERS]
+    Method : PATCH
+    URI    : http://localhost:3000/payments//fail
+  [ERRO] O servidor remoto devolveu um erro: (404) Não encontrado.
+
+─── NOTIFICATIONS ───────────────────────────────
+
+TEST 71 : POST /notifications (criar)
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/notifications
+  [REQUEST BODY]
+    {
+    "customer_id":  104,
+    "message":  "Pedido pronto para levantamento",
+    "title":  "Aviso 7279"
+}
+  [STATUS] 201 OK
+  [RESPONSE JSON]
+{"id":9,"customer_id":104,"title":"Aviso 7279","message":"Pedido pronto para levantamento","sent_at":"2026-06-01T08:31:21.836Z"}
+
+TEST 72 : GET /notifications
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/notifications
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+[{"id":1,"customer_id":16,"title":"Pagamento recebido","message":"O seu pagamento de 31,64 € foi processado com sucesso. Obrigado!","is_read":0,"sent_at":"2026-05-30T11:56:30.000Z"},{"id":2,"customer_id":15,"title":"Pagamento recebido","message":"O seu pagamento de 21,47 € foi processado com sucesso. Obrigado!","is_read":0,"sent_at":"2026-05-30T11:59:30.000Z"},{"id":3,"customer_id":14,"title":"A sua conta está pronta","message":"A sua fatura de 41,81 € está disponível. Confirme o pagamento no dashboard.","is_read":0,"sent_at":"2026-05-30T12:02:30.000Z"},{"id":4,"customer_id":12,"title":"A sua conta está pronta","message":"A sua fatura de 10,74 € está disponível. Confirme o pagamento no dashboard.","is_read":0,"sent_at":"2026-05-30T12:05:30.000Z"},{"id":5,"customer_id":3,"title":"A sua conta está pronta","message":"A sua fatura de 15,26 € está disponível. Confirme o pagamento no dashboard.","is_read":0,"sent_at":"2026-05-30T12:08:30.000Z"},{"id":9,"customer_id":104,"title":"Aviso 7279","message":"Pedido pronto para levantamento","is_read":0,"sent_at":"2026-06-01T08:31:22.000Z"}]
+
+TEST 73 : GET /notifications/:id
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/notifications/9
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"id":9,"customer_id":104,"title":"Aviso 7279","message":"Pedido pronto para levantamento","is_read":0,"sent_at":"2026-06-01T08:31:22.000Z"}
+
+TEST 74 : GET /notifications/customer/:customerId
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/notifications/customer/104
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"id":9,"customer_id":104,"title":"Aviso 7279","message":"Pedido pronto para levantamento","is_read":0,"sent_at":"2026-06-01T08:31:22.000Z"}
+
+TEST 75 : GET /notifications/customer/:customerId/unread
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/notifications/customer/104/unread
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"id":9,"customer_id":104,"title":"Aviso 7279","message":"Pedido pronto para levantamento","is_read":0,"sent_at":"2026-06-01T08:31:22.000Z"}
+
+TEST 76 : GET /customers/:id/notifications (rota aninhada)
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/customers/104/notifications
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"id":9,"customer_id":104,"title":"Aviso 7279","message":"Pedido pronto para levantamento","is_read":0,"sent_at":"2026-06-01T08:31:22.000Z"}
+
+TEST 77 : GET /customers/:id/notifications/unread (rota aninhada)
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/customers/104/notifications/unread
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"id":9,"customer_id":104,"title":"Aviso 7279","message":"Pedido pronto para levantamento","is_read":0,"sent_at":"2026-06-01T08:31:22.000Z"}
+
+TEST 78 : PUT /notifications/:id (actualizar)
+  [HEADERS]
+    Method : PUT
+    URI    : http://localhost:3000/notifications/9
+  [REQUEST BODY]
+    {
+    "title":  "Aviso Upd 7279",
+    "message":  "Mensagem actualizada",
+    "is_read":  false
+}
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Notificação actualizada com sucesso"}
+
+TEST 79 : PATCH /notifications/:id/read (marcar lida)
+  [HEADERS]
+    Method : PATCH
+    URI    : http://localhost:3000/notifications/9/read
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Notificação marcada como lida"}
+
+TEST 80 : PATCH /notifications/:id/read-status (toggle)
+  [HEADERS]
+    Method : PATCH
+    URI    : http://localhost:3000/notifications/9/read-status
+  [REQUEST BODY]
+    {
+    "is_read":  false
+}
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Notificação marcada como não lida"}
+
+TEST 81 : PATCH /customers/:id/notifications/:notifId (rota aninhada)
+  [HEADERS]
+    Method : PATCH
+    URI    : http://localhost:3000/customers/104/notifications/9
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Notificação marcada como lida"}
+
+─── CONVERSATIONS ───────────────────────────────
+
+TEST 82 : POST /conversations (criar)
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/conversations
+  [REQUEST BODY]
+    {
+    "customer_id":  104,
+    "title":  "Conversa 7279"
+}
+  [STATUS] 201 OK
+  [RESPONSE JSON]
+{"id":4,"customer_id":104,"title":"Conversa 7279","created_at":"2026-06-01T08:31:22.597Z"}
+
+TEST 83 : GET /conversations
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/conversations
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"id":4,"customer_id":104,"title":"Conversa 7279","created_at":"2026-06-01T08:31:22.000Z"}
+
+TEST 84 : GET /conversations/:id
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/conversations/4
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"id":4,"customer_id":104,"title":"Conversa 7279","created_at":"2026-06-01T08:31:22.000Z"}
+
+TEST 85 : PUT /conversations/:id (actualizar)
+  [HEADERS]
+    Method : PUT
+    URI    : http://localhost:3000/conversations/4
+  [REQUEST BODY]
+    {
+    "title":  "Conversa Upd 7279"
+}
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Conversa actualizada com sucesso"}
+
+TEST 86 : POST /conversations (sem title → 400)
+  [ESPERADO] 400 Bad Request
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/conversations
+  [REQUEST BODY]
+    {
+    "customer_id":  104
+}
+  [STATUS] 400 (esperado)
+  [INFO] title ausente rejeitado corretamente
+
+─── CHAT HISTORY ────────────────────────────────
+
+TEST 87 : POST /chat-history (criar)
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/chat-history
+  [REQUEST BODY]
+    {
+    "role_id":  1,
+    "conversation_id":  4,
+    "content":  "Olá! Quero fazer um pedido."
+}
+  [STATUS] 201 OK
+  [RESPONSE JSON]
+{"id":11,"conversation_id":4,"role_id":1,"content":"Ol�! Quero fazer um pedido.","sent_at":"2026-06-01T08:31:22.945Z"}
+
+TEST 88 : GET /chat-history
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/chat-history
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"id":11,"conversation_id":4,"role_id":1,"content":"Ol�! Quero fazer um pedido.","sent_at":"2026-06-01T08:31:22.000Z"}
+
+TEST 89 : GET /chat-history/:id
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/chat-history/11
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"id":11,"conversation_id":4,"role_id":1,"content":"Ol�! Quero fazer um pedido.","sent_at":"2026-06-01T08:31:22.000Z"}
+
+TEST 90 : GET /chat-history/conversation/:conversationId
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/chat-history/conversation/4
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"id":11,"conversation_id":4,"role_id":1,"content":"Ol�! Quero fazer um pedido.","sent_at":"2026-06-01T08:31:22.000Z"}
+
+TEST 91 : PUT /chat-history/:id (actualizar)
+  [HEADERS]
+    Method : PUT
+    URI    : http://localhost:3000/chat-history/11
+  [REQUEST BODY]
+    {
+    "content":  "Mensagem editada - Quero o prato 7279"
+}
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Mensagem actualizada com sucesso"}
+
+TEST 92 : GET /chat/history (rota aliás)
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/chat/history
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"id":11,"conversation_id":4,"role_id":1,"content":"Mensagem editada - Quero o prato 7279","sent_at":"2026-06-01T08:31:22.000Z"}
+
+TEST 93 : GET /chat/history/conversation/:conversationId
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/chat/history/conversation/4
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"id":11,"conversation_id":4,"role_id":1,"content":"Mensagem editada - Quero o prato 7279","sent_at":"2026-06-01T08:31:22.000Z"}
+
+─── LOGS ────────────────────────────────────────
+
+TEST 94 : POST /logs (criar)
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/logs
+  [REQUEST BODY]
+    {
+    "agent_name":  "kitchen-agent",
+    "status":  "success",
+    "input_payload":  "{\"item\":\"Prato\"}",
+    "output_payload":  "{\"done\":true}",
+    "order_id":  null
+}
+  [STATUS] 201 OK
+  [RESPONSE JSON]
+{"id":4,"order_id":null,"agent_name":"kitchen-agent","status":"success","input_payload":"{\"item\":\"Prato\"}","output_payload":"{\"done\":true}","created_at":"2026-06-01T08:31:23.561Z"}
+
+TEST 95 : GET /logs
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/logs
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"id":4,"order_id":null,"agent_name":"kitchen-agent","status":"success","input_payload":"{\"item\":\"Prato\"}","output_payload":"{\"done\":true}","created_at":"2026-06-01T08:31:23.000Z"}
+
+TEST 96 : GET /logs/:id
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/logs/4
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"id":4,"order_id":null,"agent_name":"kitchen-agent","status":"success","input_payload":"{\"item\":\"Prato\"}","output_payload":"{\"done\":true}","created_at":"2026-06-01T08:31:23.000Z"}
+
+TEST 97 : GET /logs/order/:orderId
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/logs/order/
+  [ERRO] O servidor remoto devolveu um erro: (404) Não encontrado.
+
+TEST 98 : GET /logs/agent/kitchen-agent
+  [HEADERS]
+    Method : GET
+    URI    : http://localhost:3000/logs/agent/kitchen-agent
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"id":4,"order_id":null,"agent_name":"kitchen-agent","status":"success","input_payload":"{\"item\":\"Prato\"}","output_payload":"{\"done\":true}","created_at":"2026-06-01T08:31:23.000Z"}
+
+TEST 99 : POST /logs (campos em falta → 400)
+  [ESPERADO] 400 Bad Request
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/logs
+  [REQUEST BODY]
+    {
+    "order_id":  null
+}
+  [STATUS] 400 (esperado)
+  [INFO] agent_name e status ausentes rejeitados corretamente
+
+─── CHATBOT ─────────────────────────────────────
+
+TEST 100 : POST /chat/message (enviar mensagem ao bot)
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/chat/message
+  [REQUEST BODY]
+    {
+    "user_id":  104,
+    "message":  "Qual é o menu de hoje?",
+    "conversationId":  4
+}
+  [NOTA] Endpoint faz stream — pode demorar ou requerer GEMINI_API_KEY válida
+  [STATUS]  (chatbot pode requerer API key válida)
+
+TEST 101 : POST /chat/conversation/:conversationId/message
+  [HEADERS]
+    Method : POST
+    URI    : http://localhost:3000/chat/conversation/4/message
+  [REQUEST BODY]
+    {
+    "message":  "Quero fazer uma reserva para 2 pessoas."
+}
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"success":true,"conversationId":"4","message":"Mensagem adicionada à conversa."}
+
+─── CLEANUP (DELETE) ────────────────────────────
+
+TEST 102 : DELETE /logs/:id
+  [HEADERS]
+    Method : DELETE
+    URI    : http://localhost:3000/logs/4
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Log eliminado com sucesso"}
+
+TEST 103 : DELETE /chat-history/:id
+  [HEADERS]
+    Method : DELETE
+    URI    : http://localhost:3000/chat-history/11
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Mensagem eliminada com sucesso"}
+
+TEST 104 : DELETE /conversations/:id
+  [HEADERS]
+    Method : DELETE
+    URI    : http://localhost:3000/conversations/4
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Conversa eliminada com sucesso"}
+
+TEST 105 : DELETE /notifications/:id
+  [HEADERS]
+    Method : DELETE
+    URI    : http://localhost:3000/notifications/9
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Notificação eliminada com sucesso"}
+
+TEST 106 : DELETE /payments/:id
+  [HEADERS]
+    Method : DELETE
+    URI    : http://localhost:3000/payments/
+  [ERRO] O servidor remoto devolveu um erro: (404) Não encontrado.
+
+TEST 107 : DELETE /invoices/:id
+  [HEADERS]
+    Method : DELETE
+    URI    : http://localhost:3000/invoices/
+  [ERRO] O servidor remoto devolveu um erro: (404) Não encontrado.
+
+TEST 108 : DELETE /order-items/order/:orderId (bulk delete)
+  [HEADERS]
+    Method : DELETE
+    URI    : http://localhost:3000/order-items/order/
+  [ERRO] O servidor remoto devolveu um erro: (500) Erro interno de servidor.
+
+TEST 109 : DELETE /orders/:id
+  [HEADERS]
+    Method : DELETE
+    URI    : http://localhost:3000/orders/
+  [ERRO] O servidor remoto devolveu um erro: (404) Não encontrado.
+
+TEST 110 : DELETE /recipe-items/item/:itemId (por item)
+  [HEADERS]
+    Method : DELETE
+    URI    : http://localhost:3000/recipe-items/item/32
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"1 entrada(s) da ficha técnica eliminada(s)"}
+
+TEST 111 : DELETE /stock/:id
+  [HEADERS]
+    Method : DELETE
+    URI    : http://localhost:3000/stock/40
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Registo de stock eliminado com sucesso"}
+
+TEST 112 : DELETE /items/:id
+  [HEADERS]
+    Method : DELETE
+    URI    : http://localhost:3000/items/32
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Item eliminado com sucesso"}
+
+TEST 113 : DELETE /ingredients/:id
+  [HEADERS]
+    Method : DELETE
+    URI    : http://localhost:3000/ingredients/40
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Ingrediente eliminado com sucesso"}
+
+TEST 114 : DELETE /tables/:id
+  [HEADERS]
+    Method : DELETE
+    URI    : http://localhost:3000/tables/28
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Mesa eliminada com sucesso"}
+
+TEST 115 : DELETE /customers/:id
+  [HEADERS]
+    Method : DELETE
+    URI    : http://localhost:3000/customers/104
+  [STATUS] 200 OK
+  [RESPONSE JSON]
+{"message":"Cliente eliminado com sucesso"}
+
+╔══════════════════════════════════════════════╗
+║                  RESUMO                      ║
+╠══════════════════════════════════════════════╣
+║  Total   : 116                                  ║
+║  Passaram: 95                                   ║
+║  Falharam: 21                                   ║
+╠══════════════════════════════════════════════╣
+║  STATUS : ❌ 21 TESTE(S) FALHARAM             ║
+╚══════════════════════════════════════════════╝
+

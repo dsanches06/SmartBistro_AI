@@ -135,7 +135,7 @@ CREATE TABLE orders (
     service_type ENUM('Table', 'Takeaway') NOT NULL,
     allergy_restrictions TEXT,
     kitchen_sequence_json JSON NOT NULL,
-    order_status ENUM('Pending', 'In Preparation', 'Ready', 'Done', 'Delivered', 'Cancelled') DEFAULT 'Pending',
+    order_status ENUM('Pending','In Preparation','Ready','Done','Delivered','Cancelled') DEFAULT 'Pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL,
     FOREIGN KEY (table_id) REFERENCES tables(id) ON DELETE SET NULL
@@ -167,7 +167,7 @@ CREATE TABLE invoices (
 CREATE TABLE payments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     invoice_id INT NOT NULL UNIQUE,
-    customer_id INT NOT NULL,
+    customer_id INT NULL,
     amount DECIMAL(10,2) NOT NULL,
     payment_method ENUM('MB Way', 'Multibanco', 'Credit Card', 'Cash') DEFAULT 'MB Way',
     payment_status ENUM('Pending', 'Completed', 'Failed') DEFAULT 'Pending',

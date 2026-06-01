@@ -6,6 +6,7 @@ import {
   createInvoice,
   updateInvoice,
   deleteInvoice,
+  getOrderById,
 } from "../services/index.js";
 
 // GET /invoices
@@ -46,6 +47,9 @@ export const create = async (req, res) => {
     const { order_id, subtotal_amount, tax_amount, total_amount, profit_margin } = req.body;
     if (!order_id || subtotal_amount === undefined || tax_amount === undefined || total_amount === undefined || profit_margin === undefined)
       return res.status(400).json({ error: "order_id, subtotal_amount, tax_amount, total_amount e profit_margin são obrigatórios" });
+
+    const order = await getOrderById(order_id);
+    if (!order) return res.status(404).json({ error: "Pedido não encontrado" });
 
     const exists = await invoiceExistsForOrder(order_id);
     if (exists) return res.status(409).json({ error: "Já existe fatura para esse pedido" });

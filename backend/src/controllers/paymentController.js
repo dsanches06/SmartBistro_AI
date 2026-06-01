@@ -8,7 +8,11 @@ import {
   processPayment,
   failPayment,
   deletePayment,
+  getInvoiceById,
 } from "../services/index.js";
+
+const PAYMENT_METHODS = ["MB Way", "Multibanco", "Credit Card", "Cash"];
+const PAYMENT_STATUS_OPTIONS = ["Pending", "Completed", "Failed"];
 
 // GET /payments?status=&paymentMethod=
 export const getAll = async (req, res) => {
@@ -57,8 +61,15 @@ export const getByCustomerId = async (req, res) => {
 export const create = async (req, res) => {
   try {
     const { invoice_id, customer_id, amount, payment_method, payment_status, processed_at } = req.body;
-    if (!invoice_id || !customer_id || amount === undefined)
-      return res.status(400).json({ error: "invoice_id, customer_id e amount são obrigatórios" });
+    if (!invoice_id || amount === undefined)
+      return res.status(400).json({ error: "invoice_id e amount são obrigatórios" });
+
+    const invoice = await getInvoiceById(invoice_id);
+    if (!invoice) return res.status(404).json({ error: "Fatura não encontrada" });
+    if (payment_method && !PAYMENT_METHODS.includes(payment_method))
+      return res.status(400).json({ error: `payment_method inválido. Use: ${PAYMENT_METHODS.join(', ')}` });
+    if (payment_status && !PAYMENT_STATUS_OPTIONS.includes(payment_status))
+      return res.status(400).json({ error: `payment_status inválido. Use: ${PAYMENT_STATUS_OPTIONS.join(', ')}` });
 
     const payment = await createPayment({ invoice_id, customer_id, amount, payment_method, payment_status, processed_at });
     res.status(201).json(payment);
@@ -71,6 +82,11 @@ export const create = async (req, res) => {
 export const update = async (req, res) => {
   try {
     const { payment_method, payment_status, processed_at } = req.body;
+    if (payment_method && !PAYMENT_METHODS.includes(payment_method))
+      return res.status(400).json({ error: `payment_method inválido. Use: ${PAYMENT_METHODS.join(', ')}` });
+    if (payment_status && !PAYMENT_STATUS_OPTIONS.includes(payment_status))
+      return res.status(400).json({ error: `payment_status inválido. Use: ${PAYMENT_STATUS_OPTIONS.join(', ')}` });
+
     const affected = await updatePayment(req.params.id, { payment_method, payment_status, processed_at });
     if (!affected) return res.status(404).json({ error: "Pagamento não encontrado" });
     res.json({ message: "Pagamento actualizado com sucesso" });

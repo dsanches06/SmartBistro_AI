@@ -30,14 +30,14 @@ class CreatePaymentFunction extends BaseFunction {
           description: "Estado do pagamento: 'Paid' | 'Pending' | 'Refunded'",
         },
       },
-      required: ['invoice_id', 'customer_id', 'amount', 'payment_method', 'payment_status'],
+      required: ['invoice_id', 'amount', 'payment_method', 'payment_status'],
     });
   }
 
   mapValues(args = {}) {
     return {
       invoice_id:     this.parseNumber(args.invoice_id, 0),
-      customer_id:    this.parseNumber(args.customer_id, 0),
+      customer_id:    args.customer_id != null ? this.parseNumber(args.customer_id, 0) : null,
       amount:         this.parseNumber(args.amount, 0),
       payment_method: this.parseString(args.payment_method, 'MB Way'),
       payment_status: this.parseString(args.payment_status, 'Paid'),

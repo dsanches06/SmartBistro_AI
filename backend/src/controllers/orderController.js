@@ -9,6 +9,8 @@ import {
   deleteOrder,
 } from "../services/index.js";
 
+const SERVICE_TYPE_OPTIONS = ["Table", "Takeaway"];
+
 // GET /orders?status=&serviceType=
 export const getAll = async (req, res) => {
   try {
@@ -57,6 +59,10 @@ export const create = async (req, res) => {
     const { customer_id, table_id, service_type, allergy_restrictions, kitchen_sequence_json, order_status } = req.body;
     if (!service_type || !kitchen_sequence_json)
       return res.status(400).json({ error: "service_type e kitchen_sequence_json são obrigatórios" });
+    if (!SERVICE_TYPE_OPTIONS.includes(service_type))
+      return res.status(400).json({ error: `service_type inválido. Use: ${SERVICE_TYPE_OPTIONS.join(', ')}` });
+    if (order_status !== undefined && typeof order_status !== 'string')
+      return res.status(400).json({ error: "order_status deve ser uma string" });
 
     const order = await createOrder({
       customer_id, table_id, service_type, allergy_restrictions, kitchen_sequence_json, order_status,
@@ -71,6 +77,8 @@ export const create = async (req, res) => {
 export const update = async (req, res) => {
   try {
     const { allergy_restrictions, kitchen_sequence_json, order_status } = req.body;
+    if (order_status !== undefined && typeof order_status !== 'string')
+      return res.status(400).json({ error: "order_status deve ser uma string" });
     const affected = await updateOrder(req.params.id, {
       allergy_restrictions, kitchen_sequence_json, order_status,
     });
@@ -87,6 +95,8 @@ export const updateStatus = async (req, res) => {
     const { order_status } = req.body;
     if (!order_status)
       return res.status(400).json({ error: "Campo order_status é obrigatório" });
+    if (typeof order_status !== 'string')
+      return res.status(400).json({ error: "order_status deve ser uma string" });
 
     const affected = await updateOrderStatus(req.params.id, order_status);
     if (!affected) return res.status(404).json({ error: "Pedido não encontrado" });

@@ -34,13 +34,13 @@ class CreateOrderFunction extends BaseFunction {
           description: "Estado inicial do pedido (default: 'Pending')",
         },
       },
-      required: ['customer_id', 'table_id', 'service_type'],
+      required: ['table_id', 'service_type'],
     });
   }
 
   mapValues(args = {}) {
     return {
-      customer_id:           this.parseNumber(args.customer_id, 0),
+      customer_id:           args.customer_id != null ? this.parseNumber(args.customer_id, 0) : null,
       table_id:              this.parseNumber(args.table_id, 0),
       service_type:          this.parseString(args.service_type, 'Dine In'),
       allergy_restrictions:  this.parseString(args.allergy_restrictions, ''),

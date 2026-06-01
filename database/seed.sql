@@ -32,7 +32,8 @@ INSERT INTO customers (id, name, email, phone, gender) VALUES
 (13, 'Manuel Santos',  'manuel@dev.com',           '555-0113', 'Male'),
 (14, 'Mariana Costa',  'mariana@dev.com',          '555-0114', 'Female'),
 (15, 'Pedro Almeida',  'pedro@dev.com',            '555-0115', 'Male'),
-(16, 'Joana Martins',  'joana.martins@dev.com',    '555-0116', 'Female');
+(16, 'Joana Martins',  'joana.martins@dev.com',    '555-0116', 'Female'),
+(100, 'Cliente Anónimo', 'anonymous@smartbistro.local', '', 'Not specified');
 
 -- =========================================================================
 -- 3. MESAS  (id = posição na lista, 1-based)

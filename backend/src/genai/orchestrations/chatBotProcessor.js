@@ -10,7 +10,10 @@ import {
   getTableFunctionDeclaration,
   updateTableStatusFunctionDeclaration,
 } from "../functions/tables/index.js";
-import { getItemFunctionDeclaration } from "../functions/items/index.js";
+import {
+  getItemFunctionDeclaration,
+  getItemsFunctionDeclaration,
+} from "../functions/items/index.js";
 import { getRecipeItemsFunctionDeclaration } from "../functions/recipe_items/index.js";
 import {
   getStockFunctionDeclaration,
@@ -46,6 +49,7 @@ import {
   getAllTables,
   updateTableStatus,
   getItemById,
+  getAllItems,
   getItemsByOrderId,
   getRecipeByItemId,
   getStockByIngredientId,
@@ -71,6 +75,7 @@ const ALL_DECLARATIONS = [
   getTableFunctionDeclaration,
   updateTableStatusFunctionDeclaration,
   getItemFunctionDeclaration,
+  getItemsFunctionDeclaration,
   getRecipeItemsFunctionDeclaration,
   getStockFunctionDeclaration,
   adjustStockFunctionDeclaration,
@@ -89,7 +94,7 @@ const ALL_DECLARATIONS = [
 ];
 
 // ── Handlers: recebem os args do Gemini e executam operações na BD ─────────────
-const FUNCTION_HANDLERS = {
+export const FUNCTION_HANDLERS = {
   get_customer: async (args) => {
     if (args.customer_id) return getCustomerById(args.customer_id);
     const term = args.name || args.email || args.phone;
@@ -118,6 +123,12 @@ const FUNCTION_HANDLERS = {
   update_table_status: async (args) =>
     updateTableStatus(args.table_id, args.status),
   get_item: async (args) => getItemById(args.item_id),
+  get_items: async (args) => {
+    const category = args.category ? String(args.category).trim() : undefined;
+    const search = args.search ? String(args.search).trim() : undefined;
+    const sort = args.sort ? String(args.sort).toLowerCase() : undefined;
+    return getAllItems(search || undefined, category || undefined, sort);
+  },
   get_recipe_items: async (args) => getRecipeByItemId(args.item_id),
   get_stock: async (args) => getStockByIngredientId(args.ingredient_id),
   adjust_stock: async (args) => adjustQuantity(args.ingredient_id, args.delta),

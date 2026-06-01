@@ -28,9 +28,9 @@ export function createGeminiClient(apiKey) {
 }
 
 // Fábrica genérica — aceita apiKey opcional; se omitida usa o cliente padrão
-export function createGeminiChat(config, history = [], apiKey = null) {
+export function createGeminiChat(config, history = [], apiKey = null, model = null) {
   const client = apiKey ? createGeminiClient(apiKey) : genAI;
-  return client.chats.create({ model: MODEL_NAME, history, config });
+  return client.chats.create({ model: model ?? MODEL_NAME, history, config });
 }
 
 export { FunctionCallingConfigMode };
