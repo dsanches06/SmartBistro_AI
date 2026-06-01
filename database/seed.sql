@@ -16,24 +16,24 @@ INSERT INTO roles (id, name, flow_order) VALUES
 -- =========================================================================
 -- 2. CLIENTES
 -- =========================================================================
-INSERT INTO customers (id, name, email, phone, gender) VALUES
-( 1, 'Hugo Neto',      'hugo@dev.com',            '555-0108', 'Male'),
-( 2, 'Ana Silva',      'ana@dev.com',              '555-0101', 'Female'),
-( 3, 'Joana Luz',      'joana@dev.com',            '555-0110', 'Female'),
-( 4, 'Bruno Costa',    'bruno@dev.com',            '555-0102', 'Male'),
-( 5, 'Igor Lima',      'igor@dev.com',             '555-0109', 'Male'),
-( 6, 'Carla Dias',     'carla@dev.com',            '555-0103', 'Female'),
-( 7, 'Filipe Gil',     'filipe@dev.com',           '555-0106', 'Male'),
-( 8, 'Elena Vaz',      'elena@dev.com',            '555-0105', 'Female'),
-( 9, 'David Reas',     'david@dev.com',            '555-0104', 'Male'),
-(10, 'Gina Rosa',      'gina@dev.com',             '555-0107', 'Female'),
-(11, 'Ana Pereira',    'ana.pereira@dev.com',      '555-0111', 'Female'),
-(12, 'Carlos Silva',   'carlos@dev.com',           '555-0112', 'Male'),
-(13, 'Manuel Santos',  'manuel@dev.com',           '555-0113', 'Male'),
-(14, 'Mariana Costa',  'mariana@dev.com',          '555-0114', 'Female'),
-(15, 'Pedro Almeida',  'pedro@dev.com',            '555-0115', 'Male'),
-(16, 'Joana Martins',  'joana.martins@dev.com',    '555-0116', 'Female'),
-(100, 'Cliente Anónimo', 'anonymous@smartbistro.local', '', 'Not specified');
+INSERT INTO customers (id, name, phone) VALUES
+(  1, 'Hugo Neto',      '555-0108'),
+(  2, 'Ana Silva',      '555-0101'),
+(  3, 'Joana Luz',      '555-0110'),
+(  4, 'Bruno Costa',    '555-0102'),
+(  5, 'Igor Lima',      '555-0109'),
+(  6, 'Carla Dias',     '555-0103'),
+(  7, 'Filipe Gil',     '555-0106'),
+(  8, 'Elena Vaz',      '555-0105'),
+(  9, 'David Reas',     '555-0104'),
+( 10, 'Gina Rosa',      '555-0107'),
+( 11, 'Ana Pereira',    '555-0111'),
+( 12, 'Carlos Silva',   '555-0112'),
+( 13, 'Manuel Santos',  '555-0113'),
+( 14, 'Mariana Costa',  '555-0114'),
+( 15, 'Pedro Almeida',  '555-0115'),
+( 16, 'Joana Martins',  '555-0116'),
+(100, 'Sistema',        NULL);
 
 -- =========================================================================
 -- 3. MESAS  (id = posição na lista, 1-based)
@@ -43,7 +43,7 @@ INSERT INTO tables (table_number, capacity, status) VALUES
 ('T01',  2, 'Available'),   -- id=1
 ('T02',  4, 'Available'),   -- id=2
 ('T03',  4, 'Occupied'),    -- id=3  pedidos #125, #127
-('T04',  4, 'Available'),   -- id=4
+('T04',  4, 'Reserved'),    -- id=4  reserva esta noite (res #2 Confirmed)
 ('T05',  6, 'Occupied'),    -- id=5  pedido  #129
 ('T06',  6, 'Occupied'),    -- id=6  pedido  #134
 ('T07',  8, 'Occupied'),    -- id=7  pedido  #126
@@ -55,7 +55,7 @@ INSERT INTO tables (table_number, capacity, status) VALUES
 ('T13',  4, 'Occupied'),    -- id=13 pedido  #135
 ('T14',  6, 'Reserved'),    -- id=14 reserva esta noite
 ('T15',  8, 'Available'),   -- id=15
-('T16',  2, 'Reserved'),    -- id=16 reserva futura
+('T16',  2, 'Available'),   -- id=16 reserva Pending (não bloqueia mesa)
 ('T17',  4, 'Occupied'),    -- id=17 pedido  #130
 ('T18',  4, 'Available'),   -- id=18
 ('T19',  6, 'Reserved'),    -- id=19 reserva futura
@@ -214,8 +214,8 @@ INSERT INTO orders (customer_id, table_id, service_type, allergy_restrictions, k
 ( 3, 22, 'Table',    NULL, '["Chicken Wings","Coca-Cola"]',                                                  'Ready',          '2026-05-30 12:38:00'), -- #11 T22
 ( 4, 21, 'Table',    NULL, '["Creme Soup","Vegetarian Pasta","Cheesecake"]',                                 'Pending',        '2026-05-30 12:50:00'), -- #12 T21
 ( 5, 23, 'Table',    NULL, '["Chicken Parmigiana","Craft Beer","Tiramisu"]',                                 'In Preparation', '2026-05-30 12:51:00'), -- #13 T23
-( 7,  6, 'Table',    NULL, '["Bife à Casa","Red Wine Glass"]',                                               'Pending',        '2026-05-30 12:52:00'), -- #14 T06 ←
-( 8, 13, 'Table',    NULL, '["Caesar Salad","Grilled Salmon","Craft Beer"]',                                 'In Preparation', '2026-05-30 12:53:00'); -- #15 T13 ←
+( 7,  6, 'Table',    NULL, '["Bife à Casa","Red Wine Glass"]',                                               'Pending',        '2026-05-30 12:52:00'), -- #14 T06
+( 8, 13, 'Table',    NULL, '["Caesar Salad","Grilled Salmon","Craft Beer"]',                                 'In Preparation', '2026-05-30 12:53:00'); -- #15 T13
 
 -- =========================================================================
 -- 8. ORDER ITEMS  (order_id começa em 1)

@@ -50,8 +50,7 @@ export const getByInvoiceId = async (req, res) => {
 // GET /payments/customer/:customerId
 export const getByCustomerId = async (req, res) => {
   try {
-    const payments = await getPaymentsByCustomerId(req.params.customerId);
-    res.json(payments);
+    res.json(await getPaymentsByCustomerId(req.params.customerId));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

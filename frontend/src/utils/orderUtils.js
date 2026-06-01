@@ -42,9 +42,9 @@ export function getOrderTarget(order) {
   return order.table_id ? `Mesa ${order.table_id}` : "Takeaway";
 }
 
-/** Nome do cliente com fallback para ID */
+/** Nome do cliente (vem do JOIN orders ↔ customers) */
 export function getOrderClientName(order) {
-  return order.customer_name || (order.customer_id ? `Cliente ${order.customer_id}` : "—");
+  return order.customer_name?.trim() || "—";
 }
 
 /** Filtra e pesquisa uma lista de pedidos */

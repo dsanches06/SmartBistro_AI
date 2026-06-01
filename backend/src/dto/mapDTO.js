@@ -12,11 +12,9 @@ export function mapCustomerDTOResponse(data) {
   return {
     id: data.id,
     name: data.name,
-    email: data.email,
-    phone: data.phone,
-    gender: data.gender,
-    role_id: data.role_id,
+    phone: data.phone ?? null,
     active: data.active,
+    role_id: data.role_id,
     created_at: data.created_at,
   };
 }
@@ -106,10 +104,12 @@ export function mapRecipeItemDTOResponse(data) {
 }
 
 // Mapeia o pedido para o formato de resposta da API
+// customer_name vem do JOIN com customers (alias na query)
 export function mapOrderDTOResponse(data) {
   return {
     id: data.id,
     customer_id: data.customer_id,
+    customer_name: data.customer_name ?? null,
     table_id: data.table_id,
     service_type: data.service_type,
     allergy_restrictions: data.allergy_restrictions,
@@ -147,7 +147,7 @@ export function mapPaymentDTOResponse(data) {
   return {
     id: data.id,
     invoice_id: data.invoice_id,
-    customer_id: data.customer_id,
+    customer_id: data.customer_id ?? null,
     amount: data.amount,
     payment_method: data.payment_method,
     payment_status: data.payment_status,

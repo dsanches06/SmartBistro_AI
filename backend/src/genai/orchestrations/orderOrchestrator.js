@@ -112,7 +112,7 @@ Analisa a mensagem do cliente e devolve APENAS JSON (sem texto adicional, sem ma
 MENSAGEM DO CLIENTE:
 "${orderData.message}"
 
-CUSTOMER_ID: ${orderData.customer_id}
+CLIENTE: ${[orderData.customer_name, orderData.customer_surname].filter(Boolean).join(' ')}
 
 MESAS DISPONÍVEIS (status Available):
 ${tablesInfo}
@@ -131,7 +131,8 @@ TAREFA:
 
 RESPONDE EXACTAMENTE com este JSON (sem comentários, sem markdown):
 {
-  "customer_id": <número>,
+  "customer_name": "<nome do cliente>",
+  "customer_surname": "<apelido ou null>",
   "table_id": <número ou null se Takeaway>,
   "service_type": "Table" ou "Takeaway",
   "allergy_restrictions": <"string" ou null>,

@@ -8,3 +8,4 @@ export * from "./orderUtils.js";
 export * from "./stockUtils.js";
 export * from "./menuUtils.js";
 export * from "./dashboardUtils.js";
+export * from "./faturacaoUtils.js";

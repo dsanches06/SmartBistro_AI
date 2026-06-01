@@ -46,8 +46,7 @@ export const getById = async (req, res) => {
 // GET /orders/customer/:customerId
 export const getByCustomerId = async (req, res) => {
   try {
-    const orders = await getOrdersByCustomerId(req.params.customerId);
-    res.json(orders);
+    res.json(await getOrdersByCustomerId(req.params.customerId));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

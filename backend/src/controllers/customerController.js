@@ -1,19 +1,19 @@
 import {
   getAllCustomers,
   getCustomerById,
-  emailExists,
   createCustomer,
   updateCustomer,
   deleteCustomer,
   toggleCustomerActive,
+  nameExists,
+  phoneExists,
 } from "../services/index.js";
 
 // GET /customers?search=&sort=
 export const getAll = async (req, res) => {
   try {
     const { search, sort } = req.query;
-    const customers = await getAllCustomers(search, sort);
-    res.json(customers);
+    res.json(await getAllCustomers(search, sort));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -33,14 +33,17 @@ export const getById = async (req, res) => {
 // POST /customers
 export const create = async (req, res) => {
   try {
-    const { name, email, phone, gender } = req.body;
-    if (!name || !email) return res.status(400).json({ error: "name e email são obrigatórios" });
+    const name  = String(req.body.name ?? "").trim();
+    const phone = req.body.phone ? String(req.body.phone).trim() : null;
 
-    const exists = await emailExists(email);
-    if (exists) return res.status(409).json({ error: "Email já registado" });
+    if (!name) return res.status(400).json({ error: "name é obrigatório" });
 
-    const customer = await createCustomer({ name, email, phone, gender });
-    res.status(201).json(customer);
+    if (await nameExists(name))
+      return res.status(409).json({ error: "Já existe um cliente com esse nome" });
+    if (phone && await phoneExists(phone))
+      return res.status(409).json({ error: "Já existe um cliente com esse telefone" });
+
+    res.status(201).json(await createCustomer({ name, phone }));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -50,16 +53,31 @@ export const create = async (req, res) => {
 export const update = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, phone, gender } = req.body;
+    const name  = req.body.name  !== undefined ? String(req.body.name).trim()  : undefined;
+    const phone = req.body.phone !== undefined ? (req.body.phone ? String(req.body.phone).trim() : null) : undefined;
 
-    if (email) {
-      const exists = await emailExists(email, id);
-      if (exists) return res.status(409).json({ error: "Email já registado por outro cliente" });
-    }
+    if (name !== undefined && await nameExists(name, id))
+      return res.status(409).json({ error: "Já existe um cliente com esse nome" });
+    if (phone && await phoneExists(phone, id))
+      return res.status(409).json({ error: "Já existe um cliente com esse telefone" });
 
-    const affected = await updateCustomer(id, { name, email, phone, gender });
+    const affected = await updateCustomer(id, { name, phone });
     if (!affected) return res.status(404).json({ error: "Cliente não encontrado" });
     res.json({ message: "Cliente actualizado com sucesso" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// PATCH /customers/:id/active
+export const toggleActive = async (req, res) => {
+  try {
+    const { active } = req.body;
+    if (active === undefined)
+      return res.status(400).json({ error: "Campo active é obrigatório" });
+    const affected = await toggleCustomerActive(req.params.id, active);
+    if (!affected) return res.status(404).json({ error: "Cliente não encontrado" });
+    res.json({ message: `Cliente ${active ? "activado" : "desactivado"} com sucesso` });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -71,20 +89,6 @@ export const remove = async (req, res) => {
     const affected = await deleteCustomer(req.params.id);
     if (!affected) return res.status(404).json({ error: "Cliente não encontrado" });
     res.json({ message: "Cliente eliminado com sucesso" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-// PATCH /customers/:id/active
-export const toggleActive = async (req, res) => {
-  try {
-    const { active } = req.body;
-    if (active === undefined) return res.status(400).json({ error: "Campo active é obrigatório" });
-
-    const affected = await toggleCustomerActive(req.params.id, { active });
-    if (!affected) return res.status(404).json({ error: "Cliente não encontrado" });
-    res.json({ message: `Cliente ${active ? "activado" : "desactivado"} com sucesso` });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

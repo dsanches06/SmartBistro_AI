@@ -15,11 +15,9 @@ CREATE TABLE roles (
 -- Clientes
 CREATE TABLE customers (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(200) NOT NULL,
-    email VARCHAR(100) NOT NULL UNIQUE,
-    phone VARCHAR(20) NOT NULL,
+    name VARCHAR(200) NOT NULL UNIQUE,
+    phone VARCHAR(20) NULL UNIQUE,
     active BOOLEAN DEFAULT TRUE,
-    gender ENUM('Male', 'Female', 'Other', 'Not specified') DEFAULT 'Not specified',
     role_id INT DEFAULT 2,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (role_id)
@@ -173,7 +171,7 @@ CREATE TABLE payments (
     payment_status ENUM('Pending', 'Completed', 'Failed') DEFAULT 'Pending',
     processed_at DATETIME NULL DEFAULT NULL,
     FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
-    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
 );
 
 -- Logs (Pipeline de Agentes)

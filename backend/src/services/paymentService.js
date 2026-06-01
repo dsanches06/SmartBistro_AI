@@ -54,7 +54,7 @@ export const createPayment = async (data) => {
      VALUES (?, ?, ?, ?, ?, ?)`,
     [
       data.invoice_id,
-      data.customer_id,
+      data.customer_id ?? null,
       data.amount,
       data.payment_method ?? "MB Way",
       data.payment_status ?? "Pending",
@@ -64,7 +64,7 @@ export const createPayment = async (data) => {
   return mapPaymentDTOResponse({
     id: result.insertId,
     invoice_id: data.invoice_id,
-    customer_id: data.customer_id,
+    customer_id: data.customer_id ?? null,
     amount: data.amount,
     payment_method: data.payment_method ?? "MB Way",
     payment_status: data.payment_status ?? "Pending",

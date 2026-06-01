@@ -9,18 +9,21 @@
  *
  * Corpo esperado:
  * {
- *   customer_id:    number,  // obrigatório
- *   message:        string,  // obrigatório — pedido em linguagem natural
- *                            // ex: "eu e a minha esposa queremos jantar, esparguete e hamburguer"
- *   payment_method: string,  // "MB Way" | "Cash" | "Card" (default: "Pending")
- *   tax_rate:       number,  // 0.13 (default) | 0.23 | 0.06
- *   discount:       number,  // 0.10 = 10% (default: 0)
- *   discount_type:  "percent" | "fixed"
+ *   customer_name:    string,  // obrigatório — primeiro nome do cliente
+ *   customer_surname: string,  // opcional — apelido do cliente
+ *   phone:            string,  // opcional — telefone (único por cliente)
+ *   message:          string,  // obrigatório — pedido em linguagem natural
+ *                              // ex: "eu e a minha esposa queremos jantar, esparguete e hamburguer"
+ *   payment_method:   string,  // "MB Way" | "Cash" | "Card" (default: "MB Way")
+ *   tax_rate:         number,  // 0.13 (default) | 0.23 | 0.06
+ *   discount:         number,  // 0.10 = 10% (default: 0)
+ *   discount_type:    "percent" | "fixed"
  * }
  */
 
 import { runOrderPipeline } from '../genai/orchestrations/index.js';
 import {
+  findOrCreateCustomer,
   createOrder,
   createOrderItem,
   createInvoice,
@@ -32,16 +35,17 @@ export async function processOrderPipeline(req, res) {
   const orderData = req.body;
 
   // ── Validação dos campos obrigatórios ────────────────────────────────────────
-  if (!orderData.customer_id) {
-    return res.status(400).json({ success: false, error: 'customer_id é obrigatório.' });
+  if (!orderData.customer_name || !String(orderData.customer_name).trim()) {
+    return res.status(400).json({ success: false, error: 'customer_name é obrigatório.' });
   }
   if (!orderData.message || !String(orderData.message).trim()) {
     return res.status(400).json({ success: false, error: 'message é obrigatório — descreva o seu pedido em linguagem natural.' });
   }
 
   try {
+    const customerFull = [orderData.customer_name, orderData.customer_surname].filter(Boolean).join(' ');
     const msgPreview = String(orderData.message).substring(0, 80);
-    console.log(`[Pipeline] A iniciar para customer_id=${orderData.customer_id} — "${msgPreview}"`);
+    console.log(`[Pipeline] A iniciar para "${customerFull}" — "${msgPreview}"`);
 
     // ── Pipeline dos 3 agentes: Maître → Chefe → Gerente ─────────────────────
     const { validated, sequenced, financials, final } = await runOrderPipeline(orderData);
@@ -49,8 +53,15 @@ export async function processOrderPipeline(req, res) {
     console.log(`[Pipeline] Agentes concluídos — total calculado: €${financials.total}`);
 
     // ── Extrair e normalizar campos do pipeline ───────────────────────────────
-    const customerId = Number(validated.customer_id ?? orderData.customer_id);
-    let tableId      = validated.table_id ?? null;   // atribuído pelo Maître, nunca pelo cliente
+    const customerName    = String(orderData.customer_name ?? '').trim();
+    const customerSurname = String(orderData.customer_surname ?? '').trim() || null;
+    const customerPhone   = orderData.phone ? String(orderData.phone).trim() : null;
+    let tableId           = validated.table_id ?? null;   // atribuído pelo Maître, nunca pelo cliente
+
+    // ── Encontrar ou criar cliente (garante unicidade de nome e telefone) ─────
+    const fullName = [customerName, customerSurname].filter(Boolean).join(' ');
+    const customer = await findOrCreateCustomer(fullName, customerPhone);
+    console.log(`[Pipeline] Cliente: "${customer.name}" (id=${customer.id}, novo=${!customer.created_at || Date.now() - new Date(customer.created_at).getTime() < 5000})`);
     const kitchenSeq = sequenced.kitchen_sequence ?? sequenced.kitchenSequence ?? [];
 
     const stockStatus = String(sequenced.stock_status ?? sequenced.stockStatus ?? 'ok').toLowerCase();
@@ -149,7 +160,8 @@ export async function processOrderPipeline(req, res) {
 
     // ── 1. Criar pedido ───────────────────────────────────────────────────────
     const order = await createOrder({
-      customer_id:           customerId,
+      customer_id:           customer.id,
+      customer_name:         customer.name,
       table_id:              tableId ? Number(tableId) : null,
       service_type:          serviceType,
       allergy_restrictions:  validated.allergy_restrictions ?? orderData.allergy_restrictions ?? null,
@@ -189,7 +201,7 @@ export async function processOrderPipeline(req, res) {
 
     const payment = await createPayment({
       invoice_id:     invoice.id,
-      customer_id:    customerId,
+      customer_id:    customer.id,
       amount:         financials.total,
       payment_method: paymentMethod,
       payment_status: 'Pending',
@@ -204,8 +216,10 @@ export async function processOrderPipeline(req, res) {
 
     // ── Resposta ──────────────────────────────────────────────────────────────
     res.status(201).json({
-      success:  true,
-      order_id: order.id,
+      success:      true,
+      order_id:     order.id,
+      customer_id:  customer.id,
+      customer:     { id: customer.id, name: customer.name, phone: customer.phone ?? null },
       order,
       invoice,
       payment,
