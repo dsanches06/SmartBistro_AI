@@ -30,6 +30,7 @@ import {
   createPayment,
   updateTableStatus,
 } from '../services/index.js';
+import { classifyGeminiError } from '../utils/index.js';
 
 export async function processOrderPipeline(req, res) {
   const orderData = req.body;
@@ -66,8 +67,12 @@ export async function processOrderPipeline(req, res) {
 
     const stockStatus = String(sequenced.stock_status ?? sequenced.stockStatus ?? 'ok').toLowerCase();
     const stockAlerts = sequenced.stock_alerts ?? sequenced.stockAlerts ?? [];
-    if (stockStatus !== 'ok' || (Array.isArray(stockAlerts) && stockAlerts.length > 0)) {
-      return res.status(400).json({
+    const unavailableItems = Array.isArray(sequenced.items)
+      ? sequenced.items.filter((item) => item?.unavailable === true || String(item?.unavailable).toLowerCase() === 'true')
+      : [];
+
+    if (unavailableItems.length > 0) {
+      const responsePayload = {
         success: false,
         error: 'Stock insuficiente para preparar este pedido. Por favor escolha outro prato ou aguarde reposição.',
         stage: 'stock_validation',
@@ -77,7 +82,10 @@ export async function processOrderPipeline(req, res) {
           validated,
           sequenced,
         },
-      });
+      };
+
+      responsePayload.unavailable_items = unavailableItems;
+      return res.status(400).json(responsePayload);
     }
 
     if (!final || final.success !== true) {
@@ -240,11 +248,95 @@ export async function processOrderPipeline(req, res) {
     });
 
   } catch (err) {
-    console.error('[Pipeline] Erro:', err.message);
+    const msg = String(err?.message ?? 'Erro desconhecido');
+    console.error('[Pipeline] Erro:', msg, err);
+
+    // If there's an underlying SDK/error from the AI provider, classify it and return friendly message
+    try {
+      const aiSource = err?.cause ?? err?.details?.sdkError ?? err;
+      const classification = classifyGeminiError(aiSource);
+      if (classification && classification.type && classification.type !== 'UNKNOWN') {
+        switch (classification.type) {
+          case 'SERVICE_DOWN':
+            return res.status(503).json({ success: false, error: classification.userMessage, stage: 'external_ai', details: err?.details ?? undefined });
+          case 'RATE_LIMIT':
+            return res.status(429).json({ success: false, error: classification.userMessage, stage: 'external_ai', details: err?.details ?? undefined });
+          case 'AUTH_ERROR':
+            return res.status(502).json({ success: false, error: classification.userMessage, stage: 'external_ai', details: err?.details ?? undefined });
+          case 'NETWORK_ERROR':
+            return res.status(502).json({ success: false, error: classification.userMessage, stage: 'external_ai', details: err?.details ?? undefined });
+          case 'INVALID_REQUEST':
+            return res.status(400).json({ success: false, error: classification.userMessage, stage: 'external_ai', details: err?.details ?? undefined });
+          default:
+            break;
+        }
+      }
+    } catch (e) {
+      // ignore classification errors and continue to structured handling
+      console.warn('[Pipeline] classifyGeminiError failed', e && e.message);
+    }
+
+    // If the pipeline threw a structured error, prefer its properties
+    const stage = err?.stage ?? err?.stageName ?? undefined;
+    const code = err?.code ?? undefined;
+    const details = err?.details ?? undefined;
+
+    // Maître validation: itens inválidos
+    if (stage === 'maitre_validation' || code === 'MAITRE_INVALID_ITEMS') {
+      return res.status(400).json({
+        success: false,
+        error: 'Itens inválidos no pedido. Verifique os nomes dos pratos ou o menu activo.',
+        stage: 'maitre_validation',
+        details,
+      });
+    }
+
+    // Retry failures from Maître/Chefe after stock feedback
+    if (stage === 'maitre_retry' || stage === 'chef_retry' || code === 'MAITRE_RETRY_UNCHANGED' || code === 'CHEF_RETRY_STILL_UNAVAILABLE') {
+      return res.status(409).json({
+        success: false,
+        error: 'Não foi possível ajustar o pedido após alerta de stock. Tente outro pedido ou contacte o serviço.',
+        stage: 'stock_retry_failed',
+        details,
+      });
+    }
+
+    // Agent validation / schema errors (zod)
+    if (stage === 'agent_validation' || code === 'AGENT_VALIDATION') {
+      return res.status(502).json({
+        success: false,
+        error: 'Resposta inválida de um agente externo (LLM).',
+        stage: 'agent_validation',
+        details,
+      });
+    }
+
+    // JSON extraction errors
+    if (stage === 'json_extraction' || code === 'JSON_EXTRACT') {
+      return res.status(502).json({
+        success: false,
+        error: 'Não foi possível interpretar a resposta do agente.',
+        stage: 'json_extraction',
+        details,
+      });
+    }
+
+    // Stock reported by Chef but handled earlier — fallback
+    if (String(msg).toLowerCase().includes('stock') || stage === 'stock_validation') {
+      return res.status(400).json({
+        success: false,
+        error: 'Problema de stock detectado para o pedido.',
+        stage: 'stock_validation',
+        details,
+      });
+    }
+
+    // Default: internal server error
     res.status(500).json({
       success: false,
-      error:   err.message,
-      stage:   err.stage ?? 'unknown',
+      error: msg,
+      stage: stage ?? 'unknown',
+      details,
     });
   }
 }

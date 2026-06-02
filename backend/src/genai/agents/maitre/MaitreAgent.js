@@ -1,5 +1,5 @@
-import { BaseAgentAI } from "../models/index.js";
-import { MAITRE_PROMPT } from "../config/index.js";
+import { BaseAgentAI } from "../../models/index.js";
+import { MAITRE_PROMPT } from "../../config/index.js";
 
 // Agente de Sala — gere clientes, mesas, reservas e pedidos de sala
 // temp 0.4 → MEDIUM thinking (interação natural com o cliente, alguma criatividade)

@@ -1,5 +1,5 @@
-import { BaseAgentAI } from "../models/index.js";
-import { CHEF_PROMPT } from "../config/index.js";
+import { BaseAgentAI } from "../../models/index.js";
+import { CHEF_PROMPT } from "../../config/index.js";
 
 // Agente de Cozinha — gere menu, receitas, ingredientes e stock
 // temp 0.2 → LOW thinking (decisões precisas: stock, receitas, disponibilidade)

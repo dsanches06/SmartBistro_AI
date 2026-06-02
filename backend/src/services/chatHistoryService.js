@@ -1,5 +1,6 @@
 import { db } from "../db.js";
 import { mapChatHistoryDTOResponse } from "../dto/mapDTO.js";
+import { PipelineError } from "../utils/pipelineError.js";
 
 // Devolve todas as mensagens de chat mapeadas para DTO
 export const getAllChatHistory = async () => {
@@ -25,8 +26,9 @@ export const getChatHistoryByConversationId = async (conversationId) => {
 // Insere uma nova mensagem e devolve o registo criado
 export const createChatHistory = async (data) => {
   if (!data.conversation_id) {
-    throw new Error(
+    throw new PipelineError(
       "conversation_id é obrigatório para criar histórico de chat",
+      { code: 'INVALID_INPUT', stage: 'service', details: null },
     );
   }
 

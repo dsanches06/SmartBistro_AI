@@ -6,6 +6,7 @@ import {
   isRetryableGeminiError,
   sendWithModelFallback,
 } from '../../utils/index.js';
+import { PipelineError } from '../../utils/pipelineError.js';
 
 // ── Superclasse base para todos os agentes do SmartBistro ─────────────────────
 class BaseAgentAI {
@@ -65,10 +66,15 @@ class BaseAgentAI {
       }
       const classified = classifyGeminiError(error);
       console.error(`[${this.name}] ${classified.type}:`, error.message);
-      const enriched = new Error(classified.userMessage);
-      enriched.geminiType = classified.type;
-      enriched.originalError = error;
-      throw enriched;
+      const pe = new PipelineError(classified.userMessage, {
+        code: `GEMINI_${classified.type}`,
+        stage: 'provider',
+        details: { message: error?.message },
+        cause: error,
+      });
+      pe.geminiType = classified.type;
+      pe.originalError = error;
+      throw pe;
     }
   }
 
@@ -91,10 +97,15 @@ class BaseAgentAI {
       }
       const classified = classifyGeminiError(error);
       console.error(`[${this.name}] ${classified.type}:`, error.message);
-      const enriched = new Error(classified.userMessage);
-      enriched.geminiType = classified.type;
-      enriched.originalError = error;
-      throw enriched;
+      const pe = new PipelineError(classified.userMessage, {
+        code: `GEMINI_${classified.type}`,
+        stage: 'provider',
+        details: { message: error?.message },
+        cause: error,
+      });
+      pe.geminiType = classified.type;
+      pe.originalError = error;
+      throw pe;
     }
   }
 
@@ -105,10 +116,15 @@ class BaseAgentAI {
     } catch (error) {
       const classified = classifyGeminiError(error);
       console.error(`[${this.name}] ${classified.type}:`, error.message);
-      const enriched = new Error(classified.userMessage);
-      enriched.geminiType = classified.type;
-      enriched.originalError = error;
-      throw enriched;
+      const pe = new PipelineError(classified.userMessage, {
+        code: `GEMINI_${classified.type}`,
+        stage: 'provider',
+        details: { message: error?.message },
+        cause: error,
+      });
+      pe.geminiType = classified.type;
+      pe.originalError = error;
+      throw pe;
     }
   }
 }

@@ -1,4 +1,5 @@
 import { ThinkingLevel } from "@google/genai";
+import { PipelineError } from './pipelineError.js';
 
 // Retorna o nível de pensamento com base na temperatura
 // temp 0.0–0.3 → LOW  (tarefas precisas/determinísticas)
@@ -32,8 +33,9 @@ export function buildThinkingConfig(options = {}, temp = 0.3) {
   const hasBudget = options.thinkingBudget !== undefined;
 
   if (hasLevel && hasBudget) {
-    throw new Error(
+    throw new PipelineError(
       "buildThinkingConfig: usa apenas thinkingLevel ou thinkingBudget, não ambos.",
+      { code: 'INVALID_ARGUMENT', stage: 'config', details: null },
     );
   }
 

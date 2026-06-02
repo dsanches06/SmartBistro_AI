@@ -3,7 +3,8 @@
  */
 
 import { createGeminiChat, FunctionCallingConfigMode, CHATBOT_SYSTEM_PROMPT } from '../config/index.js';
-import { MAX_AGENTIC_STEPS, synthesizeFallbackMessage, GEMINI_MODEL_QUEUE, isRetryableGeminiError } from "../../utils/index.js"
+import { MAX_AGENTIC_STEPS, synthesizeFallbackMessage, GEMINI_MODEL_QUEUE, isRetryableGeminiError, classifyGeminiError } from "../../utils/index.js"
+import { PipelineError } from '../../utils/pipelineError.js';
 
 // Gemini functionResponse.response deve ser um objeto — arrays são inválidos
 function toResponsePayload(result) {
@@ -63,14 +64,35 @@ export class BaseChatProcessor {
         }
         return response;
       } catch (error) {
-        if (!isRetryableGeminiError(error)) throw error;
+        if (!isRetryableGeminiError(error)) {
+          // Não retryable — encapsula como PipelineError para uniformizar o tratamento
+          if (error?.geminiType) throw error;
+          const classified = classifyGeminiError(error);
+          const pe = new PipelineError(classified.userMessage ?? (error.message || 'Erro no provider'), {
+            code: `GEMINI_${classified.type}`,
+            stage: 'provider',
+            details: { message: error?.message },
+            cause: error,
+          });
+          pe.geminiType = classified.type;
+          throw pe;
+        }
         lastError = error;
         console.warn(
           `[ChatProcessor] modelo ${model} indisponível — ${error.message}. A tentar próximo modelo...`,
         );
       }
     }
-    throw lastError;
+    if (lastError?.name === 'PipelineError') throw lastError;
+    const classifiedFinal = classifyGeminiError(lastError);
+    const finalPe = new PipelineError(classifiedFinal.userMessage ?? (lastError?.message || 'Model unavailable'), {
+      code: `GEMINI_${classifiedFinal.type}`,
+      stage: 'provider',
+      details: { message: lastError?.message },
+      cause: lastError,
+    });
+    finalPe.geminiType = classifiedFinal.type ?? lastError?.geminiType;
+    throw finalPe;
   }
 
   async _streamRoundWithFallback(conversationHistory, message, onChunk) {
@@ -83,14 +105,34 @@ export class BaseChatProcessor {
         }
         return await this._streamRound(chat, message, onChunk);
       } catch (error) {
-        if (!isRetryableGeminiError(error)) throw error;
+        if (!isRetryableGeminiError(error)) {
+          if (error?.geminiType) throw error;
+          const classified = classifyGeminiError(error);
+          const pe = new PipelineError(classified.userMessage ?? (error.message || 'Erro no provider'), {
+            code: `GEMINI_${classified.type}`,
+            stage: 'provider',
+            details: { message: error?.message },
+            cause: error,
+          });
+          pe.geminiType = classified.type;
+          throw pe;
+        }
         lastError = error;
         console.warn(
           `[ChatProcessor] modelo ${model} indisponível no stream — ${error.message}. A tentar próximo modelo...`,
         );
       }
     }
-    throw lastError;
+    if (lastError?.name === 'PipelineError') throw lastError;
+    const classifiedFinalStream = classifyGeminiError(lastError);
+    const finalPeStream = new PipelineError(classifiedFinalStream.userMessage ?? (lastError?.message || 'Model unavailable'), {
+      code: `GEMINI_${classifiedFinalStream.type}`,
+      stage: 'provider',
+      details: { message: lastError?.message },
+      cause: lastError,
+    });
+    finalPeStream.geminiType = classifiedFinalStream.type ?? lastError?.geminiType;
+    throw finalPeStream;
   }
 
   // ── Executar uma chamada de função ────────────────────────────────────────────
@@ -100,7 +142,11 @@ export class BaseChatProcessor {
     const args = typeof rawArgs === 'string' ? JSON.parse(rawArgs) : rawArgs;
     const handler = this.functionHandlers[name];
 
-    if (!handler) throw new Error(`Função "${name}" não está registada.`);
+    if (!handler) throw new PipelineError(`Função "${name}" não está registada.`, {
+      code: 'FUNCTION_NOT_REGISTERED',
+      stage: 'function_execution',
+      details: { functionName: name },
+    });
 
     const result = await handler(args);
     return { name, args, result, functionCall };

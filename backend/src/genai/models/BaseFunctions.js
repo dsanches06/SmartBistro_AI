@@ -2,6 +2,7 @@
  * Classe Base para declarações de funções (tools) do Gemini.
  * Reutilizável por todos os agentes do SmartBistro.
  */
+import { PipelineError } from '../../utils/pipelineError.js';
 export class BaseFunction {
   constructor(config = {}) {
     // Suporta tanto o padrão antigo (functionName, description, properties, required)
@@ -74,7 +75,11 @@ export class BaseFunction {
    * Recebe os args do Gemini e devolve o resultado da operação.
    */
   mapValues() {
-    throw new Error('mapValues() deve ser implementado na subclasse.');
+    throw new PipelineError('mapValues() deve ser implementado na subclasse.', {
+      code: 'NOT_IMPLEMENTED',
+      stage: 'internal',
+      details: null,
+    });
   }
 
   execute(args = {}) {

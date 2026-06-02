@@ -281,12 +281,17 @@ export async function processChatStream(
     // Classifica o erro bruto do Gemini numa estrutura tipada e com mensagem
     // amigável antes de propagar para o controller via onError
     const classified = classifyGeminiError(err);
-    const enriched = new Error(classified.userMessage);
-    enriched.geminiType = classified.type;
-    enriched.originalError = err;
+    const pe = new PipelineError(classified.userMessage, {
+      code: `GEMINI_${classified.type}`,
+      stage: 'provider',
+      details: { message: err?.message },
+      cause: err,
+    });
+    pe.geminiType = classified.type;
+    pe.originalError = err;
 
-    if (onError) onError(enriched);
-    else throw enriched;
+    if (onError) onError(pe);
+    else throw pe;
   }
 }
 

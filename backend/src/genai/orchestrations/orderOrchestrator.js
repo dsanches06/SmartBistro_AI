@@ -1,224 +1,26 @@
-import { MaitreAgent, ChefAgent, ManagerAgent } from "../agents/index.js";
+import {
+  MaitreAgent,
+  ChefAgent,
+  ManagerAgent,
+  MaitreResponseSchema,
+  ChefResponseSchema,
+  ManagerResponseSchema,
+  attemptRepairMaitreResponse,
+  enforceMenuPrices,
+  deriveChefStockMetrics,
+  repairManagerResponse,
+  buildMaitreMessage,
+  buildMaitreStockFeedbackMessage,
+  buildChefMessage,
+  buildManagerMessage,
+} from "../agents/index.js";
 import {
   calculateInvoiceTotals,
   calculateProfitMargin,
 } from "../../utils/index.js";
 import { getAllTables, getActiveItems } from "../../services/index.js";
-
-// ── Repara brackets trocados gerados por LLMs (ex: ] em vez de }) ────────────
-// Percorre o JSON caracter a caracter (ignorando strings) e corrige qualquer
-// bracket de fecho errado com base na pilha de aberturas.
-function repairBrackets(str) {
-  const stack = [];
-  let inStr  = false;
-  let result = "";
-
-  for (let i = 0; i < str.length; i++) {
-    const ch   = str[i];
-    const prev = i > 0 ? str[i - 1] : "";
-
-    // Controla se estamos dentro de uma string JSON (ignora escapes simples)
-    if (ch === '"' && prev !== "\\") {
-      inStr = !inStr;
-      result += ch;
-      continue;
-    }
-    if (inStr) { result += ch; continue; }
-
-    if      (ch === "{") { stack.push("}"); result += ch; }
-    else if (ch === "[") { stack.push("]"); result += ch; }
-    else if (ch === "}" || ch === "]") {
-      if (stack.length > 0) {
-        result += stack.pop(); // usa o fecho correcto, ignora o errado
-      }
-      // se stack vazio, descarta bracket extra
-    } else {
-      result += ch;
-    }
-  }
-  // Fecha qualquer bracket que ficou em aberto
-  while (stack.length) result += stack.pop();
-  return result;
-}
-
-// ── Limpa erros comuns de JSON gerado por LLMs ────────────────────────────────
-function sanitiseJSON(str) {
-  return repairBrackets(
-    str
-      .replace(/,\s*([\]}])/g, "$1")    // vírgulas finais:  {"a":1,}  → {"a":1}
-      .replace(/\/\/[^\n]*/g, "")       // comentários //
-      .replace(/\/\*[\s\S]*?\*\//g, ""), // comentários /* */
-  ).trim();
-}
-
-// ── Extrai JSON de resposta do agente — 3 estratégias + sanitização ────────────
-// Os agentes podem devolver:
-//   a) bloco markdown: ```json { ... } ```
-//   b) JSON puro:      { ... }
-//   c) Texto misto:    "Aqui está o resultado: { ... }"
-function extractJSON(text, agentName = "agent") {
-  if (!text) throw new Error(`[${agentName}] Resposta vazia.`);
-
-  const tryParse = (raw) => {
-    // tenta raw primeiro, depois versão sanitizada
-    try { return JSON.parse(raw); } catch {}
-    try { return JSON.parse(sanitiseJSON(raw)); } catch {}
-    return null;
-  };
-
-  // 1. Bloco markdown ```json ... ``` ou ``` ... ```
-  const block = text.match(/```(?:json)?\s*([\s\S]*?)```/s);
-  if (block) {
-    const result = tryParse(block[1].trim());
-    if (result) return result;
-  }
-
-  // 2. JSON puro (resposta começa com { ou [)
-  const trimmed = text.trim();
-  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
-    const result = tryParse(trimmed);
-    if (result) return result;
-  }
-
-  // 3. Primeiro bloco { ... } encontrado no texto (greedy — apanha o maior)
-  const match = text.match(/\{[\s\S]*\}/);
-  if (match) {
-    const result = tryParse(match[0]);
-    if (result) return result;
-  }
-
-  throw new Error(
-    `[${agentName}] Não foi possível extrair JSON da resposta.\n` +
-    `Resposta (primeiros 400 chars): ${text.substring(0, 400)}`,
-  );
-}
-
-// ── Mensagens estruturadas para cada agente ────────────────────────────────────
-
-function buildMaitreMessage(orderData, availableTables, menuItems) {
-  const tablesInfo = availableTables.length
-    ? availableTables
-        .map((t) => `  - id ${t.id}, ${t.table_number}, capacidade ${t.capacity}, ${t.status}`)
-        .join("\n")
-    : "  (nenhuma mesa disponível de momento)";
-
-  const menuInfo = menuItems
-    .map((i) => `  - id ${i.id}, ${i.name}, ${i.category ?? "—"}, €${Number(i.price).toFixed(2)}`)
-    .join("\n");
-
-  return `
-Analisa a mensagem do cliente e devolve APENAS JSON (sem texto adicional, sem markdown).
-
-MENSAGEM DO CLIENTE:
-"${orderData.message}"
-
-CLIENTE: ${[orderData.customer_name, orderData.customer_surname].filter(Boolean).join(' ')}
-
-MESAS DISPONÍVEIS (status Available):
-${tablesInfo}
-
-MENU ACTIVO:
-${menuInfo}
-
-TAREFA:
-1. Detecta o tipo de serviço: "Table" (jantar/almoço/comer aqui/mesa) ou "Takeaway" (levar/para fora/takeaway)
-2. Se "Table": escolhe UMA mesa disponível adequada ao número de pessoas mencionado (mínimo 1)
-3. Se "Takeaway": table_id deve ser null
-4. Identifica os pratos pedidos fazendo corresponder ao menu activo por semelhança fonética/textual
-5. Estima a quantidade de cada prato (1 por padrão, salvo indicação contrária)
-6. Usa os preços exactos do menu activo fornecido acima
-7. Regista restrições alimentares ou alergias mencionadas (null se nenhuma)
-
-RESPONDE EXACTAMENTE com este JSON (sem comentários, sem markdown):
-{
-  "customer_name": "<nome do cliente>",
-  "customer_surname": "<apelido ou null>",
-  "table_id": <número ou null se Takeaway>,
-  "service_type": "Table" ou "Takeaway",
-  "allergy_restrictions": <"string" ou null>,
-  "validation_status": "valid",
-  "items": [
-    { "item_id": <número>, "name": "<nome exacto do menu>", "quantity": <número>, "price": <preço decimal> }
-  ],
-  "notes": "<observações do Maître — ex: mesa T03 atribuída para 2 pessoas>"
-}
-`.trim();
-}
-
-function buildChefMessage(validated, menuItems) {
-  const menuInfo = menuItems
-    .map((i) => `  - id ${i.id}, ${i.name}, ${i.category ?? '—'}, €${Number(i.price).toFixed(2)}`)
-    .join('\n');
-
-  return `
-Recebeste do Maître a fila de pedidos validada. Devolve APENAS JSON (sem texto, sem markdown).
-
-MENU ACTIVO:
-${menuInfo}
-
-TAREFA:
-1. Define a sequência de preparação óptima por secção da cozinha (grelhados, massas, entradas, etc.)
-2. Verifica o stock de ingredientes para cada prato
-3. Estima o tempo total de preparação em minutos
-4. Se algum ingrediente estiver em falta, indica na lista stock_alerts
-
-RESPONDE EXACTAMENTE com este JSON (ATENÇÃO: "sections" usa CHAVES {}, não parênteses rectos []):
-{
-  "kitchen_sequence": ["<prato 1>", "<prato 2>"],
-  "sections": { "<secção>": ["<prato 1>", "<prato 2>"] },
-  "stock_status": "ok",
-  "stock_alerts": [],
-  "estimated_minutes": <número>,
-  "items": [
-    { "item_id": <número>, "name": "<nome>", "quantity": <número>, "price": <preço> }
-  ],
-  "notes": "<observações do Chefe>"
-}
-
-FILA DE PEDIDOS DO MAÎTRE:
-${JSON.stringify(validated, null, 2)}
-`.trim();
-}
-
-function buildManagerMessage(validated, sequenced, financials) {
-  return `
-Recebeste do Chefe a sequência de preparação. Os totais financeiros já estão calculados em JS — NÃO RECALCULES.
-Devolve APENAS JSON (sem texto, sem markdown).
-
-TAREFA:
-1. Confirma a fatura com os totais calculados abaixo
-2. Define o estado inicial do pagamento como "Pending"
-3. Gera o objeto final do pedido completamente estruturado
-
-TOTAIS JÁ CALCULADOS (não alterar):
-  subtotal : €${financials.subtotal}
-  IVA (${(financials.taxRate * 100).toFixed(0)}%)  : €${financials.taxAmount}
-  total    : €${financials.total}
-
-RESPONDE EXACTAMENTE com este JSON:
-{
-  "success": true,
-  "order_summary": "<resumo do pedido>",
-  "invoice": {
-    "subtotal_amount": ${financials.subtotal},
-    "tax_rate": ${financials.taxRate},
-    "tax_amount": ${financials.taxAmount},
-    "total_amount": ${financials.total}
-  },
-  "payment": {
-    "method": "Pending",
-    "status": "Pending"
-  },
-  "notes": "<observações do Gerente>"
-}
-
-DADOS DO PEDIDO VALIDADOS (Maître):
-${JSON.stringify(validated, null, 2)}
-
-DADOS DA SEQUÊNCIA (Chefe):
-${JSON.stringify(sequenced, null, 2)}
-`.trim();
-}
+import { PipelineError } from "../../utils/pipelineError.js";
+import { validateAgentOutput, extractJSON } from "../helpers/index.js";
 
 /**
  * Pipeline sequencial dos 3 agentes:
@@ -240,58 +42,179 @@ ${JSON.stringify(sequenced, null, 2)}
  * @returns {{ validated, sequenced, financials, final }}
  */
 export async function runOrderPipeline(orderData) {
-  // Normaliza campos que podem vir em snake_case do formulário HTTP
   const normalised = {
     ...orderData,
-    taxRate:      orderData.taxRate      ?? orderData.tax_rate      ?? undefined,
-    discountType: orderData.discountType ?? orderData.discount_type ?? undefined,
+    taxRate: orderData.taxRate ?? orderData.tax_rate ?? undefined,
+    discountType:
+      orderData.discountType ?? orderData.discount_type ?? undefined,
   };
 
-  // ── Pré-carrega contexto para o Maître (em paralelo) ──────────────────────────
   console.log("[Pipeline] A carregar mesas disponíveis e menu activo...");
   const [availableTables, menuItems] = await Promise.all([
     getAllTables("Available"),
     getActiveItems(),
   ]);
-  console.log(`[Pipeline] Contexto: ${availableTables.length} mesa(s) disponível(eis), ${menuItems.length} item(ns) no menu`);
+  console.log(
+    `[Pipeline] Contexto: ${availableTables.length} mesa(s) disponível(eis), ${menuItems.length} item(ns) no menu`,
+  );
 
-  // ── Fase 1 — Maître ───────────────────────────────────────────────────────────
-  console.log("[Pipeline] Fase 1 — Maître a interpretar pedido em linguagem natural...");
+  console.log(
+    "[Pipeline] Fase 1 — Maître a interpretar pedido em linguagem natural...",
+  );
   const maitre = new MaitreAgent();
-  const validatedText = await maitre.sendMessage(buildMaitreMessage(normalised, availableTables, menuItems));
-  const validated = extractJSON(validatedText, "Maître");
-  console.log(`[Pipeline] Maître concluído — mesa: ${validated.table_id ?? "Takeaway"}, ${validated.items?.length ?? 0} item(s)`);
+  const validatedText = await maitre.sendMessage(
+    buildMaitreMessage(normalised, availableTables, menuItems),
+  );
+  let validated = extractJSON(validatedText, "Maître");
+  validated = attemptRepairMaitreResponse(validated, menuItems, validatedText);
+  validated = validateAgentOutput(MaitreResponseSchema, validated, "Maître");
+  validated = enforceMenuPrices(validated, menuItems);
 
-  // ── Fase 2 — Chefe ────────────────────────────────────────────────────────────
+  if (String(validated.validation_status).toLowerCase() === "invalid") {
+    const invalidList = Array.isArray(validated.invalid_items)
+      ? validated.invalid_items.map((i) => i.name || i.item_id).join(", ")
+      : "unknown";
+    console.log(
+      `[Pipeline] Maître devolveu validation_status=invalid — itens: ${invalidList}`,
+    );
+    throw new PipelineError(
+      `[MaîtreValidation] Itens inválidos: ${invalidList}`,
+      {
+        code: "MAITRE_INVALID_ITEMS",
+        stage: "maitre_validation",
+        details: { invalid_items: validated.invalid_items ?? [] },
+      },
+    );
+  }
+
+  console.log(
+    `[Pipeline] Maître concluído — mesa: ${validated.table_id ?? "Takeaway"}, ${validated.items?.length ?? 0} item(s)`,
+  );
+
   console.log("[Pipeline] Fase 2 — Chefe a verificar stock e sequência...");
   const chef = new ChefAgent();
-  const sequencedText = await chef.sendMessage(buildChefMessage(validated, menuItems));
-  const sequenced = extractJSON(sequencedText, "Chefe");
-  console.log(`[Pipeline] Chefe concluído — sequência: ${(sequenced.kitchen_sequence ?? []).join(" → ")}`);
+  const sequencedText = await chef.sendMessage(
+    buildChefMessage(validated, menuItems),
+  );
+  let sequenced = extractJSON(sequencedText, "Chefe");
+  sequenced = validateAgentOutput(ChefResponseSchema, sequenced, "Chefe");
 
-  // ── Cálculo financeiro em JS puro (nunca pelo modelo) ─────────────────────────
+  const { unavailableItems, stockStatus, stockAlerts } = deriveChefStockMetrics(sequenced);
+
+  if (
+    stockStatus !== "ok" ||
+    stockAlerts.length > 0 ||
+    unavailableItems.length > 0
+  ) {
+    console.log(
+      `[Pipeline] Chefe reportou stock_status=${stockStatus}, stock_alerts=${stockAlerts.length}, unavailable_items=${unavailableItems.length}`,
+    );
+  }
+
+  if (unavailableItems.length > 0) {
+    console.log(
+      `[Pipeline] Chefe identificou ${unavailableItems.length} item(s) indisponíveis. A enviar feedback ao Maître...`,
+    );
+    const retryText = await maitre.sendMessage(
+      buildMaitreStockFeedbackMessage(
+        validated,
+        availableTables,
+        menuItems,
+        sequenced,
+      ),
+    );
+    let retryValidated = extractJSON(retryText, "MaîtreRetry");
+    retryValidated = validateAgentOutput(
+      MaitreResponseSchema,
+      retryValidated,
+      "MaîtreRetry",
+    );
+    retryValidated = enforceMenuPrices(retryValidated, menuItems);
+
+    if (
+      JSON.stringify(retryValidated.items) === JSON.stringify(validated.items)
+    ) {
+      throw new PipelineError(
+        "[MaîtreRetry] O pedido não foi ajustado após alerta de stock.",
+        {
+          code: "MAITRE_RETRY_UNCHANGED",
+          stage: "maitre_retry",
+        },
+      );
+    }
+
+    validated = retryValidated;
+    const retrySequencedText = await chef.sendMessage(
+      buildChefMessage(validated, menuItems),
+    );
+    sequenced = extractJSON(retrySequencedText, "ChefeRetry");
+    sequenced = validateAgentOutput(
+      ChefResponseSchema,
+      sequenced,
+      "ChefeRetry",
+    );
+
+    const retryUnavailableItems = Array.isArray(sequenced.items)
+      ? sequenced.items.filter((item) => item?.unavailable === true)
+      : [];
+
+    console.log(
+      `[Pipeline] ChefeRetry final — stock_status=${sequenced.stock_status ?? sequenced.stockStatus}, ` +
+        `stock_alerts=${Array.isArray(sequenced.stock_alerts) ? sequenced.stock_alerts.length : Array.isArray(sequenced.stockAlerts) ? sequenced.stockAlerts.length : 0}, ` +
+        `unavailable_items=${retryUnavailableItems.length}`,
+    );
+
+    if (retryUnavailableItems.length > 0) {
+      throw new PipelineError(
+        "[ChefeRetry] Ainda há itens indisponíveis no pedido ajustado.",
+        {
+          code: "CHEF_RETRY_STILL_UNAVAILABLE",
+          stage: "chef_retry",
+          details: { unavailable_items: retryUnavailableItems },
+        },
+      );
+    }
+  }
+
+  console.log(
+    `[Pipeline] Chefe concluído — sequência: ${(sequenced.kitchen_sequence ?? []).join(" → ")}`,
+  );
+
   const items = sequenced.items ?? validated.items ?? normalised.items ?? [];
   const financials = calculateInvoiceTotals({
     items,
-    taxRate:      sequenced.taxRate      ?? normalised.taxRate,
-    discount:     sequenced.discount     ?? normalised.discount,
+    taxRate: sequenced.taxRate ?? normalised.taxRate,
+    discount: sequenced.discount ?? normalised.discount,
     discountType: sequenced.discountType ?? normalised.discountType,
   });
   financials.profitMargin = calculateProfitMargin(
     financials.total,
     sequenced.ingredientsCost ?? 0,
   );
-  console.log(`[Pipeline] Financeiro calculado em JS — total: €${financials.total}`);
+  console.log(
+    `[Pipeline] Financeiro calculado em JS — total: €${financials.total}`,
+  );
 
-  // ── Fase 3 — Gerente ──────────────────────────────────────────────────────────
   console.log("[Pipeline] Fase 3 — Gerente a formatar fatura...");
   const manager = new ManagerAgent();
-  const finalText = await manager.sendMessage(buildManagerMessage(validated, sequenced, financials));
-  const final = extractJSON(finalText, "Gerente");
-  if (!final || final.success !== true) {
-    throw new Error('Gerente devolveu um resultado inválido ou incompleto.');
-  }
+  const finalText = await manager.sendMessage(
+    buildManagerMessage(validated, sequenced, financials),
+  );
+  const finalRaw = extractJSON(finalText, "Gerente");
+  const finalRepaired = repairManagerResponse(finalRaw, financials);
+  const final = validateAgentOutput(
+    ManagerResponseSchema,
+    finalRepaired,
+    "Gerente",
+  );
   console.log("[Pipeline] Gerente concluído.");
 
   return { validated, sequenced, financials, final };
 }
+
+export {
+  attemptRepairMaitreResponse,
+  enforceMenuPrices,
+  repairManagerResponse,
+  extractJSON,
+};

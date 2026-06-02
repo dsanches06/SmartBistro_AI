@@ -1,4 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
+import { PipelineError } from './pipelineError.js';
+import { classifyGeminiError } from './classifyError.js';
 
 // ── Papéis na tabela `roles` ──────────────────────────────────────────────────
 export const ROLE_USER      = 2; // role: "user"
@@ -45,6 +47,8 @@ export function isRetryableGeminiError(error) {
   );
 }
 
+ 
+
 /**
  * Envia uma mensagem percorrendo a fila de modelos Gemini.
  * Se o modelo actual falhar por quota/indisponibilidade, passa automaticamente
@@ -74,9 +78,9 @@ export async function sendWithModelFallback(
   idx = 0,
 ) {
   if (idx >= queue.length) {
-    throw new Error(
-      "Todos os modelos Gemini disponíveis estão com quota esgotada ou indisponíveis. " +
-      "Aguarda alguns minutos e tenta novamente.",
+    throw new PipelineError(
+      "Todos os modelos Gemini disponíveis estão com quota esgotada ou indisponíveis. Aguarda alguns minutos e tenta novamente.",
+      { code: 'MODEL_UNAVAILABLE', stage: 'provider', details: null },
     );
   }
 
@@ -102,8 +106,17 @@ export async function sendWithModelFallback(
       );
       return sendWithModelFallback(chatConfig, history, message, queue, apiKey, idx + 1);
     }
-    // Erros não-retryable (INVALID_REQUEST, autenticação, etc.) são relançados imediatamente
-    throw error;
+    // Erros não-retryable (INVALID_REQUEST, autenticação, etc.) — encapsula em PipelineError para consistência
+    if (error?.name === 'PipelineError' || error?.geminiType) throw error;
+    const classified = classifyGeminiError(error);
+    const pe = new PipelineError(classified.userMessage ?? (error?.message || 'Erro no provider'), {
+      code: `GEMINI_${classified.type}`,
+      stage: 'provider',
+      details: { message: error?.message },
+      cause: error,
+    });
+    pe.geminiType = classified.type;
+    throw pe;
   }
 }
 
