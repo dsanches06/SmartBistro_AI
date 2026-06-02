@@ -200,21 +200,23 @@ INSERT INTO reservations (customer_id, table_id, reservation_date, party_size, s
 -- Mapeamento: #1-#13 = pedidos existentes  |  #14-#15 = novos (T06, T13)
 -- =========================================================================
 INSERT INTO orders (customer_id, table_id, service_type, allergy_restrictions, kitchen_sequence_json, order_status, created_at) VALUES
-(16,  9, 'Table',    NULL, '["Grilled Salmon","Legumes Salteados","Sparkling Water"]',                        'Delivered',      '2026-06-01 07:15:00'), -- #1  T09
-(15,  2, 'Table',    NULL, '["Frango Assado","Craft Beer"]',                                                 'Delivered',      '2026-06-01 08:22:00'), -- #2  T02
-(14, 12, 'Table',    NULL, '["Bruschetta","Sumol","Esparguete Bolonhesa","Caesar Salad","Chocolate Mousse"]', 'Ready',          '2026-06-01 09:05:00'), -- #3  T12
-(13, NULL,'Takeaway',NULL, '["Hamburguer Gourmet","Batatas Fritas","Sparkling Water"]',                       'In Preparation', '2026-06-01 10:40:00'), -- #4  Takeaway
-(12,  3, 'Table',    NULL, '["Bruschetta","Sumol"]',                                                         'Ready',          '2026-06-01 10:55:00'), -- #5  T03
-(11,  7, 'Table',    NULL, '["Bife à Casa","Arroz de Marisco","Batatas Fritas","Coca-Cola"]',                 'Pending',        '2026-06-01 11:30:00'), -- #6  T07
-(12,  3, 'Table',    NULL, '["Pizza Margherita","Sumol"]',                                                   'Pending',        '2026-06-01 12:10:00'), -- #7  T03
-(14, 12, 'Table',    NULL, '["Bacalhau à Brás","Salada Mista","Red Wine Glass","Pão","Café"]',                'In Preparation', '2026-06-01 12:47:00'), -- #8  T12
-( 2,  5, 'Table',    NULL, '["Caesar Salad","Grilled Salmon","Orange Juice"]',                               'Pending',        '2026-06-01 13:20:00'), -- #9  T05
-( 1, 17, 'Table',    NULL, '["Esparguete Bolonhesa","Tiramisu"]',                                            'In Preparation', '2026-06-01 14:05:00'), -- #10 T17
-( 3, 22, 'Table',    NULL, '["Chicken Wings","Coca-Cola"]',                                                  'Ready',          '2026-06-01 15:38:00'), -- #11 T22
-( 4, 21, 'Table',    NULL, '["Creme Soup","Vegetarian Pasta","Cheesecake"]',                                 'Pending',        '2026-06-01 16:50:00'), -- #12 T21
-( 5, 23, 'Table',    NULL, '["Chicken Parmigiana","Craft Beer","Tiramisu"]',                                 'In Preparation', '2026-06-01 17:25:00'), -- #13 T23
-( 7,  6, 'Table',    NULL, '["Bife à Casa","Red Wine Glass"]',                                               'Pending',        '2026-06-01 18:10:00'), -- #14 T06
-( 8, 13, 'Table',    NULL, '["Caesar Salad","Grilled Salmon","Craft Beer"]',                                 'In Preparation', '2026-06-01 18:53:00'); -- #15 T13
+(16,  9, 'Table',    NULL, '["Grilled Salmon","Legumes Salteados","Sparkling Water"]',                        'Delivered',      DATE_ADD(CURRENT_DATE, INTERVAL '07:15' HOUR_MINUTE)), -- #1  T09
+(15,  2, 'Table',    NULL, '["Frango Assado","Craft Beer"]',                                                 'Delivered',      DATE_ADD(CURRENT_DATE, INTERVAL '08:22' HOUR_MINUTE)), -- #2  T02
+(14, 12, 'Table',    NULL, '["Bruschetta","Sumol","Esparguete Bolonhesa","Caesar Salad","Chocolate Mousse"]', 'Ready',          DATE_ADD(CURRENT_DATE, INTERVAL '09:05' HOUR_MINUTE)), -- #3  T12
+(13, NULL,'Takeaway',NULL, '["Hamburguer Gourmet","Batatas Fritas","Sparkling Water"]',                       'In Preparation', DATE_ADD(CURRENT_DATE, INTERVAL '10:40' HOUR_MINUTE)), -- #4  Takeaway
+(12,  3, 'Table',    NULL, '["Bruschetta","Sumol"]',                                                         'Ready',          DATE_ADD(CURRENT_DATE, INTERVAL '10:55' HOUR_MINUTE)), -- #5  T03
+(11,  7, 'Table',    NULL, '["Bife à Casa","Arroz de Marisco","Batatas Fritas","Coca-Cola"]',                 'Pending',        DATE_ADD(CURRENT_DATE, INTERVAL '11:30' HOUR_MINUTE)), -- #6  T07
+(12,  3, 'Table',    NULL, '["Pizza Margherita","Sumol"]',                                                   'Pending',        DATE_ADD(CURRENT_DATE, INTERVAL '12:10' HOUR_MINUTE)), -- #7  T03
+(14, 12, 'Table',    NULL, '["Bacalhau à Brás","Salada Mista","Red Wine Glass","Pão","Café"]',                'In Preparation', DATE_ADD(CURRENT_DATE, INTERVAL '12:47' HOUR_MINUTE)), -- #8  T12
+( 2,  5, 'Table',    NULL, '["Caesar Salad","Grilled Salmon","Orange Juice"]',                               'Pending',        DATE_ADD(CURRENT_DATE, INTERVAL '13:20' HOUR_MINUTE)), -- #9  T05
+( 1, 17, 'Table',    NULL, '["Esparguete Bolonhesa","Tiramisu"]',                                            'In Preparation', DATE_ADD(CURRENT_DATE, INTERVAL '14:05' HOUR_MINUTE)), -- #10 T17
+( 3, 22, 'Table',    NULL, '["Chicken Wings","Coca-Cola"]',                                                  'Ready',          DATE_ADD(CURRENT_DATE, INTERVAL '15:38' HOUR_MINUTE)), -- #11 T22
+( 4, 21, 'Table',    NULL, '["Creme Soup","Vegetarian Pasta","Cheesecake"]',                                 'Pending',        DATE_ADD(CURRENT_DATE, INTERVAL '16:50' HOUR_MINUTE)), -- #12 T21
+( 5, 23, 'Table',    NULL, '["Chicken Parmigiana","Craft Beer","Tiramisu"]',                                 'In Preparation', DATE_ADD(CURRENT_DATE, INTERVAL '17:25' HOUR_MINUTE)), -- #13 T23
+( 7,  6, 'Table',    NULL, '["Bife à Casa","Red Wine Glass"]',                                               'Pending',        DATE_ADD(CURRENT_DATE, INTERVAL '18:10' HOUR_MINUTE)), -- #14 T06
+( 8, 13, 'Table',    NULL, '["Caesar Salad","Grilled Salmon","Craft Beer"]',                                 'In Preparation', DATE_ADD(CURRENT_DATE, INTERVAL '18:53' HOUR_MINUTE)); -- #15 T13
+
+
 
 -- =========================================================================
 -- 8. ORDER ITEMS  (order_id começa em 1)

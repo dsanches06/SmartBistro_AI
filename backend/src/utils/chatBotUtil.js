@@ -15,12 +15,19 @@ export const MAX_AGENTIC_STEPS = 5;
 // Se o modelo principal (MODEL_NAME do .env) falhar por quota/indisponibilidade,
 // sendWithModelFallback percorre esta lista automaticamente.
 export const GEMINI_MODEL_QUEUE = [
+  "gemini-3.5-flash",      // Gemini 3 — mais recente, suporta thinking
   "gemini-2.5-flash",      // GA — rápido, estável, excelente para function calling
-  "gemini-3.5-flash",      // Stable/Frontier — última geração
   "gemini-2.5-pro",        // GA — máxima capacidade (mais lento)
-  "gemini-2.0-flash",      // fallback secundário
-  "gemini-1.5-flash",      // último recurso
+  "gemini-2.0-flash",      // fallback secundário (sem thinking)
+  "gemini-1.5-flash",      // último recurso (sem thinking)
 ];
+
+// Modelos que suportam thinkingConfig — os restantes ignoram ou rejeitam esse campo
+export const THINKING_CAPABLE_MODELS = new Set([
+  "gemini-3.5-flash",
+  "gemini-2.5-flash",
+  "gemini-2.5-pro",
+]);
 
 // ── Erros que justificam tentar o próximo modelo ──────────────────────────────
 // 429 = RESOURCE_EXHAUSTED (quota/rate limit)
@@ -90,7 +97,11 @@ export async function sendWithModelFallback(
   try {
     const key    = apiKey ?? process.env.GEMINI_API_KEY;
     const client = new GoogleGenAI({ apiKey: key });
-    const chat   = client.chats.create({ model, history, config: chatConfig });
+    // Remove thinkingConfig para modelos que não suportam thinking
+    const config = THINKING_CAPABLE_MODELS.has(model)
+      ? chatConfig
+      : { ...chatConfig, thinkingConfig: undefined };
+    const chat   = client.chats.create({ model, history, config });
     const response = await chat.sendMessage({ message });
 
     if (idx > 0) {

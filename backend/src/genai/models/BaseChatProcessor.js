@@ -3,7 +3,7 @@
  */
 
 import { createGeminiChat, FunctionCallingConfigMode, CHATBOT_SYSTEM_PROMPT } from '../config/index.js';
-import { MAX_AGENTIC_STEPS, synthesizeFallbackMessage, GEMINI_MODEL_QUEUE, isRetryableGeminiError, classifyGeminiError } from "../../utils/index.js"
+import { MAX_AGENTIC_STEPS, synthesizeFallbackMessage, GEMINI_MODEL_QUEUE, THINKING_CAPABLE_MODELS, isRetryableGeminiError, classifyGeminiError } from "../../utils/index.js"
 import { PipelineError } from '../../utils/pipelineError.js';
 
 // Gemini functionResponse.response deve ser um objeto — arrays são inválidos
@@ -19,6 +19,7 @@ function buildChatConfig(tools = []) {
   return {
     systemInstruction: CHATBOT_SYSTEM_PROMPT(),
     temperature: 0.3,
+    thinkingConfig: { thinkingBudget: 0 },
     ...(hasTools && {
       tools: [{ functionDeclarations: tools }],
       toolConfig: {
@@ -45,8 +46,12 @@ export class BaseChatProcessor {
   }
 
   async _createChat(conversationHistory = [], model = null) {
+    const baseConfig = buildChatConfig(this.toolConfig);
+    const config = model && !THINKING_CAPABLE_MODELS.has(model)
+      ? { ...baseConfig, thinkingConfig: undefined }
+      : baseConfig;
     return createGeminiChat(
-      buildChatConfig(this.toolConfig),
+      config,
       this.buildHistory(conversationHistory),
       null,
       model,
@@ -289,6 +294,16 @@ export class BaseChatProcessor {
 
     // Primeira ronda — pode ser resposta directa ou chamada de função
     let { functionCalls } = await this._streamRoundWithFallback(conversationHistory, userMessage, emit);
+
+    // Gemini devolveu resposta vazia (sem texto, sem function calls) — força continuação
+    if (!functionCalls.length && !allChunks.length) {
+      ({ functionCalls } = await this._streamRoundWithFallback(
+        conversationHistory,
+        `${userMessage}\n\n[Sistema: continua o fluxo — chama as ferramentas necessárias para avançar.]`,
+        emit,
+      ));
+    }
+
     let step = 0;
 
     while (functionCalls.length && step < MAX_AGENTIC_STEPS) {
