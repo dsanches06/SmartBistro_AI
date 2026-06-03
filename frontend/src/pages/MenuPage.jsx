@@ -320,19 +320,19 @@ export default function MenuPage() {
       <div className="rounded-[32px] bg-surface p-6 shadow-sm">
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-5">
-          <h1 className="text-2xl font-bold" style={{ color: "var(--text)" }}>Menu</h1>
-          <div className="flex items-center gap-2">
-            <button onClick={load} title="Atualizar"
-              className="w-9 h-9 inline-flex items-center justify-center rounded-xl border border-[var(--border)] transition-colors"
-              style={{ color: "var(--text-secondary)", background: "var(--surface-2)" }}>
-              <i className={`fa-solid fa-rotate-right text-sm${loading ? " fa-spin" : ""}`} />
-            </button>
+        <div className="flex items-center justify-between gap-2 mb-5">
+          <h1 className="text-xl sm:text-2xl font-bold" style={{ color: "var(--text)" }}>Menu</h1>
+          <div className="flex items-center gap-2 flex-shrink-0">
             <button onClick={() => setShowCreate(true)}
-              className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+              className="flex items-center gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white whitespace-nowrap"
               style={{ background: "var(--primary)" }}>
-              <i className="fa-solid fa-plus text-xs" />
+              <i className="fa-solid fa-plus text-[10px] sm:text-xs" />
               Novo Item
+            </button>
+            <button onClick={load} title="Atualizar"
+              className="w-8 h-8 sm:w-9 sm:h-9 inline-flex items-center justify-center rounded-xl border border-[var(--border)] transition-colors flex-shrink-0"
+              style={{ color: "var(--text-secondary)", background: "var(--surface-2)" }}>
+              <i className={`fa-solid fa-rotate-right text-xs sm:text-sm${loading ? " fa-spin" : ""}`} />
             </button>
           </div>
         </div>
@@ -351,20 +351,38 @@ export default function MenuPage() {
           )}
         </div>
 
-        {/* Category filters — scroll horizontal no mobile */}
-        <div className="flex gap-1.5 mb-5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
+        {/* Category filters */}
+        <div className="flex gap-2 mb-5 justify-between sm:justify-start sm:gap-1.5 pt-1">
           <button onClick={() => handleCatFilter("all")}
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex-shrink-0 whitespace-nowrap"
+            className="relative flex-1 sm:flex-shrink-0 sm:flex-initial px-3 py-2 sm:py-1.5 rounded-full text-xs font-semibold transition-all text-center"
             style={{ background: catFilter === "all" ? "var(--primary)" : "var(--surface-2)", color: catFilter === "all" ? "#fff" : "var(--text-secondary)" }}>
-            Todos
+            <span className="sm:hidden">⊞</span>
+            <span className="hidden sm:inline">Todos</span>
+            {items.length > 0 && (
+              <span className="sm:hidden absolute -top-1.5 -right-1 w-4 h-4 flex items-center justify-center rounded-full text-[9px] font-bold"
+                style={{ background: catFilter === "all" ? "rgba(255,255,255,0.9)" : "var(--primary)", color: catFilter === "all" ? "var(--primary)" : "#fff" }}>
+                {items.length}
+              </span>
+            )}
           </button>
-          {MENU_CATEGORIES.map(cat => (
-            <button key={cat.key} onClick={() => handleCatFilter(cat.key)}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex-shrink-0 whitespace-nowrap"
-              style={{ background: catFilter === cat.key ? cat.accent : "var(--surface-2)", color: catFilter === cat.key ? "#fff" : "var(--text-secondary)" }}>
-              {cat.emoji} {cat.label}
-            </button>
-          ))}
+          {MENU_CATEGORIES.map(cat => {
+            const count = items.filter(i => i.category === cat.key).length;
+            const active = catFilter === cat.key;
+            return (
+              <button key={cat.key} onClick={() => handleCatFilter(cat.key)}
+                className="relative flex-1 sm:flex-shrink-0 sm:flex-initial flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 sm:py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all"
+                style={{ background: active ? cat.accent : "var(--surface-2)", color: active ? "#fff" : "var(--text-secondary)" }}>
+                <span>{cat.emoji}</span>
+                <span className="hidden sm:inline">{cat.label}</span>
+                {count > 0 && (
+                  <span className="sm:hidden absolute -top-1.5 -right-1 w-4 h-4 flex items-center justify-center rounded-full text-[9px] font-bold"
+                    style={{ background: active ? "rgba(255,255,255,0.9)" : cat.accent, color: active ? cat.accent : "#fff" }}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
 

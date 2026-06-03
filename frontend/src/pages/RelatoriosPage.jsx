@@ -488,20 +488,20 @@ export default function RelatoriosPage() {
 
         {/* ── Sidebar (desktop) / Tabs (mobile) ── */}
         <aside className="lg:w-44 flex-shrink-0">
-          {/* Mobile: grid 4 + 2 */}
-          <div className="grid grid-cols-4 lg:hidden gap-2 mb-1">
-            {REPORT_SECTIONS.map((s, i) => (
+          {/* Mobile: ícones em linha sem overflow */}
+          <div className="flex lg:hidden gap-2 mb-2 justify-between">
+            {REPORT_SECTIONS.map(s => (
               <button
                 key={s.key}
                 onClick={() => setSection(s.key)}
-                className={`flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl text-xs font-semibold transition-colors${i >= 4 ? " col-span-2" : ""}`}
+                title={s.label}
+                className="flex-1 flex items-center justify-center py-2 rounded-xl text-xs font-semibold transition-colors"
                 style={{
                   background: section === s.key ? "var(--primary)" : "var(--surface)",
                   color: section === s.key ? "#fff" : "var(--text-muted)",
                 }}
               >
-                <i className={`${s.icon} text-xs`} />
-                <span className="truncate">{s.label}</span>
+                <i className={`${s.icon} text-sm`} />
               </button>
             ))}
           </div>
@@ -531,13 +531,44 @@ export default function RelatoriosPage() {
         <div className="flex-1 min-w-0">
 
           {/* Period filter */}
-          <div className="flex flex-wrap items-center gap-3 mb-5">
-            <div className="flex gap-2 flex-wrap">
+          <div className="flex flex-col gap-2 mb-5">
+            {/* Mobile: 3 na primeira linha + Personalizado na segunda */}
+            <div className="flex lg:hidden flex-col gap-2">
+              <div className="flex gap-2">
+                {REPORT_PERIODS.slice(0, 3).map(p => (
+                  <button
+                    key={p.key}
+                    onClick={() => setPeriod(p.key)}
+                    className="flex-1 py-2 rounded-lg text-xs font-semibold transition-colors"
+                    style={{
+                      background: period === p.key ? "var(--primary)" : "var(--surface)",
+                      color: period === p.key ? "#fff" : "var(--text-muted)",
+                      border: "1px solid var(--border)",
+                    }}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setPeriod("personalizado")}
+                className="w-full py-2 rounded-lg text-xs font-semibold transition-colors"
+                style={{
+                  background: period === "personalizado" ? "var(--primary)" : "var(--surface)",
+                  color: period === "personalizado" ? "#fff" : "var(--text-muted)",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                Personalizado
+              </button>
+            </div>
+            {/* Desktop: linha única */}
+            <div className="hidden lg:flex gap-2">
               {REPORT_PERIODS.map(p => (
                 <button
                   key={p.key}
                   onClick={() => setPeriod(p.key)}
-                  className="px-4 py-2 rounded-lg text-xs font-semibold transition-colors"
+                  className="px-4 py-2 rounded-lg text-xs font-semibold transition-colors flex-shrink-0 whitespace-nowrap"
                   style={{
                     background: period === p.key ? "var(--primary)" : "var(--surface)",
                     color: period === p.key ? "#fff" : "var(--text-muted)",

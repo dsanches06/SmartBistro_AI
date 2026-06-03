@@ -10,6 +10,7 @@ export const MENU_CATEGORY_META = {
 export const MENU_CATEGORIES = Object.entries(MENU_CATEGORY_META).map(([key, val]) => ({ key, ...val }));
 
 const ITEM_EMOJI_MAP = [
+  { keys: ["fries", "batata frita", "batatas fritas", "chips"], emoji: "🍟" },
   { keys: ["caesar", "salad", "salada"],                       emoji: "🥗" },
   { keys: ["bruschetta"],                                       emoji: "🍞" },
   { keys: ["soup", "sopa", "creme"],                           emoji: "🍲" },

@@ -278,37 +278,40 @@ export default function FaturacaoPage() {
         />
       )}
 
-      {/* Date filter + Exportar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>De</label>
+      {/* Date filter + Botões */}
+      <div className="flex flex-col gap-4 mb-6">
+        {/* Linha 1: [date] — [date] */}
+        <div className="flex items-center gap-2">
           <input
             type="date"
             value={dateFrom}
             onChange={e => { setDateFrom(e.target.value); setPage(1); }}
+            className="flex-1"
             style={inputStyle}
           />
-          <label className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Até</label>
+          <span className="text-xs font-medium flex-shrink-0" style={{ color: "var(--text-muted)" }}>-</span>
           <input
             type="date"
             value={dateTo}
             onChange={e => { setDateTo(e.target.value); setPage(1); }}
+            className="flex-1"
             style={inputStyle}
           />
         </div>
-        <div className="flex gap-2">
+        {/* Linha 2: Botões */}
+        <div className="flex items-center gap-7">
           <button
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white"
-            style={{ background: "var(--primary)" }}
+            className="flex-1 flex items-center justify-center gap-2 font-semibold text-white"
+            style={{ background: "var(--primary)", borderRadius: 8, padding: "6px 10px", fontSize: 13 }}
           >
             <i className="fa-solid fa-plus text-xs" />
             Nova Fatura
           </button>
           <button
             onClick={() => exportInvoicesCSV(filteredInvoices)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-            style={{ background: "var(--surface-2)", color: "var(--text)", border: "1px solid var(--border)" }}
+            className="flex-1 flex items-center justify-center gap-2 font-semibold"
+            style={{ background: "var(--surface-2)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "6px 10px", fontSize: 13 }}
             onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-3)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "var(--surface-2)"; }}
           >

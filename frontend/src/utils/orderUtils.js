@@ -12,12 +12,12 @@ export const ORDER_STATUS_META = {
 };
 
 export const ORDER_TABS = [
-  { key: "all",            label: "Todos" },
-  { key: "Pending",        label: "Novos" },
-  { key: "In Preparation", label: "Em preparação" },
-  { key: "Ready",          label: "Prontos" },
-  { key: "Delivered",      label: "Entregue" },
-  { key: "Done",           label: "Concluído" },
+  { key: "all",            label: "Todos",          icon: "fa-solid fa-list" },
+  { key: "Pending",        label: "Novos",          icon: "fa-solid fa-clock" },
+  { key: "In Preparation", label: "Em preparação",  icon: "fa-solid fa-fire" },
+  { key: "Ready",          label: "Prontos",        icon: "fa-solid fa-check" },
+  { key: "Delivered",      label: "Entregue",       icon: "fa-solid fa-truck" },
+  { key: "Done",           label: "Concluído",      icon: "fa-solid fa-check-double" },
 ];
 
 export const ORDER_TABLE_HEADERS = ["ID", "Mesa", "Cliente", "Estado", "Itens", "Valor", "Hora", "Ações"];

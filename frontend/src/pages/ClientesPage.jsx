@@ -583,22 +583,6 @@ export default function ClientesPage() {
     { label: "Ativos %",  value: `${activePct}%`,    icon: "fas fa-percentage",   filter: null       },
   ];
 
-  // ── Actions ──
-  async function toggleActive(id) {
-    const current = customers.find((c) => c.id === id);
-    if (!current) return;
-    const newActive = !current.active;
-    setCustomers((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, active: newActive } : c))
-    );
-    try {
-      await customerService.toggleActive(id, newActive);
-    } catch {
-      setCustomers((prev) =>
-        prev.map((c) => (c.id === id ? { ...c, active: current.active } : c))
-      );
-    }
-  }
 
   async function deleteCustomer(id) {
     setCustomers((prev) => prev.filter((c) => c.id !== id));
@@ -676,37 +660,55 @@ export default function ClientesPage() {
         )}
 
         {/* ── Header ── */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-main mb-0.5">Gestão de Clientes</h2>
-            <p className="text-muted text-sm">Lista de clientes registados no restaurante.</p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-xl sm:text-3xl font-bold text-main mb-0.5 leading-tight">Clientes</h2>
+            <p className="text-muted text-xs sm:text-sm hidden sm:block">Lista de clientes registados no restaurante.</p>
           </div>
           <button
             onClick={() => setShowCreateCliente(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white"
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white flex-shrink-0 whitespace-nowrap"
             style={{ background: "var(--primary)" }}
           >
-            <i className="fa-solid fa-plus text-xs" />
-            Novo Cliente
+            <i className="fa-solid fa-plus text-[10px] sm:text-xs" />
+            <span className="hidden sm:inline">Novo</span> Cliente
           </button>
         </div>
 
         {/* ── Toolbar ── */}
         <div className="flex flex-col gap-3">
 
-          {/* Mobile: 2+2+1 layout */}
-          <div className="sm:hidden space-y-2">
-            <div className="grid grid-cols-2 gap-2">
-              {statCards.slice(0, 2).map((c) => (
-                <FilterStatCard key={c.label} {...c} currentFilter={statusFilter} onFilter={setStatusFilter} />
-              ))}
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {statCards.slice(2, 4).map((c) => (
-                <FilterStatCard key={c.label} {...c} currentFilter={statusFilter} onFilter={setStatusFilter} />
-              ))}
-            </div>
-            <FilterStatCard {...statCards[4]} currentFilter={statusFilter} onFilter={setStatusFilter} />
+          {/* Mobile: ícones compactos com badge — igual às Mesas */}
+          <div className="sm:hidden grid grid-cols-5 gap-2">
+            {statCards.map(({ label, value, icon, filter }) => {
+              const isSelected = filter && statusFilter === filter;
+              const color = label === "Ativos" ? "#22c55e"
+                : label === "Inativos" ? "#ef4444"
+                : label === "Filtrados" ? "#3b82f6"
+                : label === "Ativos %" ? "#8b5cf6"
+                : "#64748b";
+              return (
+                <div
+                  key={label}
+                  onClick={() => filter && setStatusFilter(filter)}
+                  className="relative flex flex-col items-center justify-center gap-1 rounded-2xl py-3"
+                  style={{
+                    background: isSelected ? `${color}20` : "var(--surface)",
+                    border: isSelected ? `1.5px solid ${color}` : "1.5px solid transparent",
+                    cursor: filter ? "pointer" : "default",
+                  }}
+                >
+                  <i className={`${icon} text-lg`} style={{ color }} />
+                  <span className="text-[9px] font-medium text-center leading-tight" style={{ color: "var(--text-muted)" }}>{label}</span>
+                  <span
+                    className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[9px] font-bold px-1"
+                    style={{ background: color, color: "#fff" }}
+                  >
+                    {value}
+                  </span>
+                </div>
+              );
+            })}
           </div>
 
           {/* Desktop: 5 in one row */}

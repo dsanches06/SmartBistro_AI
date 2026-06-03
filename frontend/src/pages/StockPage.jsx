@@ -260,22 +260,22 @@ export default function StockPage() {
 
           {/* Linha 1 — título + acções */}
           <div className="flex items-center justify-between gap-2">
-            <h1 className="text-2xl font-bold" style={{ color: "var(--text)" }}>Stock</h1>
-            <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold" style={{ color: "var(--text)" }}>Stock</h1>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                className="flex items-center gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white whitespace-nowrap"
+                style={{ background: "var(--primary)" }}
+              >
+                <i className="fa-solid fa-plus text-[10px] sm:text-xs" />
+                Novo Produto
+              </button>
               <button
                 onClick={load}
                 title="Atualizar"
-                className="w-9 h-9 inline-flex items-center justify-center rounded-xl border border-[var(--border)] transition-colors"
+                className="w-8 h-8 sm:w-9 sm:h-9 inline-flex items-center justify-center rounded-xl border border-[var(--border)] transition-colors flex-shrink-0"
                 style={{ color: "var(--text-secondary)", background: "var(--surface-2)" }}
               >
-                <i className={`fa-solid fa-rotate-right text-sm${loading ? " fa-spin" : ""}`} />
-              </button>
-              <button
-                className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
-                style={{ background: "var(--primary)" }}
-              >
-                <i className="fa-solid fa-plus text-xs" />
-                <span>Novo Produto</span>
+                <i className={`fa-solid fa-rotate-right text-xs sm:text-sm${loading ? " fa-spin" : ""}`} />
               </button>
             </div>
           </div>

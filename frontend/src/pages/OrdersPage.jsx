@@ -352,58 +352,59 @@ export default function OrdersPage() {
         )}
 
         {/* ── Header ── */}
-        <div className="flex items-center justify-between mb-5">
-          <h1 className="text-2xl font-bold" style={{ color: "var(--text)" }}>Pedidos</h1>
-          <div className="flex gap-2">
+        <div className="flex items-center justify-between gap-2 mb-5">
+          <h1 className="text-xl sm:text-2xl font-bold" style={{ color: "var(--text)" }}>Pedidos</h1>
+          <div className="flex gap-2 flex-shrink-0">
             <button
               onClick={() => setShowCreate(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white"
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white whitespace-nowrap"
               style={{ background: "var(--primary)" }}
             >
-              <i className="fa-solid fa-plus text-xs" />
+              <i className="fa-solid fa-plus text-[10px] sm:text-xs" />
               Novo Pedido
             </button>
             <button
               onClick={load}
               title="Atualizar"
-              className="w-9 h-9 inline-flex items-center justify-center rounded-xl border border-[var(--border)] transition-colors"
+              className="w-8 h-8 sm:w-9 sm:h-9 inline-flex items-center justify-center rounded-xl border border-[var(--border)] transition-colors flex-shrink-0"
               style={{ color: "var(--text-secondary)", background: "var(--surface-2)" }}
             >
-              <i className={`fa-solid fa-rotate-right text-sm${loading ? " fa-spin" : ""}`} />
+              <i className={`fa-solid fa-rotate-right text-xs sm:text-sm${loading ? " fa-spin" : ""}`} />
             </button>
           </div>
         </div>
 
         {/* ── Status Tabs ── */}
-        <div
-          className="flex gap-1.5 mb-4 overflow-x-auto pb-0.5"
-          style={{ scrollbarWidth: "none" }}
-        >
-          {ORDER_TABS.map(({ key, label }) => {
+        <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-1.5 mb-4 pt-2">
+          {ORDER_TABS.map(({ key, label, icon }) => {
             const active = tab === key;
             const count  = counts[key] ?? 0;
             return (
               <button
                 key={key}
                 onClick={() => setTab(key)}
-                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0"
+                title={label}
+                className="relative flex-1 sm:flex-shrink-0 sm:flex-initial flex items-center justify-center gap-1 sm:gap-1.5 rounded-full px-2 sm:px-3 py-2 sm:py-1.5 text-xs sm:text-sm font-semibold transition-all"
                 style={{
                   background: active ? "var(--primary)" : "var(--surface-2)",
                   color: active ? "#fff" : "var(--text-secondary)",
-                  boxShadow: active ? "0 2px 8px rgba(0,0,0,0.12)" : "none",
                 }}
               >
-                {label}
+                <i className={`${icon} text-xs`} />
+                <span className="hidden sm:inline whitespace-nowrap">{label}</span>
                 {key !== "all" && count > 0 && (
-                  <span
-                    className="rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none"
-                    style={{
-                      background: active ? "rgba(255,255,255,0.3)" : "var(--primary)",
-                      color: "#fff",
-                    }}
-                  >
-                    {count}
-                  </span>
+                  <>
+                    {/* Mobile: badge absoluto */}
+                    <span className="sm:hidden absolute -top-1.5 -right-1 w-4 h-4 flex items-center justify-center rounded-full text-[9px] font-bold"
+                      style={{ background: active ? "rgba(255,255,255,0.9)" : "var(--primary)", color: active ? "var(--primary)" : "#fff" }}>
+                      {count}
+                    </span>
+                    {/* Desktop: badge inline */}
+                    <span className="hidden sm:inline rounded-full px-1.5 py-0.5 text-[10px] font-bold"
+                      style={{ background: active ? "rgba(255,255,255,0.3)" : "var(--primary)", color: "#fff" }}>
+                      {count}
+                    </span>
+                  </>
                 )}
               </button>
             );
@@ -419,7 +420,7 @@ export default function OrdersPage() {
             <i className="fa-solid fa-magnifying-glass text-sm" style={{ color: "var(--text-muted)" }} />
             <input
               type="text"
-              placeholder="Pesquisar pedido, mesa ou cliente"
+              placeholder="Pesquisar..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="flex-1 bg-transparent text-sm outline-none"
