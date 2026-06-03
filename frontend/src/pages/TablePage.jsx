@@ -7,6 +7,73 @@ import { PageSection, StatCard, TableCard } from "@/components";
 
 const formatTableLabel = (number) => `T${String(number).padStart(2, "0")}`;
 
+/* ── NovaMesaModal ── */
+function NovaMesaModal({ onClose, onCreate }) {
+  const [form, setForm] = useState({ table_number: "", capacity: "4" });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.table_number.trim()) return setErr("Número da mesa obrigatório.");
+    const capacity = parseInt(form.capacity);
+    if (isNaN(capacity) || capacity < 1) return setErr("Capacidade inválida.");
+    setSaving(true); setErr("");
+    try {
+      const created = await tableService.create({ table_number: form.table_number.trim(), capacity, status: "Available" });
+      onCreate(created);
+      onClose();
+    } catch { setErr("Erro ao criar mesa. Verifique se o número já existe."); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.5)" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="rounded-[24px] p-6 w-full max-w-sm shadow-2xl"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>Nova Mesa</h2>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl"
+            style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
+            <i className="fa-solid fa-xmark text-sm" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div>
+            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Número da Mesa *</label>
+            <input type="text" value={form.table_number} onChange={e => set("table_number", e.target.value)}
+              placeholder="Ex: T25"
+              className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Capacidade (lugares)</label>
+            <input type="number" min="1" max="20" value={form.capacity} onChange={e => set("capacity", e.target.value)}
+              className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+          </div>
+          {err && <p className="text-xs text-red-500">{err}</p>}
+          <div className="flex gap-2 pt-1">
+            <button type="button" onClick={onClose}
+              className="flex-1 py-2 rounded-xl text-sm font-semibold"
+              style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
+              Cancelar
+            </button>
+            <button type="submit" disabled={saving}
+              className="flex-1 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
+              style={{ background: "var(--primary)" }}>
+              {saving ? <i className="fa-solid fa-spinner fa-spin" /> : "Criar Mesa"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function TablePage() {
   const [mesas, setMesas] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,6 +84,7 @@ export default function TablePage() {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [showCreateMesa, setShowCreateMesa] = useState(false);
 
   const fetchMesas = useCallback(async () => {
     try {
@@ -167,10 +235,25 @@ export default function TablePage() {
 
   return (
     <PageSection>
+      {showCreateMesa && (
+        <NovaMesaModal
+          onClose={() => setShowCreateMesa(false)}
+          onCreate={() => { setShowCreateMesa(false); fetchMesas(); }}
+        />
+      )}
+
       <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-[var(--text)]">Mesas</h1>
         </div>
+        <button
+          onClick={() => setShowCreateMesa(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white"
+          style={{ background: "var(--primary)" }}
+        >
+          <i className="fa-solid fa-plus text-xs" />
+          Nova Mesa
+        </button>
       </div>
 
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
@@ -407,7 +490,7 @@ export default function TablePage() {
                         <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-secondary)] mb-3">
                           Itens Pedidos
                         </p>
-                        <div className="flex flex-col gap-2">
+                        <div className="grid grid-cols-2 gap-2">
                           {items.map((name, i) => (
                             <div key={i} className="flex items-center gap-2.5 rounded-xl px-3 py-2"
                               style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageSection, Pagination, ListCard } from "@/components";
-import { orderService } from "@/services";
+import { orderService, tableService, customerService, itemService, orderItemService } from "@/services";
 import {
   formatTime,
   ORDER_PAGE_SIZE,
@@ -14,6 +14,203 @@ import {
   getOrderItemCount,
   getOrderTarget,
 } from "@/utils";
+
+/* ── NovoPedidoModal ── */
+function NovoPedidoModal({ onClose, onCreated }) {
+  const [loading,       setLoading]       = useState(true);
+  const [tables,        setTables]        = useState([]);
+  const [customers,     setCustomers]     = useState([]);
+  const [menuItems,     setMenuItems]     = useState([]);
+  const [form,          setForm]          = useState({ service_type: "Table", table_id: "", customer_id: "" });
+  const [selectedItems, setSelectedItems] = useState([]);
+  const [itemSearch,    setItemSearch]    = useState("");
+  const [saving,        setSaving]        = useState(false);
+  const [err,           setErr]           = useState("");
+
+  useEffect(() => {
+    Promise.all([
+      tableService.getAll().catch(() => []),
+      customerService.getAll().catch(() => []),
+      itemService.getActive().catch(() => []),
+    ]).then(([t, c, m]) => {
+      setTables(Array.isArray(t) ? t : []);
+      setCustomers(Array.isArray(c) ? c : []);
+      setMenuItems(Array.isArray(m) ? m : []);
+    }).finally(() => setLoading(false));
+  }, []);
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const addItem = (item) => {
+    setSelectedItems(prev => {
+      const ex = prev.find(i => i.item_id === item.id);
+      if (ex) return prev.map(i => i.item_id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
+      return [...prev, { item_id: item.id, name: item.name, price: Number(item.price), quantity: 1 }];
+    });
+  };
+
+  const updateQty = (item_id, qty) => {
+    if (qty < 1) setSelectedItems(prev => prev.filter(i => i.item_id !== item_id));
+    else setSelectedItems(prev => prev.map(i => i.item_id === item_id ? { ...i, quantity: qty } : i));
+  };
+
+  const filteredMenu = menuItems.filter(m => m.name.toLowerCase().includes(itemSearch.toLowerCase()));
+  const totalItems   = selectedItems.reduce((s, i) => s + i.quantity, 0);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedItems.length) return setErr("Adicione pelo menos um item ao pedido.");
+    setSaving(true); setErr("");
+    try {
+      const kitchen_sequence_json = selectedItems.flatMap(i => Array(i.quantity).fill(i.name));
+      const orderData = {
+        service_type: form.service_type,
+        kitchen_sequence_json,
+        order_status: "Pending",
+        ...(form.table_id    ? { table_id:    parseInt(form.table_id)    } : {}),
+        ...(form.customer_id ? { customer_id: parseInt(form.customer_id) } : {}),
+      };
+      const order = await orderService.create(orderData);
+      await orderItemService.createBulk({
+        order_id: order.id,
+        items: selectedItems.map(i => ({ item_id: i.item_id, quantity: i.quantity })),
+      });
+      onCreated();
+      onClose();
+    } catch (e) {
+      setErr("Erro ao criar pedido. Tente novamente.");
+      console.error(e);
+    } finally { setSaving(false); }
+  };
+
+  const inputStyle = { background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.5)" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="rounded-[24px] p-6 w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>Novo Pedido</h2>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl"
+            style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
+            <i className="fa-solid fa-xmark text-sm" />
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-10">
+            <i className="fa-solid fa-spinner fa-spin text-xl" style={{ color: "var(--primary)" }} />
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4 overflow-y-auto flex-1 pr-1">
+
+            {/* Tipo de serviço */}
+            <div className="flex gap-2">
+              {["Table", "Takeaway"].map(t => (
+                <button key={t} type="button"
+                  onClick={() => { set("service_type", t); if (t === "Takeaway") set("table_id", ""); }}
+                  className="flex-1 py-2 rounded-xl text-sm font-semibold transition-all"
+                  style={{
+                    background: form.service_type === t ? "var(--primary)" : "var(--surface-2)",
+                    color: form.service_type === t ? "#fff" : "var(--text-secondary)",
+                  }}>
+                  <i className={`fa-solid ${t === "Table" ? "fa-utensils" : "fa-bag-shopping"} mr-1.5 text-xs`} />
+                  {t === "Table" ? "Mesa" : "Takeaway"}
+                </button>
+              ))}
+            </div>
+
+            {/* Mesa (só se Table) */}
+            {form.service_type === "Table" && (
+              <div>
+                <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Mesa</label>
+                <select value={form.table_id} onChange={e => set("table_id", e.target.value)}
+                  className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle}>
+                  <option value="">Sem mesa específica</option>
+                  {tables.filter(t => t.status === "Available").map(t => (
+                    <option key={t.id} value={t.id}>Mesa {t.table_number} ({t.capacity} lugares)</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Cliente */}
+            <div>
+              <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Cliente (opcional)</label>
+              <select value={form.customer_id} onChange={e => set("customer_id", e.target.value)}
+                className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle}>
+                <option value="">Sem cliente</option>
+                {customers.filter(c => c.active).map(c => (
+                  <option key={c.id} value={c.id}>{c.name}{c.phone ? ` · ${c.phone}` : ""}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Itens do menu */}
+            <div>
+              <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>
+                Itens do Menu {totalItems > 0 && <span style={{ color: "var(--primary)" }}>({totalItems} selecionados)</span>}
+              </label>
+              <input type="text" value={itemSearch} onChange={e => setItemSearch(e.target.value)}
+                placeholder="Pesquisar item…"
+                className="w-full rounded-xl px-3 py-2 text-sm outline-none mb-2"
+                style={inputStyle} />
+              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)", maxHeight: 220, overflowY: "auto" }}>
+                {filteredMenu.length === 0 ? (
+                  <p className="text-xs text-center py-4" style={{ color: "var(--text-muted)" }}>Nenhum item encontrado.</p>
+                ) : filteredMenu.map(item => {
+                  const sel = selectedItems.find(s => s.item_id === item.id);
+                  return (
+                    <div key={item.id} className="flex items-center justify-between px-3 py-2"
+                      style={{ borderBottom: "1px solid var(--border)" }}>
+                      <div>
+                        <p className="text-sm font-medium" style={{ color: "var(--text)" }}>{item.name}</p>
+                        <p className="text-xs" style={{ color: "var(--text-muted)" }}>{Number(item.price).toFixed(2)} €</p>
+                      </div>
+                      {sel ? (
+                        <div className="flex items-center gap-2">
+                          <button type="button" onClick={() => updateQty(item.id, sel.quantity - 1)}
+                            className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold"
+                            style={{ background: "var(--surface-2)", color: "var(--text)" }}>−</button>
+                          <span className="text-sm font-semibold w-4 text-center" style={{ color: "var(--text)" }}>{sel.quantity}</span>
+                          <button type="button" onClick={() => updateQty(item.id, sel.quantity + 1)}
+                            className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold"
+                            style={{ background: "var(--primary)", color: "#fff" }}>+</button>
+                        </div>
+                      ) : (
+                        <button type="button" onClick={() => addItem(item)}
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-xs"
+                          style={{ background: "var(--primary)", color: "#fff" }}>
+                          <i className="fa-solid fa-plus" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {err && <p className="text-xs text-red-500">{err}</p>}
+            <div className="flex gap-2 pt-1">
+              <button type="button" onClick={onClose}
+                className="flex-1 py-2 rounded-xl text-sm font-semibold"
+                style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
+                Cancelar
+              </button>
+              <button type="submit" disabled={saving}
+                className="flex-1 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
+                style={{ background: "var(--primary)" }}>
+                {saving ? <i className="fa-solid fa-spinner fa-spin" /> : "Criar Pedido"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
 
 /* ── StatusBadge ── */
 function StatusBadge({ status }) {
@@ -105,12 +302,13 @@ function OrderCard({ order }) {
 
 /* ── OrdersPage ── */
 export default function OrdersPage() {
-  const [orders,  setOrders]  = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(null);
-  const [tab,     setTab]     = useState("all");
-  const [search,  setSearch]  = useState("");
-  const [page,    setPage]    = useState(1);
+  const [orders,      setOrders]      = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState(null);
+  const [tab,         setTab]         = useState("all");
+  const [search,      setSearch]      = useState("");
+  const [page,        setPage]        = useState(1);
+  const [showCreate,  setShowCreate]  = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -146,17 +344,34 @@ export default function OrdersPage() {
     <PageSection>
       <div className="rounded-[32px] bg-surface p-6 shadow-sm">
 
+        {showCreate && (
+          <NovoPedidoModal
+            onClose={() => setShowCreate(false)}
+            onCreated={load}
+          />
+        )}
+
         {/* ── Header ── */}
         <div className="flex items-center justify-between mb-5">
           <h1 className="text-2xl font-bold" style={{ color: "var(--text)" }}>Pedidos</h1>
-          <button
-            onClick={load}
-            title="Atualizar"
-            className="w-9 h-9 inline-flex items-center justify-center rounded-xl border border-[var(--border)] transition-colors"
-            style={{ color: "var(--text-secondary)", background: "var(--surface-2)" }}
-          >
-            <i className={`fa-solid fa-rotate-right text-sm${loading ? " fa-spin" : ""}`} />
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowCreate(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white"
+              style={{ background: "var(--primary)" }}
+            >
+              <i className="fa-solid fa-plus text-xs" />
+              Novo Pedido
+            </button>
+            <button
+              onClick={load}
+              title="Atualizar"
+              className="w-9 h-9 inline-flex items-center justify-center rounded-xl border border-[var(--border)] transition-colors"
+              style={{ color: "var(--text-secondary)", background: "var(--surface-2)" }}
+            >
+              <i className={`fa-solid fa-rotate-right text-sm${loading ? " fa-spin" : ""}`} />
+            </button>
+          </div>
         </div>
 
         {/* ── Status Tabs ── */}

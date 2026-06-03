@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageSection, Pagination, StatCard } from "@/components";
 import {
   invoiceService, orderService, paymentService,
@@ -36,16 +36,140 @@ function PayBadge({ status }) {
   );
 }
 
+// ── NovaFaturaModal ───────────────────────────────────────────────────────────
+
+function NovaFaturaModal({ orders, invoices, orderItems, menuItems, onClose, onCreate }) {
+  const [orderId, setOrderId] = useState("");
+  const [ivaRate, setIvaRate] = useState(13);
+  const [saving, setSaving]   = useState(false);
+  const [err, setErr]         = useState("");
+
+  const invoiceOrderIds = useMemo(() => new Set(invoices.map(i => i.order_id)), [invoices]);
+  const availableOrders = useMemo(() => orders.filter(o => !invoiceOrderIds.has(o.id)), [orders, invoiceOrderIds]);
+
+  const itemPriceMap = useMemo(() => {
+    const m = new Map();
+    menuItems.forEach(i => m.set(i.id, Number(i.price)));
+    return m;
+  }, [menuItems]);
+
+  const subtotal = useMemo(() => {
+    if (!orderId) return 0;
+    const oid = parseInt(orderId);
+    return orderItems
+      .filter(oi => oi.order_id === oid)
+      .reduce((s, oi) => s + oi.quantity * (itemPriceMap.get(oi.item_id) || 0), 0);
+  }, [orderId, orderItems, itemPriceMap]);
+
+  const tax   = subtotal * (ivaRate / 100);
+  const total = subtotal + tax;
+
+  const fmt = (v) => `${v.toFixed(2)} €`;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!orderId) return setErr("Selecione um pedido.");
+    setSaving(true); setErr("");
+    try {
+      const created = await invoiceService.create({
+        order_id:        parseInt(orderId),
+        subtotal_amount: parseFloat(subtotal.toFixed(2)),
+        tax_amount:      parseFloat(tax.toFixed(2)),
+        total_amount:    parseFloat(total.toFixed(2)),
+        profit_margin:   0,
+      });
+      onCreate(created);
+      onClose();
+    } catch { setErr("Erro ao criar fatura. O pedido pode já ter fatura associada."); }
+    finally { setSaving(false); }
+  };
+
+  const inputStyle = { background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.5)" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="rounded-[24px] p-6 w-full max-w-md shadow-2xl"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>Nova Fatura</h2>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl"
+            style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
+            <i className="fa-solid fa-xmark text-sm" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div>
+            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Pedido *</label>
+            <select value={orderId} onChange={e => setOrderId(e.target.value)}
+              className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+              style={inputStyle}>
+              <option value="">Selecione um pedido…</option>
+              {availableOrders.map(o => (
+                <option key={o.id} value={o.id}>
+                  #{o.id} — {o.customer_name || "Sem cliente"} ({o.table_id ? `Mesa ${o.table_id}` : "Takeaway"})
+                </option>
+              ))}
+            </select>
+            {availableOrders.length === 0 && (
+              <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>Todos os pedidos já têm fatura.</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Taxa de IVA</label>
+            <select value={ivaRate} onChange={e => setIvaRate(Number(e.target.value))}
+              className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+              style={inputStyle}>
+              <option value={6}>6%</option>
+              <option value={13}>13%</option>
+              <option value={23}>23%</option>
+            </select>
+          </div>
+          {orderId && (
+            <div className="rounded-xl p-3 space-y-1.5" style={{ background: "var(--surface-2)" }}>
+              <div className="flex justify-between text-xs" style={{ color: "var(--text-secondary)" }}>
+                <span>Subtotal</span><span>{fmt(subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-xs" style={{ color: "var(--text-secondary)" }}>
+                <span>IVA ({ivaRate}%)</span><span>{fmt(tax)}</span>
+              </div>
+              <div className="flex justify-between text-sm font-bold pt-1" style={{ borderTop: "1px solid var(--border)", color: "var(--text)" }}>
+                <span>Total</span><span>{fmt(total)}</span>
+              </div>
+            </div>
+          )}
+          {err && <p className="text-xs text-red-500">{err}</p>}
+          <div className="flex gap-2 pt-1">
+            <button type="button" onClick={onClose}
+              className="flex-1 py-2 rounded-xl text-sm font-semibold"
+              style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
+              Cancelar
+            </button>
+            <button type="submit" disabled={saving || !orderId}
+              className="flex-1 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
+              style={{ background: "var(--primary)" }}>
+              {saving ? <i className="fa-solid fa-spinner fa-spin" /> : "Criar Fatura"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ── main component ────────────────────────────────────────────────────────────
 
 export default function FaturacaoPage() {
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const queryClient = useQueryClient();
 
   const [dateFrom, setDateFrom]     = useState(THIRTY_DAYS_AGO);
   const [dateTo, setDateTo]         = useState(TODAY);
   const [page, setPage]             = useState(1);
   const [selectedInv, setSelectedInv] = useState(null);
+  const [showCreate, setShowCreate] = useState(false);
 
   const { data: invoices   = [] } = useQuery({ queryKey: ["invoices"],    queryFn: invoiceService.getAll });
   const { data: orders     = [] } = useQuery({ queryKey: ["orders"],      queryFn: orderService.getAll });
@@ -143,6 +267,17 @@ export default function FaturacaoPage() {
   return (
     <PageSection title="Faturação" description="Faturas, pagamentos e receitas">
 
+      {showCreate && (
+        <NovaFaturaModal
+          orders={orders}
+          invoices={invoices}
+          orderItems={orderItems}
+          menuItems={menuItems}
+          onClose={() => setShowCreate(false)}
+          onCreate={() => queryClient.invalidateQueries({ queryKey: ["invoices"] })}
+        />
+      )}
+
       {/* Date filter + Exportar */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div className="flex flex-wrap items-center gap-2">
@@ -161,16 +296,26 @@ export default function FaturacaoPage() {
             style={inputStyle}
           />
         </div>
-        <button
-          onClick={() => exportInvoicesCSV(filteredInvoices)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-          style={{ background: "var(--surface-2)", color: "var(--text)", border: "1px solid var(--border)" }}
-          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-3)"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "var(--surface-2)"; }}
-        >
-          <i className="fa-solid fa-download text-xs" />
-          Exportar
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white"
+            style={{ background: "var(--primary)" }}
+          >
+            <i className="fa-solid fa-plus text-xs" />
+            Nova Fatura
+          </button>
+          <button
+            onClick={() => exportInvoicesCSV(filteredInvoices)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
+            style={{ background: "var(--surface-2)", color: "var(--text)", border: "1px solid var(--border)" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-3)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface-2)"; }}
+          >
+            <i className="fa-solid fa-download text-xs" />
+            Exportar
+          </button>
+        </div>
       </div>
 
       {/* KPI cards */}
@@ -182,10 +327,10 @@ export default function FaturacaoPage() {
       </div>
 
       {/* Table + Detail */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+      <div className={`grid gap-4 ${selectedInv ? "lg:grid-cols-5" : "lg:grid-cols-1"}`}>
 
         {/* Invoice table */}
-        <div className="lg:col-span-3 rounded-[20px] bg-[var(--surface)] p-5 shadow-sm">
+        <div className={`${selectedInv ? "lg:col-span-3" : ""} rounded-[20px] bg-[var(--surface)] p-5 shadow-sm`}>
           <h3 className="font-semibold text-sm mb-4" style={{ color: "var(--text)" }}>Nº Fatura</h3>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -264,17 +409,10 @@ export default function FaturacaoPage() {
           </div>
         </div>
 
-        {/* Detail panel */}
+        {/* Detail panel — only rendered when a invoice is selected */}
+        {selectedInv && (
         <div className="lg:col-span-2 rounded-[20px] bg-[var(--surface)] p-5 shadow-sm flex flex-col">
-          {!selectedInv ? (
-            <div className="flex flex-col items-center justify-center flex-1 min-h-[260px] gap-3">
-              <i className="fa-solid fa-file-invoice text-4xl" style={{ color: "var(--border)" }} />
-              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                Clique numa fatura para ver o detalhe
-              </p>
-            </div>
-          ) : (
-            <>
+          <>
               {/* Header */}
               <div className="flex items-start justify-between mb-1">
                 <div>
@@ -371,19 +509,10 @@ export default function FaturacaoPage() {
                   <i className="fa-solid fa-print text-xs" />
                   Imprimir
                 </button>
-                <button
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold"
-                  style={{ background: "var(--primary)", color: "#ffffff" }}
-                  onMouseEnter={e => { e.currentTarget.style.opacity = "0.88"; }}
-                  onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
-                >
-                  <i className="fa-solid fa-paper-plane text-xs" />
-                  Enviar
-                </button>
               </div>
-            </>
-          )}
+          </>
         </div>
+        )}
 
       </div>
     </PageSection>

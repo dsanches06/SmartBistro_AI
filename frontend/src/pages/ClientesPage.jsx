@@ -67,6 +67,72 @@ function DeleteConfirm({ customer, onCancel, onConfirm }) {
   );
 }
 
+// ── Create customer modal ──────────────────────────────────────────────────────
+function NovoClienteModal({ onClose, onCreate }) {
+  const [form, setForm] = useState({ name: "", phone: "" });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.name.trim()) return setErr("Nome obrigatório.");
+    setSaving(true); setErr("");
+    try {
+      const created = await customerService.create({ name: form.name.trim(), phone: form.phone.trim() || null });
+      onCreate(created);
+      onClose();
+    } catch { setErr("Erro ao criar cliente. Nome ou telefone já podem existir."); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.5)" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="rounded-[24px] p-6 w-full max-w-sm shadow-2xl"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>Novo Cliente</h2>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl"
+            style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
+            <i className="fa-solid fa-xmark text-sm" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div>
+            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Nome *</label>
+            <input type="text" value={form.name} onChange={e => set("name", e.target.value)}
+              placeholder="Ex: João Silva"
+              className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Telefone</label>
+            <input type="tel" value={form.phone} onChange={e => set("phone", e.target.value)}
+              placeholder="Ex: 912345678"
+              className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+          </div>
+          {err && <p className="text-xs text-red-500">{err}</p>}
+          <div className="flex gap-2 pt-1">
+            <button type="button" onClick={onClose}
+              className="flex-1 py-2 rounded-xl text-sm font-semibold"
+              style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
+              Cancelar
+            </button>
+            <button type="submit" disabled={saving}
+              className="flex-1 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
+              style={{ background: "var(--primary)" }}>
+              {saving ? <i className="fa-solid fa-spinner fa-spin" /> : "Criar Cliente"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 const ORDER_STATUS_STYLE = {
   "Pending":        { bg: "#FFF7ED", tx: "#C2410C" },
   "In Preparation": { bg: "#EFF6FF", tx: "#1D4ED8" },
@@ -438,6 +504,7 @@ export default function ClientesPage() {
   const [sortDirection,      setSortDirection]      = useState("NONE");
   const [activeDetail,       setActiveDetail]       = useState(null);
   const [confirmDeleteId,    setConfirmDeleteId]    = useState(null);
+  const [showCreateCliente,  setShowCreateCliente]  = useState(false);
 
   const loadCustomers = async () => {
     try {
@@ -574,10 +641,27 @@ export default function ClientesPage() {
     <div className="min-h-full p-6 pb-16 md:pb-6 bg-[var(--bg)] text-[var(--text)]">
       <div className="mx-auto max-w-[1200px] space-y-5">
 
+        {showCreateCliente && (
+          <NovoClienteModal
+            onClose={() => setShowCreateCliente(false)}
+            onCreate={(c) => { setCustomers(prev => [{ ...c, active: true }, ...prev]); }}
+          />
+        )}
+
         {/* ── Header ── */}
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-main mb-0.5">Gestão de Clientes</h2>
-          <p className="text-muted text-sm">Lista de clientes registados no restaurante.</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-main mb-0.5">Gestão de Clientes</h2>
+            <p className="text-muted text-sm">Lista de clientes registados no restaurante.</p>
+          </div>
+          <button
+            onClick={() => setShowCreateCliente(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white"
+            style={{ background: "var(--primary)" }}
+          >
+            <i className="fa-solid fa-plus text-xs" />
+            Novo Cliente
+          </button>
         </div>
 
         {/* ── Toolbar ── */}

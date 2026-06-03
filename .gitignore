@@ -7,5 +7,8 @@ frontend/node_modules
 backend/.env
 frontend/.env
 
+frontend/dist
+backend/tests
+
 M7_Projeto_GEN_IA
 layout
