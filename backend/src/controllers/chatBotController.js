@@ -51,7 +51,7 @@ export async function sendMessageToBotStream(req, res) {
         );
         res.end();
       },
-      // Erros do Gemini — já classificados e com mensagem amigável
+      // Erros do Groq — já classificados e com mensagem amigável
       onError: (err) => {
         clearInterval(ping);
         writeSseError(res, err);

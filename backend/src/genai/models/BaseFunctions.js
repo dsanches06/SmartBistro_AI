@@ -1,21 +1,16 @@
-/**
- * Classe Base para declarações de funções (tools) do Gemini.
- * Reutilizável por todos os agentes do SmartBistro.
- */
 import { PipelineError } from '../../utils/pipelineError.js';
+
 export class BaseFunction {
   constructor(config = {}) {
-    // Suporta tanto o padrão antigo (functionName, description, properties, required)
-    // quanto o novo padrão (type, function) compatível com OpenAI/Groq
+    // Suporta tanto o padrão simples (functionName, description, properties, required)
+    // quanto o padrão OpenAI/Groq (type, function)
     if (config.type === 'function' && config.function) {
-      // Novo padrão (OpenAI / Groq)
       this.config = config;
       this.functionName = config.function.name;
       this.description = config.function.description;
       this.properties = config.function.parameters?.properties || {};
       this.required = config.function.parameters?.required || [];
     } else {
-      // Padrão antigo (compatibilidade com Google GenAI)
       this.functionName = config.functionName;
       this.description = config.description;
       this.properties = config.properties || {};
@@ -26,12 +21,10 @@ export class BaseFunction {
   // ── Declaração ────────────────────────────────────────────────────────────────
 
   getDeclaration() {
-    // Se foi configurado com o novo padrão, devolve a estrutura completa
     if (this.config?.type === 'function') {
       return this.config;
     }
 
-    // Padrão antigo (Google GenAI)
     return {
       name: this.functionName,
       description: this.description,
@@ -70,10 +63,6 @@ export class BaseFunction {
     return new Date().toISOString();
   }
 
-  /**
-   * Método a ser sobrescrito nas subclasses (polimorfismo).
-   * Recebe os args do Gemini e devolve o resultado da operação.
-   */
   mapValues() {
     throw new PipelineError('mapValues() deve ser implementado na subclasse.', {
       code: 'NOT_IMPLEMENTED',

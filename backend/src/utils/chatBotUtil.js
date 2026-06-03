@@ -12,9 +12,6 @@ export const THINKING_CAPABLE_MODELS = new Set([
   "openai/gpt-oss-20b",
 ]);
 
-// Alias para compatibilidade — a lógica real está em groqUtil.isRetryableGroqError
-export { isRetryableGroqError as isRetryableGeminiError } from './groqUtil.js';
-
 // ── SSE helpers ───────────────────────────────────────────────────────────────
 
 export const SSE_ERROR_EVENT = {
@@ -26,7 +23,7 @@ export const SSE_ERROR_EVENT = {
 };
 
 export function sseErrorEvent(err) {
-  const type = err?.groqType ?? err?.geminiType;
+  const type = err?.groqType;
   return SSE_ERROR_EVENT[type] ?? 'provider_error';
 }
 
@@ -34,7 +31,7 @@ export function writeSseError(res, err) {
   res.write(
     `event: ${sseErrorEvent(err)}\ndata: ${JSON.stringify({
       success:   false,
-      errorType: err?.groqType ?? err?.geminiType ?? 'UNKNOWN',
+      errorType: err?.groqType ?? 'UNKNOWN',
       message:   err.message,
     })}\n\n`,
   );

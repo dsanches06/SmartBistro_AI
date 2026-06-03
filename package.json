@@ -1,7 +1,7 @@
 {
   "name": "m8_projeto_final",
   "version": "1.0.0",
-  "description": "Sistema Multi-Agente Cooperativo e Inteligente com Node.js, React e Gemini para Gestão Operacional e Fluxo de Pedidos em Restaurantes via API REST.",
+  "description": "Sistema Multi-Agente Cooperativo e Inteligente com Node.js, React e Groq para Gestão Operacional e Fluxo de Pedidos em Restaurantes via API REST.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

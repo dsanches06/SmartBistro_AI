@@ -70,6 +70,3 @@ export function classifyGroqError(error) {
 
   return { type: "UNKNOWN", userMessage: "O assistente de IA não está disponível de momento. Tente novamente. 🤖" };
 }
-
-// Alias para compatibilidade com código existente que importa classifyGeminiError
-export const classifyGeminiError = classifyGroqError;
