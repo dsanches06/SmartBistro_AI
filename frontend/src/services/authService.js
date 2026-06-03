@@ -23,6 +23,18 @@ export const authService = {
       body: JSON.stringify({ name, username, email, phone, password }),
     }),
 
+  logout: (token) =>
+    request('/auth/logout', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  requestDelete: (token) =>
+    request('/auth/request-delete', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
   me: (token) =>
     request('/auth/me', {
       headers: { Authorization: `Bearer ${token}` },

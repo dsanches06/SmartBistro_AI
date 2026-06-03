@@ -42,9 +42,11 @@ export function AuthProvider({ children }) {
   }
 
   function logout() {
+    const t = token;
     localStorage.removeItem(TOKEN_KEY);
     setToken(null);
     setUser(null);
+    if (t) authService.logout(t).catch(() => {});
   }
 
   return (

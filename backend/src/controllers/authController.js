@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { pool } from '../db/connection.js';
+import { db } from '../db.js';
 
 const SALT_ROUNDS = 10;
 
@@ -19,13 +19,13 @@ export async function register(req, res) {
   if (!name?.trim() || !password?.trim())
     return res.status(400).json({ message: 'name e password são obrigatórios.' });
 
-  if (!username?.trim() && !email?.trim())
-    return res.status(400).json({ message: 'É necessário fornecer username ou email.' });
+  if (!username?.trim())
+    return res.status(400).json({ message: 'O username é obrigatório.' });
 
   try {
     const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
 
-    const [result] = await pool.execute(
+    const [result] = await db.query(
       `INSERT INTO customers (name, username, email, phone, password_hash, role_id)
        VALUES (?, ?, ?, ?, ?, 2)`,
       [
@@ -37,7 +37,7 @@ export async function register(req, res) {
       ],
     );
 
-    const [rows] = await pool.execute(
+    const [rows] = await db.query(
       'SELECT id, name, username, email, phone, role_id, created_at FROM customers WHERE id = ?',
       [result.insertId],
     );
@@ -63,7 +63,7 @@ export async function login(req, res) {
     return res.status(400).json({ message: 'identifier e password são obrigatórios.' });
 
   try {
-    const [rows] = await pool.execute(
+    const [rows] = await db.query(
       `SELECT id, name, username, email, phone, role_id, password_hash
        FROM customers
        WHERE (email = ? OR username = ?) AND password_hash IS NOT NULL`,
@@ -79,12 +79,59 @@ export async function login(req, res) {
     if (!isValid)
       return res.status(401).json({ message: 'Credenciais inválidas.' });
 
+    await db.query('UPDATE customers SET active = TRUE WHERE id = ?', [user.id]);
+
     const { password_hash: _, ...safeUser } = user;
     const token = signToken(user);
 
-    return res.json({ token, user: safeUser });
+    return res.json({ token, user: { ...safeUser, active: true } });
   } catch (err) {
     console.error('[Auth] login:', err.message);
+    return res.status(500).json({ message: 'Erro interno.' });
+  }
+}
+
+// POST /auth/logout  (requer verifyToken)
+export async function logout(req, res) {
+  try {
+    await db.query('UPDATE customers SET active = FALSE WHERE id = ?', [req.user.id]);
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('[Auth] logout:', err.message);
+    return res.status(500).json({ message: 'Erro interno.' });
+  }
+}
+
+// POST /auth/request-delete  (requer verifyToken) — notifica admins/managers
+export async function requestDelete(req, res) {
+  try {
+    const [admins] = await db.query(
+      `SELECT id FROM customers WHERE role_id = 1 AND active = TRUE`
+    );
+
+    if (admins.length > 0) {
+      const [user] = await db.query(
+        `SELECT name, username, email FROM customers WHERE id = ?`,
+        [req.user.id]
+      );
+      const u = user[0];
+      const label = u?.username ? `@${u.username}` : u?.email || `#${req.user.id}`;
+
+      await Promise.all(admins.map(admin =>
+        db.query(
+          `INSERT INTO notification (customer_id, title, message) VALUES (?, ?, ?)`,
+          [
+            admin.id,
+            '🗑️ Pedido de remoção de conta',
+            `O utilizador ${u?.name || ''} (${label}) solicitou a remoção da sua conta.`,
+          ]
+        )
+      ));
+    }
+
+    return res.json({ success: true, message: 'Pedido enviado aos administradores.' });
+  } catch (err) {
+    console.error('[Auth] requestDelete:', err.message);
     return res.status(500).json({ message: 'Erro interno.' });
   }
 }
@@ -92,7 +139,7 @@ export async function login(req, res) {
 // GET /auth/me  (requer verifyToken)
 export async function me(req, res) {
   try {
-    const [rows] = await pool.execute(
+    const [rows] = await db.query(
       'SELECT id, name, username, email, phone, role_id, created_at FROM customers WHERE id = ?',
       [req.user.id],
     );

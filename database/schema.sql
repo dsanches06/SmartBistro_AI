@@ -20,7 +20,7 @@ CREATE TABLE customers (
     email VARCHAR(150) NULL UNIQUE,
     phone VARCHAR(20) NULL UNIQUE,
     password_hash VARCHAR(255) NULL,
-    active BOOLEAN DEFAULT TRUE,
+    active BOOLEAN DEFAULT FALSE,
     role_id INT DEFAULT 2,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (role_id)

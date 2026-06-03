@@ -33,7 +33,7 @@ export function formatDate(dateStr) {
   });
 }
 
-export default function CustomerCard({ customer, onDetail, onToggle, onDelete, delay = 0 }) {
+export default function CustomerCard({ customer, onDetail, onDelete, canDelete = false, delay = 0 }) {
   const [flipped, setFlipped] = useState(false);
   const [hovered, setHovered] = useState(false);
   const c = getPalette(customer.id);
@@ -155,20 +155,16 @@ export default function CustomerCard({ customer, onDetail, onToggle, onDelete, d
                 title: "Ver perfil",
                 colorHover: "hover:bg-[#E6F1FB] hover:text-[#185FA5]",
                 onClick: () => onDetail?.(customer),
-              },
-              {
-                iconClass: customer.active ? "fas fa-toggle-on" : "fas fa-toggle-off",
-                title: customer.active ? "Desativar" : "Ativar",
-                colorHover: "hover:bg-[#FAEEDA] hover:text-[#854F0B]",
-                onClick: () => onToggle?.(customer.id),
+                show: true,
               },
               {
                 iconClass: "fas fa-trash",
                 title: "Remover",
                 colorHover: "hover:bg-[#FCEBEB] hover:text-[#A32D2D]",
                 onClick: () => onDelete?.(customer.id),
+                show: canDelete,
               },
-            ].map(({ iconClass, title, colorHover, onClick }) => (
+            ].filter(b => b.show).map(({ iconClass, title, colorHover, onClick }) => (
               <button
                 key={title}
                 title={title}

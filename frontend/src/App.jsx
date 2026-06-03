@@ -4,6 +4,7 @@ import MainLayout from "@/pages/MainLayout";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import AdminRoute from "@/components/auth/AdminRoute";
 import { ChatUI } from "@/components/chat";
 import { NAV_HANDLE_H, NAV_OPEN_H } from "@/components/ui";
 import TrophySpin from "./components/ui/TrophySpin";
@@ -19,6 +20,7 @@ const RelatoriosPage     = lazy(() => import("@/pages/RelatoriosPage"));
 const ClientesPage       = lazy(() => import("@/pages/ClientesPage"));
 const ConfiguracoesPage  = lazy(() => import("@/pages/ConfiguracoesPage"));
 const MenuPage           = lazy(() => import("@/pages/MenuPage"));
+const ProfilePage        = lazy(() => import("@/pages/ProfilePage"));
 const LoginPage          = lazy(() => import("@/pages/LoginPage"));
 
 function PageLoader() {
@@ -50,18 +52,25 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<MainPage />} />
           <Route path="/login" element={<LoginPage />} />
+          {/* Rotas autenticadas — MainLayout para todos */}
           <Route element={<ProtectedRoute />}>
             <Route element={<MainLayout onBottomNavChange={setBottomNavOpen} bottomNavOpen={bottomNavOpen} isMobile={isMobile} />}>
-              <Route path="/dashboard"     element={<DashboardPage />} />
-              <Route path="/table"         element={<TablePage />} />
-              <Route path="/orders"        element={<OrdersPage />} />
-              <Route path="/kds"           element={<KdsPage />} />
-              <Route path="/stock"         element={<StockPage />} />
-              <Route path="/faturacao"     element={<FaturacaoPage />} />
-              <Route path="/relatorios"    element={<RelatoriosPage />} />
-              <Route path="/clientes"      element={<ClientesPage />} />
-              <Route path="/configuracoes" element={<ConfiguracoesPage />} />
-              <Route path="/menu"          element={<MenuPage />} />
+              {/* Acessível a todos os utilizadores autenticados */}
+              <Route path="/perfil" element={<ProfilePage />} />
+
+              {/* Apenas admin/manager (role_id=1) */}
+              <Route element={<AdminRoute />}>
+                <Route path="/dashboard"     element={<DashboardPage />} />
+                <Route path="/table"         element={<TablePage />} />
+                <Route path="/orders"        element={<OrdersPage />} />
+                <Route path="/kds"           element={<KdsPage />} />
+                <Route path="/stock"         element={<StockPage />} />
+                <Route path="/faturacao"     element={<FaturacaoPage />} />
+                <Route path="/relatorios"    element={<RelatoriosPage />} />
+                <Route path="/clientes"      element={<ClientesPage />} />
+                <Route path="/configuracoes" element={<ConfiguracoesPage />} />
+                <Route path="/menu"          element={<MenuPage />} />
+              </Route>
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

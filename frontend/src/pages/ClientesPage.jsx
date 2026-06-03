@@ -8,6 +8,7 @@ import { orderItemService } from "@/services/orderItemService.js";
 import { itemService }      from "@/services/itemService.js";
 import TrophySpin from "@/components/ui/TrophySpin";
 import CustomerCard, { getPalette, getInitials, formatDate } from "@/components/customers/CustomerCard.jsx";
+import { useAuth } from "@/context/AuthContext";
 
 ChartJS.register(ArcElement, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler);
 
@@ -331,17 +332,15 @@ function CustomerDetail({ customer, onBack }) {
         </ul>
       </div>
 
-      {/* ── Row 1: Notificações + Histórico ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-        {/* Notificações */}
+      {/* ── Notificações — só para admin/manager ── */}
+      {customer.role_id === 1 && (
         <div className="rounded-2xl bg-surface border border-surface shadow-sm overflow-hidden flex flex-col">
           <div className="flex items-center gap-2 px-5 py-3 border-b border-surface">
             <i className="fas fa-bell text-sm text-muted" />
             <h3 className="text-sm font-semibold text-main flex-1">Notificações</h3>
-            {unread > 0 && (
+            {notifications.filter(n => !n.is_read).length > 0 && (
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#ef4444] text-white">
-                {unread} não {unread === 1 ? "lida" : "lidas"}
+                {notifications.filter(n => !n.is_read).length} não {notifications.filter(n => !n.is_read).length === 1 ? "lida" : "lidas"}
               </span>
             )}
           </div>
@@ -350,7 +349,7 @@ function CustomerDetail({ customer, onBack }) {
               <p className="text-center py-8 text-muted text-sm">A carregar…</p>
             ) : notifications.length === 0 ? (
               <p className="text-center py-8 text-muted text-sm">Sem notificações.</p>
-            ) : pagedNotifs.map((n) => (
+            ) : notifications.slice((notifPage - 1) * NOTIFS_PER_PAGE, notifPage * NOTIFS_PER_PAGE).map((n) => (
               <div key={n.id} onClick={() => !n.is_read && markRead(n.id)}
                 className={`flex gap-3 px-5 py-3 transition-colors ${n.is_read ? "opacity-50 cursor-default" : "cursor-pointer hover:bg-surface-2"}`}>
                 <span className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${n.is_read ? "bg-transparent" : "bg-[#ef4444]"}`} />
@@ -362,20 +361,25 @@ function CustomerDetail({ customer, onBack }) {
               </div>
             ))}
           </div>
-          {notifTotal > 1 && (
+          {Math.ceil(notifications.length / NOTIFS_PER_PAGE) > 1 && (
             <div className="flex items-center justify-between px-5 py-2 border-t border-surface">
-              <button disabled={notifPage === 1} onClick={() => setNotifPage((p) => p - 1)}
+              <button disabled={notifPage === 1} onClick={() => setNotifPage(p => p - 1)}
                 className="text-xs text-muted disabled:opacity-30 hover:text-main transition-colors cursor-pointer disabled:cursor-default">
                 ← Anterior
               </button>
-              <span className="text-xs text-muted">{notifPage} / {notifTotal}</span>
-              <button disabled={notifPage === notifTotal} onClick={() => setNotifPage((p) => p + 1)}
+              <span className="text-xs text-muted">{notifPage} / {Math.ceil(notifications.length / NOTIFS_PER_PAGE)}</span>
+              <button disabled={notifPage === Math.ceil(notifications.length / NOTIFS_PER_PAGE)} onClick={() => setNotifPage(p => p + 1)}
                 className="text-xs text-muted disabled:opacity-30 hover:text-main transition-colors cursor-pointer disabled:cursor-default">
                 Próxima →
               </button>
             </div>
           )}
         </div>
+      )}
+
+      {/* ── Row 1: Histórico — só para clientes normais ── */}
+      {customer.role_id !== 1 && (
+      <div className="grid grid-cols-1 gap-4">
 
         {/* Histórico de ordens com paginação */}
         <div className="rounded-2xl bg-surface border border-surface shadow-sm overflow-hidden flex flex-col">
@@ -450,8 +454,10 @@ function CustomerDetail({ customer, onBack }) {
           </div>
         </div>
       </div>
+      )}
 
-      {/* ── Row 2: Charts ── */}
+      {/* ── Row 2: Charts — só para clientes normais ── */}
+      {customer.role_id !== 1 && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
         {/* Doughnut */}
@@ -489,12 +495,15 @@ function CustomerDetail({ customer, onBack }) {
         </div>
 
       </div>
+      )}
     </div>
   );
 }
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function ClientesPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role_id === 1;
   const [customers,          setCustomers]          = useState([]);
   const [loading,            setLoading]            = useState(true);
   const [error,              setError]              = useState(null);
@@ -727,8 +736,8 @@ export default function ClientesPage() {
               key={c.id}
               customer={c}
               onDetail={setActiveDetail}
-              onToggle={toggleActive}
               onDelete={(id) => setConfirmDeleteId(id)}
+              canDelete={isAdmin}
               delay={i * 70}
             />
           ))}

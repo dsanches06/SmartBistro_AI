@@ -11,7 +11,6 @@ router.post("/",      customerController.create);
 router.get("/:id",           checkCustomerExists, customerController.getById);
 router.put("/:id",           checkCustomerExists, customerController.update);
 router.delete("/:id",        checkCustomerExists, customerController.remove);
-router.patch("/:id/active",  checkCustomerExists, customerController.toggleActive);
 
 // Rotas de notificações aninhadas — mais específicas antes da geral
 router.get("/:id/notifications/unread", (req, res) => {
