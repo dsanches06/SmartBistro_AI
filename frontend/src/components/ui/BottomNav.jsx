@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router';
 import { useTheme } from '../../context/ThemeContext';
 
 const menuLinks = [
-  { to: '/',              label: 'Dashboard',    icon: 'fa-solid fa-house',               exact: true },
+  { to: '/dashboard',     label: 'Dashboard',    icon: 'fa-solid fa-house',               exact: true },
   { to: '/table',         label: 'Mesas',        icon: 'fa-solid fa-chair'                            },
   { to: '/orders',        label: 'Pedidos',      icon: 'fa-solid fa-receipt'                          },
   { to: '/kds',           label: 'KDS',          icon: 'fa-solid fa-kitchen-set'                      },

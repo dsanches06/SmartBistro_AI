@@ -6,6 +6,7 @@ import { ChatUI } from "@/components/chat";
 import { NAV_HANDLE_H, NAV_OPEN_H } from "@/components/ui";
 import TrophySpin from "./components/ui/TrophySpin";
 
+const MainPage           = lazy(() => import("@/pages/MainPage"));
 const DashboardPage      = lazy(() => import("@/pages/DashboardPage"));
 const TablePage          = lazy(() => import("@/pages/TablePage"));
 const OrdersPage         = lazy(() => import("@/pages/OrdersPage"));
@@ -45,20 +46,21 @@ function AppContent() {
     <>
       <Suspense fallback={<PageLoader />}>
         <Routes>
+          <Route path="/" element={<MainPage />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={<MainLayout onBottomNavChange={setBottomNavOpen} bottomNavOpen={bottomNavOpen} isMobile={isMobile} />}>
-            <Route index element={<DashboardPage />} />
-            <Route path="table"         element={<TablePage />} />
-            <Route path="orders"        element={<OrdersPage />} />
-            <Route path="kds"           element={<KdsPage />} />
-            <Route path="stock"         element={<StockPage />} />
-            <Route path="faturacao"     element={<FaturacaoPage />} />
-            <Route path="relatorios"    element={<RelatoriosPage />} />
-            <Route path="clientes"      element={<ClientesPage />} />
-            <Route path="configuracoes" element={<ConfiguracoesPage />} />
-            <Route path="menu"          element={<MenuPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+          <Route element={<MainLayout onBottomNavChange={setBottomNavOpen} bottomNavOpen={bottomNavOpen} isMobile={isMobile} />}>
+            <Route path="/dashboard"    element={<DashboardPage />} />
+            <Route path="/table"        element={<TablePage />} />
+            <Route path="/orders"       element={<OrdersPage />} />
+            <Route path="/kds"          element={<KdsPage />} />
+            <Route path="/stock"        element={<StockPage />} />
+            <Route path="/faturacao"    element={<FaturacaoPage />} />
+            <Route path="/relatorios"   element={<RelatoriosPage />} />
+            <Route path="/clientes"     element={<ClientesPage />} />
+            <Route path="/configuracoes" element={<ConfiguracoesPage />} />
+            <Route path="/menu"         element={<MenuPage />} />
           </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
 

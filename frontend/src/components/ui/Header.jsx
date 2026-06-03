@@ -3,7 +3,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { useTheme } from "../../context/ThemeContext";
 
 const navLinks = [
-  { to: "/", label: "Dashboard", exact: true },
+  { to: "/dashboard", label: "Dashboard", exact: true },
   { to: "/table", label: "Mesas" },
   { to: "/orders", label: "Pedidos" },
   { to: "/kds", label: "KDS" },
@@ -39,7 +39,7 @@ export function Header() {
       >
         {/* Brand */}
         <Link
-          to="/"
+          to="/dashboard"
           className="flex flex-col leading-tight select-none flex-shrink-0"
           aria-label="Início — SmartBistro IA"
         >
