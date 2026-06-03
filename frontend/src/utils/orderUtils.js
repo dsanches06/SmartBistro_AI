@@ -1,6 +1,18 @@
 // Utilitários e constantes da página de Pedidos
 
-export const ORDER_PAGE_SIZE = 10;
+export const ORDER_PAGE_SIZE    = 10;
+export const ORDERS_PER_PAGE    = 5;   // paginação em listas compactas (ClientesPage, ProfilePage)
+export const NOTIFS_PER_PAGE    = 5;   // paginação de notificações
+
+// Estilos de status para tabelas de pedidos (usado em ClientesPage, ProfilePage)
+export const ORDER_STATUS_STYLE = {
+  "Pending":        { bg: "#FFF7ED", tx: "#C2410C" },
+  "In Preparation": { bg: "#EFF6FF", tx: "#1D4ED8" },
+  "Ready":          { bg: "#F0FDF4", tx: "#166534" },
+  "Done":           { bg: "#F5F3FF", tx: "#6D28D9" },
+  "Delivered":      { bg: "#ECFEFF", tx: "#0E7490" },
+  "Cancelled":      { bg: "#FEF2F2", tx: "#B91C1C" },
+};
 
 export const ORDER_STATUS_META = {
   Pending:          { label: "Novo",          bg: "#eef2ff", color: "#4f46e5", text: "#3730a3" },
@@ -12,12 +24,12 @@ export const ORDER_STATUS_META = {
 };
 
 export const ORDER_TABS = [
-  { key: "all",            label: "Todos" },
-  { key: "Pending",        label: "Novos" },
-  { key: "In Preparation", label: "Em preparação" },
-  { key: "Ready",          label: "Prontos" },
-  { key: "Delivered",      label: "Entregue" },
-  { key: "Done",           label: "Concluído" },
+  { key: "all",            label: "Todos",          icon: "fa-solid fa-list" },
+  { key: "Pending",        label: "Novos",          icon: "fa-solid fa-clock" },
+  { key: "In Preparation", label: "Em preparação",  icon: "fa-solid fa-fire" },
+  { key: "Ready",          label: "Prontos",        icon: "fa-solid fa-check" },
+  { key: "Delivered",      label: "Entregue",       icon: "fa-solid fa-truck" },
+  { key: "Done",           label: "Concluído",      icon: "fa-solid fa-check-double" },
 ];
 
 export const ORDER_TABLE_HEADERS = ["ID", "Mesa", "Cliente", "Estado", "Itens", "Valor", "Hora", "Ações"];

@@ -6,15 +6,15 @@ import { useAuth } from "../../context/AuthContext";
 import { getInitials, getPalette } from "../customers/CustomerCard";
 
 const navLinks = [
-  { to: "/dashboard", label: "Dashboard", exact: true },
-  { to: "/table", label: "Mesas" },
-  { to: "/orders", label: "Pedidos" },
-  { to: "/kds", label: "KDS" },
-  { to: "/stock", label: "Stock" },
-  { to: "/faturacao", label: "Faturação" },
+  { to: "/dashboard",  label: "Dashboard",  exact: true },
+  { to: "/table",      label: "Mesas" },
+  { to: "/orders",     label: "Pedidos" },
+  { to: "/kds",        label: "KDS" },
+  { to: "/faturacao",  label: "Faturação" },
+  { to: "/stock",      label: "Stock" },
+  { to: "/clientes",   label: "Clientes" },
   { to: "/relatorios", label: "Relatórios" },
-  { to: "/clientes", label: "Clientes" },
-  { to: "/menu", label: "Menu" },
+  { to: "/menu",       label: "Menu" },
 ];
 
 function isActive(pathname, to, exact) {

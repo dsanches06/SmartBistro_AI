@@ -7,11 +7,11 @@ const menuLinks = [
   { to: '/table',         label: 'Mesas',        icon: 'fa-solid fa-chair'                            },
   { to: '/orders',        label: 'Pedidos',      icon: 'fa-solid fa-receipt'                          },
   { to: '/kds',           label: 'KDS',          icon: 'fa-solid fa-kitchen-set'                      },
-  { to: '/stock',         label: 'Stock',        icon: 'fa-solid fa-boxes-stacked'                    },
   { to: '/faturacao',     label: 'Faturação',    icon: 'fa-solid fa-file-invoice-dollar'              },
-  { to: '/relatorios',    label: 'Relatórios',   icon: 'fa-solid fa-chart-line'                       },
+  { to: '/stock',         label: 'Stock',        icon: 'fa-solid fa-boxes-stacked'                    },
   { to: '/clientes',      label: 'Clientes',     icon: 'fa-solid fa-users'                            },
-  { to: '/menu',          label: 'Menu',          icon: 'fa-solid fa-utensils'                         },
+  { to: '/relatorios',    label: 'Relatórios',   icon: 'fa-solid fa-chart-line'                       },
+  { to: '/menu',          label: 'Menu',         icon: 'fa-solid fa-utensils'                         },
 ];
 
 export const NAV_OPEN_H   = '15rem';

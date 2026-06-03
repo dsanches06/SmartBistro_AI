@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { itemService } from "@/services";
-import { MENU_CATEGORIES, MENU_CATEGORY_META, formatMenuPrice, getItemEmoji } from "@/utils";
+import { MENU_CATEGORIES, MENU_CATEGORY_META, formatMenuPrice, getItemEmoji, ALL_KEY } from "@/utils";
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { ThemeToggle } from "@/components/ui";
-
-const ALL_KEY = "all";
 
 /* ── Icons ── */
 function IconLogin() {
@@ -349,7 +347,7 @@ export default function MainPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)" }}>
+    <div style={{ minHeight: "100dvh", background: "var(--bg)", color: "var(--text)" }}>
       {/* Header */}
       <header
         className="sticky top-0 z-50 flex items-center justify-between px-4 sm:px-8 h-14 md:h-16"
@@ -425,35 +423,51 @@ export default function MainPage() {
       </div>
 
       {/* Category Tabs */}
-      <div className="flex items-center justify-center gap-2 overflow-x-auto px-4 sm:px-8 pb-3 no-scrollbar max-w-5xl mx-auto">
+      <div className="flex items-center justify-between sm:justify-center gap-2 px-4 sm:px-8 pb-3 pt-2 max-w-5xl mx-auto">
         <button
           onClick={() => setActiveCategory(ALL_KEY)}
-          className="flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all"
+          className="relative flex-1 sm:flex-shrink-0 sm:flex-initial px-2 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all text-center"
           style={{
             background: activeCategory === ALL_KEY ? "var(--primary)" : "var(--surface-2)",
             color: activeCategory === ALL_KEY ? "#fff" : "var(--text-secondary)",
           }}
         >
           Todos
+          {items.length > 0 && (
+            <span className="sm:hidden absolute -top-1.5 -right-1 w-4 h-4 flex items-center justify-center rounded-full text-[9px] font-bold"
+              style={{ background: activeCategory === ALL_KEY ? "rgba(255,255,255,0.9)" : "var(--primary)", color: activeCategory === ALL_KEY ? "var(--primary)" : "#fff" }}>
+              {items.length}
+            </span>
+          )}
         </button>
-        {MENU_CATEGORIES.map(cat => (
-          <button
-            key={cat.key}
-            onClick={() => setActiveCategory(cat.key)}
-            className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all"
-            style={{
-              background: activeCategory === cat.key ? cat.accent : "var(--surface-2)",
-              color: activeCategory === cat.key ? "#fff" : "var(--text-secondary)",
-            }}
-          >
-            <span>{cat.emoji}</span>
-            {cat.label}
-          </button>
-        ))}
+        {MENU_CATEGORIES.map(cat => {
+          const count = items.filter(i => i.category === cat.key).length;
+          const active = activeCategory === cat.key;
+          return (
+            <button
+              key={cat.key}
+              onClick={() => setActiveCategory(cat.key)}
+              className="relative flex-1 sm:flex-shrink-0 sm:flex-initial flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all"
+              style={{
+                background: active ? cat.accent : "var(--surface-2)",
+                color: active ? "#fff" : "var(--text-secondary)",
+              }}
+            >
+              <span>{cat.emoji}</span>
+              <span className="hidden sm:inline">{cat.label}</span>
+              {count > 0 && (
+                <span className="sm:hidden absolute -top-1.5 -right-1 w-4 h-4 flex items-center justify-center rounded-full text-[9px] font-bold"
+                  style={{ background: active ? "rgba(255,255,255,0.9)" : cat.accent, color: active ? cat.accent : "#fff" }}>
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Content */}
-      <main className="px-4 sm:px-8 py-6 max-w-5xl mx-auto pb-12">
+      <main className="px-4 sm:px-8 py-6 max-w-5xl mx-auto pb-32 sm:pb-12">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <span style={{ color: "var(--text-muted)" }}>A carregar cardápio...</span>
@@ -501,6 +515,50 @@ export default function MainPage() {
         onSwitchToLogin={() => setShowLogin(true)}
         isDark={isDark}
         onRegister={handleRegister}
+      />
+
+      {/* BottomNav mobile — só visível em mobile */}
+      <nav
+        className="sm:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around px-4 pt-2"
+        style={{
+          background: isDark ? "rgb(13,13,13)" : "rgb(248,250,252)",
+          backdropFilter: "blur(12px)",
+          borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`,
+          paddingBottom: "calc(env(safe-area-inset-bottom) + 1.25rem)",
+          boxShadow: "0 -4px 20px rgba(0,0,0,0.15)",
+        }}
+      >
+        <Link to="/" className="flex flex-col items-center gap-0.5 py-1 px-3">
+          <i className="fa-solid fa-utensils text-base" style={{ color: "var(--primary)" }} />
+          <span className="text-[10px] font-semibold" style={{ color: "var(--primary)" }}>Cardápio</span>
+        </Link>
+        {user ? (
+          <Link to="/perfil" className="flex flex-col items-center gap-0.5 py-1 px-3">
+            <i className="fa-solid fa-user text-base" style={{ color: "var(--text-muted)" }} />
+            <span className="text-[10px] font-semibold" style={{ color: "var(--text-muted)" }}>Perfil</span>
+          </Link>
+        ) : (
+          <>
+            <button onClick={() => setShowLogin(true)} className="flex flex-col items-center gap-0.5 py-1 px-3">
+              <i className="fa-solid fa-right-to-bracket text-base" style={{ color: "var(--text-muted)" }} />
+              <span className="text-[10px] font-semibold" style={{ color: "var(--text-muted)" }}>Entrar</span>
+            </button>
+            <button onClick={() => setShowRegister(true)} className="flex flex-col items-center gap-0.5 py-1 px-3">
+              <i className="fa-solid fa-user-plus text-base" style={{ color: "var(--text-muted)" }} />
+              <span className="text-[10px] font-semibold" style={{ color: "var(--text-muted)" }}>Registar</span>
+            </button>
+          </>
+        )}
+      </nav>
+
+      {/* Tape o fundo abaixo do BottomNav em mobile */}
+      <div
+        className="sm:hidden fixed bottom-0 left-0 right-0 z-30"
+        style={{
+          height: "env(safe-area-inset-bottom, 20px)",
+          minHeight: "20px",
+          background: isDark ? "rgb(13,13,13)" : "rgb(248,250,252)",
+        }}
       />
     </div>
   );

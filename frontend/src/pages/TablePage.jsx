@@ -242,49 +242,44 @@ export default function TablePage() {
         />
       )}
 
-      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-[var(--text)]">Mesas</h1>
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text)]">Mesas</h1>
         <button
           onClick={() => setShowCreateMesa(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white"
+          className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white flex-shrink-0 whitespace-nowrap"
           style={{ background: "var(--primary)" }}
         >
-          <i className="fa-solid fa-plus text-xs" />
+          <i className="fa-solid fa-plus text-[10px] sm:text-xs" />
           Nova Mesa
         </button>
       </div>
 
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
-        <StatCard
-          label="Total Mesas"
-          value={totals.total}
-          icon="fa-solid fa-table-cells"
-          borderColor="#3b82f6"
-          className="bg-surface"
-        />
-        <StatCard
-          label="Ocupadas"
-          value={totals.ocupada}
-          icon="fa-solid fa-chair"
-          borderColor="#f59e0b"
-          className="bg-surface"
-        />
-        <StatCard
-          label="Livres"
-          value={totals.livre}
-          icon="fa-solid fa-check-circle"
-          borderColor="#22c55e"
-          className="bg-surface"
-        />
-        <StatCard
-          label="Reservadas"
-          value={totals.reservada}
-          icon="fa-solid fa-calendar-check"
-          borderColor="#8b5cf6"
-          className="bg-surface"
-        />
+      {/* Mobile: ícones compactos 2x2 com badge; Desktop: StatCards */}
+      <div className="grid grid-cols-4 gap-2 sm:hidden">
+        {[
+          { label: "Total",     value: totals.total,    icon: "fa-solid fa-table-cells",    color: "#3b82f6" },
+          { label: "Ocupadas",  value: totals.ocupada,  icon: "fa-solid fa-chair",           color: "#f59e0b" },
+          { label: "Livres",    value: totals.livre,    icon: "fa-solid fa-check-circle",    color: "#22c55e" },
+          { label: "Reservadas",value: totals.reservada,icon: "fa-solid fa-calendar-check",  color: "#8b5cf6" },
+        ].map(({ label, value, icon, color }) => (
+          <div key={label} className="relative flex flex-col items-center justify-center gap-1 rounded-2xl py-3"
+            style={{ background: "var(--surface)" }}>
+            <i className={`${icon} text-xl`} style={{ color }} />
+            <span className="text-[10px] font-medium text-center leading-tight" style={{ color: "var(--text-muted)" }}>{label}</span>
+            <span
+              className="absolute -top-1.5 -right-1.5 w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold"
+              style={{ background: color, color: "#fff" }}
+            >
+              {value}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="hidden sm:grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+        <StatCard label="Total Mesas"  value={totals.total}     icon="fa-solid fa-table-cells"    borderColor="#3b82f6" className="bg-surface" />
+        <StatCard label="Ocupadas"     value={totals.ocupada}   icon="fa-solid fa-chair"           borderColor="#f59e0b" className="bg-surface" />
+        <StatCard label="Livres"       value={totals.livre}     icon="fa-solid fa-check-circle"    borderColor="#22c55e" className="bg-surface" />
+        <StatCard label="Reservadas"   value={totals.reservada} icon="fa-solid fa-calendar-check"  borderColor="#8b5cf6" className="bg-surface" />
       </div>
 
       {loading && (
