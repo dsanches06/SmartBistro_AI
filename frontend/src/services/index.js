@@ -1,5 +1,6 @@
 // ── Frontend services barrel ──────────────────────────────────────────────────
 export { getBackendUrl, BACKEND_URL }  from "./BaseService.js";
+export { authService }                 from "./authService.js";
 export { chatService }                 from "./chatService.js";
 export { tableService }                from "./tableService.js";
 export { orderService }                from "./orderService.js";

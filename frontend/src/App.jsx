@@ -2,6 +2,8 @@ import { useState, useEffect, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 import MainLayout from "@/pages/MainLayout";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { AuthProvider } from "@/context/AuthContext";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { ChatUI } from "@/components/chat";
 import { NAV_HANDLE_H, NAV_OPEN_H } from "@/components/ui";
 import TrophySpin from "./components/ui/TrophySpin";
@@ -48,17 +50,19 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<MainPage />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route element={<MainLayout onBottomNavChange={setBottomNavOpen} bottomNavOpen={bottomNavOpen} isMobile={isMobile} />}>
-            <Route path="/dashboard"    element={<DashboardPage />} />
-            <Route path="/table"        element={<TablePage />} />
-            <Route path="/orders"       element={<OrdersPage />} />
-            <Route path="/kds"          element={<KdsPage />} />
-            <Route path="/stock"        element={<StockPage />} />
-            <Route path="/faturacao"    element={<FaturacaoPage />} />
-            <Route path="/relatorios"   element={<RelatoriosPage />} />
-            <Route path="/clientes"     element={<ClientesPage />} />
-            <Route path="/configuracoes" element={<ConfiguracoesPage />} />
-            <Route path="/menu"         element={<MenuPage />} />
+          <Route element={<ProtectedRoute />}>
+            <Route element={<MainLayout onBottomNavChange={setBottomNavOpen} bottomNavOpen={bottomNavOpen} isMobile={isMobile} />}>
+              <Route path="/dashboard"     element={<DashboardPage />} />
+              <Route path="/table"         element={<TablePage />} />
+              <Route path="/orders"        element={<OrdersPage />} />
+              <Route path="/kds"           element={<KdsPage />} />
+              <Route path="/stock"         element={<StockPage />} />
+              <Route path="/faturacao"     element={<FaturacaoPage />} />
+              <Route path="/relatorios"    element={<RelatoriosPage />} />
+              <Route path="/clientes"      element={<ClientesPage />} />
+              <Route path="/configuracoes" element={<ConfiguracoesPage />} />
+              <Route path="/menu"          element={<MenuPage />} />
+            </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -92,7 +96,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <ThemeProvider>
-        <AppContent />
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>
   );

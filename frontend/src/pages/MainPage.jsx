@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { itemService } from "@/services";
 import { MENU_CATEGORIES, MENU_CATEGORY_META, formatMenuPrice, getItemEmoji } from "@/utils";
 import { useTheme } from "@/context/ThemeContext";
+import { useAuth } from "@/context/AuthContext";
 import { ThemeToggle } from "@/components/ui";
 
 const ALL_KEY = "all";
@@ -109,25 +110,52 @@ function Field({ label, type = "text", value, onChange, placeholder, autoFocus }
   );
 }
 
-/* ── Modal Login ── */
-function LoginModal({ open, onClose, onSwitchToRegister, isDark }) {
-  const [email, setEmail]       = useState("");
-  const [password, setPassword] = useState("");
+/* ── Mensagem de erro ── */
+function ErrorMsg({ msg }) {
+  if (!msg) return null;
+  return (
+    <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444" }}>
+      {msg}
+    </p>
+  );
+}
 
-  const handleClose = () => { setEmail(""); setPassword(""); onClose(); };
+/* ── Modal Login ── */
+function LoginModal({ open, onClose, onSwitchToRegister, isDark, onLogin }) {
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword]     = useState("");
+  const [loading, setLoading]       = useState(false);
+  const [error, setError]           = useState("");
+
+  const handleClose = () => { setIdentifier(""); setPassword(""); setError(""); onClose(); };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      await onLogin(identifier, password);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Modal open={open} onClose={handleClose} title="Entrar na conta" isDark={isDark}>
-      <form className="flex flex-col gap-4" onSubmit={e => e.preventDefault()}>
-        <Field label="E-mail" type="email" value={email} onChange={setEmail} placeholder="exemplo@email.com" autoFocus />
+      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+        <Field label="E-mail ou username" value={identifier} onChange={setIdentifier} placeholder="email ou username" autoFocus />
         <Field label="Palavra-passe" type="password" value={password} onChange={setPassword} placeholder="••••••••" />
+        <ErrorMsg msg={error} />
 
         <button
           type="submit"
-          className="w-full py-2.5 rounded-xl text-sm font-bold transition-opacity hover:opacity-90 mt-1"
+          disabled={loading}
+          className="w-full py-2.5 rounded-xl text-sm font-bold transition-opacity hover:opacity-90 mt-1 disabled:opacity-60"
           style={{ background: "var(--primary)", color: "#fff" }}
         >
-          Entrar
+          {loading ? "A entrar..." : "Entrar"}
         </button>
 
         <p className="text-center text-xs" style={{ color: "var(--text-muted)" }}>
@@ -147,25 +175,51 @@ function LoginModal({ open, onClose, onSwitchToRegister, isDark }) {
 }
 
 /* ── Modal Registo ── */
-function RegisterModal({ open, onClose, onSwitchToLogin, isDark }) {
+function RegisterModal({ open, onClose, onSwitchToLogin, isDark, onRegister }) {
   const [name, setName]         = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail]       = useState("");
+  const [phone, setPhone]       = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm]   = useState("");
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState("");
 
-  const handleClose = () => { setName(""); setEmail(""); setPassword(""); setConfirm(""); onClose(); };
+  const handleClose = () => {
+    setName(""); setUsername(""); setEmail(""); setPhone("");
+    setPassword(""); setConfirm(""); setError(""); onClose();
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    if (password !== confirm) { setError("As palavras-passe não coincidem."); return; }
+    if (!username.trim() && !email.trim()) { setError("Preenche o username ou e-mail."); return; }
+    setLoading(true);
+    try {
+      await onRegister(name, username, email, phone, password);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Modal open={open} onClose={handleClose} title="Criar conta" isDark={isDark}>
-      <form className="flex flex-col gap-4" onSubmit={e => e.preventDefault()}>
-        <Field label="Nome completo" value={name} onChange={setName} placeholder="O teu nome" autoFocus />
-        <Field label="E-mail" type="email" value={email} onChange={setEmail} placeholder="exemplo@email.com" />
-        <Field label="Palavra-passe" type="password" value={password} onChange={setPassword} placeholder="••••••••" />
-        <Field label="Confirmar palavra-passe" type="password" value={confirm} onChange={setConfirm} placeholder="••••••••" />
+      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+        <Field label="Nome completo *" value={name} onChange={setName} placeholder="O teu nome" autoFocus />
+        <Field label="Username" value={username} onChange={setUsername} placeholder="username (opcional)" />
+        <Field label="E-mail" type="email" value={email} onChange={setEmail} placeholder="email (opcional)" />
+        <Field label="Telefone" value={phone} onChange={setPhone} placeholder="telefone (opcional)" />
+        <Field label="Palavra-passe *" type="password" value={password} onChange={setPassword} placeholder="••••••••" />
+        <Field label="Confirmar palavra-passe *" type="password" value={confirm} onChange={setConfirm} placeholder="••••••••" />
+        <ErrorMsg msg={error} />
 
         <button
           type="submit"
-          className="w-full py-2.5 rounded-xl text-sm font-bold transition-opacity hover:opacity-90 mt-1"
+          disabled={loading}
+          className="w-full py-2.5 rounded-xl text-sm font-bold transition-opacity hover:opacity-90 mt-1 disabled:opacity-60"
           style={{ background: "var(--primary)", color: "#fff" }}
         >
           Criar conta
@@ -193,6 +247,8 @@ function RegisterModal({ open, onClose, onSwitchToLogin, isDark }) {
 export default function MainPage() {
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const { login, register } = useAuth();
+  const navigate = useNavigate();
 
   const [items, setItems]               = useState([]);
   const [loading, setLoading]           = useState(true);
@@ -206,6 +262,16 @@ export default function MainPage() {
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
   }, []);
+
+  const handleLogin = async (identifier, password) => {
+    await login(identifier, password);
+    navigate("/dashboard", { replace: true });
+  };
+
+  const handleRegister = async (name, username, email, phone, password) => {
+    await register(name, username, email, phone, password);
+    navigate("/dashboard", { replace: true });
+  };
 
   const groupedAll = MENU_CATEGORIES.map(cat => ({
     ...cat,
@@ -349,12 +415,14 @@ export default function MainPage() {
         onClose={() => setShowLogin(false)}
         onSwitchToRegister={() => setShowRegister(true)}
         isDark={isDark}
+        onLogin={handleLogin}
       />
       <RegisterModal
         open={showRegister}
         onClose={() => setShowRegister(false)}
         onSwitchToLogin={() => setShowLogin(true)}
         isDark={isDark}
+        onRegister={handleRegister}
       />
     </div>
   );
