@@ -12,19 +12,26 @@ CREATE TABLE roles (
     flow_order INT
 );
 
--- Clientes / Utilizadores
+-- Clientes
 CREATE TABLE customers (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(200) NOT NULL UNIQUE,
-    username VARCHAR(100) NULL UNIQUE,
     email VARCHAR(150) NULL UNIQUE,
     phone VARCHAR(20) NULL UNIQUE,
-    password_hash VARCHAR(255) NULL,
     active BOOLEAN DEFAULT FALSE,
     role_id INT DEFAULT 2,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (role_id)
-        REFERENCES roles (id)
+    FOREIGN KEY (role_id) REFERENCES roles (id)
+);
+
+-- Credenciais de autenticação (separado dos dados do cliente)
+CREATE TABLE auth_accounts (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    customer_id INT NOT NULL UNIQUE,
+    username VARCHAR(100) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE CASCADE
 );
 
 -- Sessões de Chat

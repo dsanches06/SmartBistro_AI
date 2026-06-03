@@ -66,7 +66,7 @@ function UserMenu({ user, onLogout }) {
           </div>
 
           <button
-            onClick={() => { setOpen(false); navigate("/perfil"); }}
+            onClick={() => { setOpen(false); navigate(`/clientes?open=${user.id}`); }}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors hover:bg-[var(--surface-2)]"
             style={{ color: "var(--text)" }}
           >

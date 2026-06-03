@@ -135,6 +135,7 @@ export default function ProfilePage() {
   };
 
   if (!user) return null;
+  if (user.role_id === 1) { navigate("/dashboard", { replace: true }); return null; }
 
   const isAdmin     = user.role_id === 1;
   const totalGasto  = Object.values(invoiceMap).filter(Boolean).reduce((s, inv) => s + Number(inv.total_amount ?? 0), 0);

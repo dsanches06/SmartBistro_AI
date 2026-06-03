@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router";
 import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler } from "chart.js";
 import { Doughnut, Line } from "react-chartjs-2";
 import { customerService }  from "@/services/customerService.js";
@@ -296,22 +297,30 @@ function CustomerDetail({ customer, onBack }) {
     <div className="w-full max-w-[1200px] mx-auto px-4 sm:px-6 py-4 sm:py-6 animate-fadeInUp space-y-4">
 
       {/* ── Header ── */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <button onClick={onBack} className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-main transition-colors cursor-pointer">
-          ← Voltar
-        </button>
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold" style={{ background: c.bg, color: c.tx }}>
+      <div className="flex items-center gap-3">
+        {/* Esquerda: avatar + nome + badge */}
+        <div className="flex items-center gap-2.5 flex-1 min-w-0">
+          <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0" style={{ background: c.bg, color: c.tx }}>
             {getInitials(customer.name)}
           </div>
-          <div>
-            <p className="text-sm font-bold text-main leading-tight">{customer.name}</p>
+          <div className="min-w-0">
+            <div className="flex items-center gap-3 flex-wrap">
+              <p className="text-sm font-bold text-main leading-tight">{customer.name}</p>
+              <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${customer.active ? "bg-[#EAF3DE] text-[#3B6D11]" : "bg-[#FCEBEB] text-[#A32D2D]"}`}>
+                {customer.active ? "Ativo" : "Inativo"}
+              </span>
+            </div>
             <p className="text-[11px] text-muted">{customer.phone || "sem telefone"}</p>
           </div>
         </div>
-        <span className={`ml-auto text-xs px-3 py-1 rounded-full font-semibold ${customer.active ? "bg-[#EAF3DE] text-[#3B6D11]" : "bg-[#FCEBEB] text-[#A32D2D]"}`}>
-          {customer.active ? "Ativo" : "Inativo"}
-        </span>
+
+        {/* Direita: botão Voltar */}
+        <button onClick={onBack} className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+          style={{ background: "var(--surface-2)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = "var(--primary)"}
+          onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border)"}>
+          <i className="fa-solid fa-arrow-left text-[10px]" /> Voltar
+        </button>
       </div>
 
       {/* ── Info card ── */}
@@ -504,6 +513,7 @@ function CustomerDetail({ customer, onBack }) {
 export default function ClientesPage() {
   const { user } = useAuth();
   const isAdmin = user?.role_id === 1;
+  const [searchParams] = useSearchParams();
   const [customers,          setCustomers]          = useState([]);
   const [loading,            setLoading]            = useState(true);
   const [error,              setError]              = useState(null);
@@ -531,6 +541,14 @@ export default function ClientesPage() {
   };
 
   useEffect(() => { loadCustomers(); }, []);
+
+  // Abre automaticamente o detail do admin quando ?open=id está presente
+  useEffect(() => {
+    const openId = Number(searchParams.get("open"));
+    if (!openId || !customers.length) return;
+    const target = customers.find(c => c.id === openId);
+    if (target) setActiveDetail(target);
+  }, [searchParams, customers]);
 
   // ── Derivations ──
   const filtered = customers.filter((c) => {

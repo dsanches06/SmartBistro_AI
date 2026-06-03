@@ -17,11 +17,10 @@ INSERT INTO roles (name, flow_order) VALUES
 -- =========================================================================
 -- 2. CLIENTES
 -- =========================================================================
--- Utilizadores com auth (role_id=1 ADMIN, role_id=2 USER)
--- Passwords: admin→admin123 | manager→manager123 | user→user123
-INSERT INTO customers (name, username, email, phone, password_hash, role_id) VALUES
-('Admin SmartBistro', 'admin',   'admin@smartbistro.pt',   NULL,         '$2b$10$e6BP1FypTH1HoEdcGkFvSONNRq7NVHbMvHGsS6pCPnTRKy1325Kyq', 1),
-('Manager SmartBistro', 'manager', 'manager@smartbistro.pt', '555-0100',   '$2b$10$8xnntok3EVYFLuse1MYds.klcWYqzZLXijT1S1r9/CdNvUkWZbgju', 1);
+-- Admin e Manager (role_id=1)
+INSERT INTO customers (name, email, phone, active, role_id) VALUES
+('Admin SmartBistro',   'admin@smartbistro.pt',   NULL,        TRUE, 1),
+('Manager SmartBistro', 'manager@smartbistro.pt', '555-0100',  TRUE, 1);
 
 -- Clientes sem auth (criados pelo chatbot/pipeline)
 INSERT INTO customers (name, phone) VALUES
@@ -41,6 +40,14 @@ INSERT INTO customers (name, phone) VALUES
 ('Mariana Costa',  '555-0114'),
 ('Pedro Almeida',  '555-0115'),
 ('Joana Martins',  '555-0116');
+
+-- =========================================================================
+-- 2b. AUTH ACCOUNTS
+-- Passwords: admin→admin123 | manager→manager123
+-- =========================================================================
+INSERT INTO auth_accounts (customer_id, username, password_hash) VALUES
+(1, 'admin',   '$2b$10$e6BP1FypTH1HoEdcGkFvSONNRq7NVHbMvHGsS6pCPnTRKy1325Kyq'),
+(2, 'manager', '$2b$10$8xnntok3EVYFLuse1MYds.klcWYqzZLXijT1S1r9/CdNvUkWZbgju');
 
 -- =========================================================================
 -- 3. MESAS

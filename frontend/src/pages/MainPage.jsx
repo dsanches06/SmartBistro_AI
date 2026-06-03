@@ -40,7 +40,7 @@ function IconClose() {
 }
 
 /* ── Modal base ── */
-function Modal({ open, onClose, title, children, isDark }) {
+function Modal({ open, onClose, title, children, isDark, size = "lg" }) {
   const overlayRef = useRef(null);
 
   useEffect(() => {
@@ -60,7 +60,7 @@ function Modal({ open, onClose, title, children, isDark }) {
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
       <div
-        className="w-full max-w-sm rounded-2xl p-6 shadow-2xl"
+        className={`w-full ${size === "xs" ? "max-w-xs" : size === "sm" ? "max-w-sm" : size === "md" ? "max-w-md" : "max-w-lg"} rounded-2xl p-6 shadow-2xl`}
         style={{
           background: "var(--surface)",
           border: "1px solid var(--border)",
@@ -102,7 +102,7 @@ function Field({ label, type = "text", value, onChange, placeholder, autoFocus }
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
           autoFocus={autoFocus}
-          className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all"
+          className="w-full h-8 rounded-lg px-3 text-sm outline-none transition-all"
           style={{
             background: "var(--surface-2)",
             border: "1.5px solid var(--border)",
@@ -176,7 +176,7 @@ function LoginModal({ open, onClose, onSwitchToRegister, isDark, onLogin }) {
   };
 
   return (
-    <Modal open={open} onClose={handleClose} title="Entrar na conta" isDark={isDark}>
+    <Modal open={open} onClose={handleClose} title="Entrar na conta" isDark={isDark} size="xs">
       <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
         <Field label="E-mail ou username" value={identifier} onChange={setIdentifier} placeholder="email ou username" autoFocus />
         <Field label="Palavra-passe" type="password" value={password} onChange={setPassword} placeholder="••••••••" />
@@ -185,10 +185,11 @@ function LoginModal({ open, onClose, onSwitchToRegister, isDark, onLogin }) {
         <button
           type="submit"
           disabled={!canSubmit || loading}
-          className="w-full py-2.5 rounded-xl text-sm font-bold transition-all mt-1"
+          className="w-full py-2 rounded-xl text-sm font-semibold transition-all"
           style={{
-            background: canSubmit ? "var(--primary)" : "var(--surface-2)",
+            background: canSubmit ? "var(--primary)" : "transparent",
             color: canSubmit ? "#fff" : "var(--text-muted)",
+            border: canSubmit ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
             cursor: canSubmit ? "pointer" : "not-allowed",
           }}
         >
@@ -222,8 +223,8 @@ function RegisterModal({ open, onClose, onSwitchToLogin, isDark, onRegister }) {
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState("");
 
-  const canSubmit = name.trim().length > 0 && username.trim().length > 0 &&
-                    password.length > 0 && confirm.length > 0;
+  const passwordsMatch = password.length > 0 && password === confirm;
+  const canSubmit = name.trim().length > 0 && username.trim().length > 0 && passwordsMatch;
 
   const handleClose = () => {
     setName(""); setUsername(""); setEmail(""); setPhone("");
@@ -247,22 +248,39 @@ function RegisterModal({ open, onClose, onSwitchToLogin, isDark, onRegister }) {
 
   return (
     <Modal open={open} onClose={handleClose} title="Criar conta" isDark={isDark}>
-      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-        <Field label="Nome completo *" value={name} onChange={setName} placeholder="O teu nome" autoFocus />
-        <Field label="Username *" value={username} onChange={setUsername} placeholder="username" />
-        <Field label="E-mail" type="email" value={email} onChange={setEmail} placeholder="email (opcional)" />
-        <Field label="Telefone" value={phone} onChange={setPhone} placeholder="telefone (opcional)" />
-        <Field label="Palavra-passe *" type="password" value={password} onChange={setPassword} placeholder="••••••••" />
-        <Field label="Confirmar palavra-passe *" type="password" value={confirm} onChange={setConfirm} placeholder="••••••••" />
+      <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
+        {/* Row 1 */}
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Nome completo *" value={name} onChange={setName} placeholder="O teu nome" autoFocus />
+          <Field label="Username *" value={username} onChange={setUsername} placeholder="username" />
+        </div>
+        {/* Row 2 */}
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="E-mail" type="email" value={email} onChange={setEmail} placeholder="email (opcional)" />
+          <Field label="Telefone" value={phone} onChange={setPhone} placeholder="telefone (opcional)" />
+        </div>
+        {/* Row 3 */}
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Palavra-passe *" type="password" value={password} onChange={setPassword} placeholder="••••••••" />
+          <div className="flex flex-col gap-1.5">
+            <Field label="Confirmar *" type="password" value={confirm} onChange={setConfirm} placeholder="••••••••" />
+            {confirm.length > 0 && (
+              <p className="text-[10px]" style={{ color: passwordsMatch ? "#22c55e" : "#ef4444" }}>
+                {passwordsMatch ? "✓ Coincidem" : "✗ Não coincidem"}
+              </p>
+            )}
+          </div>
+        </div>
         <ErrorMsg msg={error} />
 
         <button
           type="submit"
           disabled={!canSubmit || loading}
-          className="w-full py-2.5 rounded-xl text-sm font-bold transition-all mt-1"
+          className="w-full py-2 rounded-xl text-sm font-semibold transition-all"
           style={{
-            background: canSubmit ? "var(--primary)" : "var(--surface-2)",
+            background: canSubmit ? "var(--primary)" : "transparent",
             color: canSubmit ? "#fff" : "var(--text-muted)",
+            border: canSubmit ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
             cursor: canSubmit ? "pointer" : "not-allowed",
           }}
         >
