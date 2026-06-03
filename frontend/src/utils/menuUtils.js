@@ -1,4 +1,17 @@
-// Utilitários e constantes da página de Menu
+// Utilitários e constantes do Menu
+
+export const ALL_KEY = "all";
+
+export const MENU_PAGE_SIZE = 10;
+
+// Chart.js category colors (usados em ClientesPage e ProfilePage)
+export const CAT_COLORS = {
+  "Appetizer":   { bg: "rgba(245,158,11,0.7)",  border: "#F59E0B" },
+  "Main Course": { bg: "rgba(59,130,246,0.7)",  border: "#3B82F6" },
+  "Dessert":     { bg: "rgba(236,72,153,0.7)",  border: "#EC4899" },
+  "Beverage":    { bg: "rgba(16,185,129,0.7)",  border: "#10B981" },
+};
+export const CAT_FALLBACK = { bg: "rgba(107,114,128,0.7)", border: "#6B7280" };
 
 export const MENU_CATEGORY_META = {
   Appetizer:    { label: "Entradas",          emoji: "🥗", accent: "#22c55e", bg: "#f0fdf4", bgDark: "rgba(34,197,94,0.1)" },

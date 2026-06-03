@@ -10,6 +10,9 @@ import { itemService }      from "@/services/itemService.js";
 import TrophySpin from "@/components/ui/TrophySpin";
 import CustomerCard, { getPalette, getInitials, formatDate } from "@/components/customers/CustomerCard.jsx";
 import { useAuth } from "@/context/AuthContext";
+import { CAT_COLORS, CAT_FALLBACK } from "@/utils/menuUtils";
+import { ORDER_STATUS_STYLE, ORDERS_PER_PAGE, NOTIFS_PER_PAGE } from "@/utils/orderUtils";
+import { fmtEur } from "@/utils/dashboardUtils";
 
 ChartJS.register(ArcElement, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler);
 
@@ -135,29 +138,7 @@ function NovoClienteModal({ onClose, onCreate }) {
   );
 }
 
-const ORDER_STATUS_STYLE = {
-  "Pending":        { bg: "#FFF7ED", tx: "#C2410C" },
-  "In Preparation": { bg: "#EFF6FF", tx: "#1D4ED8" },
-  "Ready":          { bg: "#F0FDF4", tx: "#166534" },
-  "Done":           { bg: "#F5F3FF", tx: "#6D28D9" },
-  "Delivered":      { bg: "#ECFEFF", tx: "#0E7490" },
-  "Cancelled":      { bg: "#FEF2F2", tx: "#B91C1C" },
-};
-
-function fmt(v) {
-  return v != null ? `${Number(v).toFixed(2)} €` : "—";
-}
-
-const ORDERS_PER_PAGE = 5;
-const NOTIFS_PER_PAGE = 5;
-
-const CAT_COLORS = {
-  "Appetizer":   { bg: "rgba(245,158,11,0.7)",  border: "#F59E0B" },
-  "Main Course": { bg: "rgba(59,130,246,0.7)",  border: "#3B82F6" },
-  "Dessert":     { bg: "rgba(236,72,153,0.7)",  border: "#EC4899" },
-  "Beverage":    { bg: "rgba(16,185,129,0.7)",  border: "#10B981" },
-};
-const CAT_FALLBACK = { bg: "rgba(107,114,128,0.7)", border: "#6B7280" };
+const fmt = (v) => fmtEur(v ?? null);
 
 // ── Customer detail panel ──────────────────────────────────────────────────────
 function CustomerDetail({ customer, onBack }) {

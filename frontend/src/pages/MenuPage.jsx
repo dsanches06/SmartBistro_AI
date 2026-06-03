@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PageSection, Pagination, ListCard } from "@/components";
 import { itemService } from "@/services";
-import { MENU_CATEGORIES, MENU_CATEGORY_META, formatMenuPrice, getItemEmoji } from "@/utils";
-
-const MENU_PAGE_SIZE = 10;
+import { MENU_CATEGORIES, MENU_CATEGORY_META, formatMenuPrice, getItemEmoji, MENU_PAGE_SIZE } from "@/utils";
 
 /* ── PriceEditor (gestão inline) ── */
 function PriceEditor({ item, onSave, onCancel, saving }) {

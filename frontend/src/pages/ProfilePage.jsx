@@ -11,27 +11,13 @@ import { orderItemService } from "@/services/orderItemService";
 import { itemService }     from "@/services/itemService";
 import { getPalette, getInitials, formatDate } from "@/components/customers/CustomerCard";
 import TrophySpin from "@/components/ui/TrophySpin";
+import { CAT_COLORS, CAT_FALLBACK } from "@/utils/menuUtils";
+import { ORDER_STATUS_STYLE as STATUS_STYLE, ORDERS_PER_PAGE, NOTIFS_PER_PAGE } from "@/utils/orderUtils";
+import { fmtEur } from "@/utils/dashboardUtils";
 
 ChartJS.register(ArcElement, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler);
 
-const STATUS_STYLE = {
-  "Pending":        { bg: "#FFF7ED", tx: "#C2410C" },
-  "In Preparation": { bg: "#EFF6FF", tx: "#1D4ED8" },
-  "Ready":          { bg: "#F0FDF4", tx: "#166534" },
-  "Done":           { bg: "#F5F3FF", tx: "#6D28D9" },
-  "Delivered":      { bg: "#ECFEFF", tx: "#0E7490" },
-  "Cancelled":      { bg: "#FEF2F2", tx: "#B91C1C" },
-};
-
-const CAT_COLORS = {
-  "Appetizer":   { bg: "rgba(245,158,11,0.7)",  border: "#F59E0B" },
-  "Main Course": { bg: "rgba(59,130,246,0.7)",  border: "#3B82F6" },
-  "Dessert":     { bg: "rgba(236,72,153,0.7)",  border: "#EC4899" },
-  "Beverage":    { bg: "rgba(16,185,129,0.7)",  border: "#10B981" },
-};
-const CAT_FALLBACK = { bg: "rgba(107,114,128,0.7)", border: "#6B7280" };
-
-function fmt(v) { return v != null ? `${Number(v).toFixed(2)} €` : "—"; }
+const fmt = (v) => fmtEur(v ?? null);
 
 function StatBox({ label, value, sub, color }) {
   return (
@@ -79,8 +65,6 @@ export default function ProfilePage() {
   const [categoryTotals, setCategoryTotals] = useState({});
   const [orderPage,      setOrderPage]      = useState(1);
   const [notifPage,      setNotifPage]      = useState(1);
-  const ORDERS_PER_PAGE = 5;
-  const NOTIFS_PER_PAGE = 5;
   const [loading,        setLoading]        = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteLoading,   setDeleteLoading]   = useState(false);
