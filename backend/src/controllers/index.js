@@ -1,3 +1,4 @@
+export * as authController from "./authController.js";
 export * as customerController from "./customerController.js";
 export * as roleController from "./roleController.js";
 export * as tableController from "./tableController.js";

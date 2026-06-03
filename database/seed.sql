@@ -17,23 +17,30 @@ INSERT INTO roles (id, name, flow_order) VALUES
 -- =========================================================================
 -- 2. CLIENTES
 -- =========================================================================
+-- Utilizadores com auth (role_id=1 ADMIN, role_id=2 USER)
+-- Passwords: admin→admin123 | manager→manager123 | user→user123
+INSERT INTO customers (id, name, username, email, phone, password_hash, role_id) VALUES
+(  1, 'Admin SmartBistro', 'admin',   'admin@smartbistro.pt',   NULL,         '$2b$10$e6BP1FypTH1HoEdcGkFvSONNRq7NVHbMvHGsS6pCPnTRKy1325Kyq', 1),
+(  2, 'Manager SmartBistro', 'manager', 'manager@smartbistro.pt', '555-0100',   '$2b$10$8xnntok3EVYFLuse1MYds.klcWYqzZLXijT1S1r9/CdNvUkWZbgju', 1);
+
+-- Clientes sem auth (criados pelo chatbot/pipeline)
 INSERT INTO customers (id, name, phone) VALUES
-(  1, 'Hugo Neto',      '555-0108'),
-(  2, 'Ana Silva',      '555-0101'),
-(  3, 'Joana Luz',      '555-0110'),
-(  4, 'Bruno Costa',    '555-0102'),
-(  5, 'Igor Lima',      '555-0109'),
-(  6, 'Carla Dias',     '555-0103'),
-(  7, 'Filipe Gil',     '555-0106'),
-(  8, 'Elena Vaz',      '555-0105'),
-(  9, 'David Reas',     '555-0104'),
-( 10, 'Gina Rosa',      '555-0107'),
-( 11, 'Ana Pereira',    '555-0111'),
-( 12, 'Carlos Silva',   '555-0112'),
-( 13, 'Manuel Santos',  '555-0113'),
-( 14, 'Mariana Costa',  '555-0114'),
-( 15, 'Pedro Almeida',  '555-0115'),
-( 16, 'Joana Martins',  '555-0116');
+(  3, 'Hugo Neto',      '555-0108'),
+(  4, 'Ana Silva',      '555-0101'),
+(  5, 'Joana Luz',      '555-0110'),
+(  6, 'Bruno Costa',    '555-0102'),
+(  7, 'Igor Lima',      '555-0109'),
+(  8, 'Carla Dias',     '555-0103'),
+(  9, 'Filipe Gil',     '555-0106'),
+( 10, 'Elena Vaz',      '555-0105'),
+( 11, 'David Reas',     '555-0104'),
+( 12, 'Gina Rosa',      '555-0107'),
+( 13, 'Ana Pereira',    '555-0111'),
+( 14, 'Carlos Silva',   '555-0112'),
+( 15, 'Manuel Santos',  '555-0113'),
+( 16, 'Mariana Costa',  '555-0114'),
+( 17, 'Pedro Almeida',  '555-0115'),
+( 18, 'Joana Martins',  '555-0116');
 
 -- =========================================================================
 -- 3. MESAS

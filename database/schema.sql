@@ -12,11 +12,14 @@ CREATE TABLE roles (
     flow_order INT
 );
 
--- Clientes
+-- Clientes / Utilizadores
 CREATE TABLE customers (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(200) NOT NULL UNIQUE,
+    username VARCHAR(100) NULL UNIQUE,
+    email VARCHAR(150) NULL UNIQUE,
     phone VARCHAR(20) NULL UNIQUE,
+    password_hash VARCHAR(255) NULL,
     active BOOLEAN DEFAULT TRUE,
     role_id INT DEFAULT 2,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

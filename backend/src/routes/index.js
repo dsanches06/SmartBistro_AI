@@ -1,3 +1,4 @@
+export { default as authRoutes } from "./authRoutes.js";
 export { default as customerRoutes } from "./customerRoutes.js";
 export { default as roleRoutes } from "./roleRoutes.js";
 export { default as tableRoutes } from "./tableRoutes.js";
