@@ -1,5 +1,6 @@
 import { BaseChatProcessor } from "../models/index.js";
-import { classifyGeminiError, calculateInvoiceTotals, calculateProfitMargin } from "../../utils/index.js";
+import { classifyGroqError, calculateInvoiceTotals, calculateProfitMargin } from "../../utils/index.js";
+import { PipelineError } from "../../utils/pipelineError.js";
 
 // ── Declarações das ferramentas ────────────────────────────────────────────────
 import {
@@ -97,7 +98,7 @@ const ALL_DECLARATIONS = [
   cancelReservationFunctionDeclaration,
 ];
 
-// ── Handlers: recebem os args do Gemini e executam operações na BD ─────────────
+// ── Handlers: recebem os args do Groq e executam operações na BD ──────────────
 export const FUNCTION_HANDLERS = {
   find_or_create_customer: async (args) =>
     findOrCreateCustomer(args.name, args.phone ?? null),
@@ -119,9 +120,9 @@ export const FUNCTION_HANDLERS = {
       const num = String(args.table_number).replace(/^[Tt]/, '');
       return tables.find((t) => String(t.table_number).replace(/^[Tt]/, '') === num) ?? null;
     }
-    // Pesquisa por status e/ou capacidade mínima
-    let filtered = tables;
-    if (args.status)       filtered = filtered.filter(t => t.status === args.status);
+    // Filtra por status — por defeito só devolve mesas Available (segurança contra modelo sem argumento)
+    const statusFilter = args.status || 'Available';
+    let filtered = tables.filter(t => t.status === statusFilter);
     if (args.min_capacity) filtered = filtered.filter(t => t.capacity >= Number(args.min_capacity));
     // Ordena por capacidade crescente para atribuir a mesa mais adequada
     filtered.sort((a, b) => a.capacity - b.capacity);
@@ -278,16 +279,14 @@ export async function processChatStream(
     const result = await processor.chat(message, onChunk);
     if (onDone) onDone(result.message || "", result.functionResults ?? []);
   } catch (err) {
-    // Classifica o erro bruto do Gemini numa estrutura tipada e com mensagem
-    // amigável antes de propagar para o controller via onError
-    const classified = classifyGeminiError(err);
+    const classified = classifyGroqError(err);
     const pe = new PipelineError(classified.userMessage, {
-      code: `GEMINI_${classified.type}`,
+      code: `GROQ_${classified.type}`,
       stage: 'provider',
       details: { message: err?.message },
       cause: err,
     });
-    pe.geminiType = classified.type;
+    pe.groqType = classified.type;
     pe.originalError = err;
 
     if (onError) onError(pe);

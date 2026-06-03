@@ -1,131 +1,91 @@
-import { createGeminiChat, FunctionCallingConfigMode } from '../config/index.js';
 import {
-  classifyGeminiError,
-  buildThinkingConfig,
-  parseThinkingResponse,
-  isRetryableGeminiError,
-  sendWithModelFallback,
-} from '../../utils/index.js';
+  groq,
+  chatWithFallback,
+} from '../config/index.js';
+import {
+  normalizeGroqResponse,
+  normalizeGroqTools,
+} from '../../utils/groqUtil.js';
+import { classifyGroqError } from '../../utils/classifyError.js';
+import { getThinkingLevel } from '../../utils/thinkingBotUtil.js';
 import { PipelineError } from '../../utils/pipelineError.js';
 
 // ── Superclasse base para todos os agentes do SmartBistro ─────────────────────
 class BaseAgentAI {
   /**
-   * @param {string}         name        - Nome do agente (ex: 'Maitre', 'Chef', 'Manager')
-   * @param {string}         instruction - System instruction do agente
-   * @param {number}         temperature - Temperatura de geração (0.0 – 1.0)
-   * @param {Array|null}     tools       - Declarações de ferramentas (function calling)
-   * @param {Array}          history     - Histórico inicial da conversa
-   * @param {boolean|object} thinking    - Activa thinking; se object, usa como thinkingOptions
-   * @param {string|null}    apiKey      - Chave API própria do agente; null → usa GEMINI_API_KEY
+   * @param {string}     name        - Nome do agente (ex: 'Maitre', 'Chef', 'Manager')
+   * @param {string}     instruction - System instruction do agente
+   * @param {number}     temperature - Temperatura de geração (0.0 – 1.0)
+   * @param {Array|null} tools       - Declarações de ferramentas (function calling)
+   * @param {Array}      history     - Histórico inicial (ignorado — compatibilidade)
+   * @param {boolean}    thinking    - Activa reasoning_effort nos modelos OpenAI/Groq
    */
-  constructor(name, instruction, temperature = 0.25, tools = null, history = [], thinking = false, apiKey = null) {
-    this.name    = name;
-    this.thinking = thinking;
-    this.apiKey   = apiKey;
-    this._history = history; // guardado para fallback (novo chat com modelo alternativo)
+  constructor(name, instruction, temperature = 0.25, tools = null, history = [], thinking = false) {
+    this.name        = name;
+    this.thinking    = thinking;
+    this.temperature = temperature;
+    this.tools       = tools;
 
-    const config = {
-      systemInstruction: instruction,
-      temperature,
+    // O histórico começa com a system instruction; sendMessage acrescenta turns
+    this._messages = [{ role: "system", content: instruction }];
+  }
+
+  // ── Opções de raciocínio — getThinkingLevel mapeia temp → "low"|"medium"|"high"
+  _reasoningOptions() {
+    if (!this.thinking) return {};
+    return { reasoning_effort: getThinkingLevel(this.temperature) };
+  }
+
+  // ── Chamada interna com fallback ──────────────────────────────────────────────
+  async _call(userContent) {
+    const userMsg  = { role: "user", content: String(userContent) };
+    const messages = [...this._messages, userMsg];
+
+    const options = {
+      temperature: this.temperature,
+      ...this._reasoningOptions(),
+      ...(this.tools ? { tools: normalizeGroqTools(this.tools) } : {}),
     };
 
-    if (tools) {
-      config.tools = [{ functionDeclarations: tools }];
-      config.toolConfig = {
-        functionCallingConfig: { mode: FunctionCallingConfigMode.AUTO },
-      };
-    }
+    try {
+      const response   = await chatWithFallback(messages, options);
+      const normalized = normalizeGroqResponse(response);
 
-    if (thinking) {
-      const thinkingOptions = typeof thinking === 'object' ? thinking : {};
-      config.thinkingConfig = buildThinkingConfig(thinkingOptions, temperature);
-    }
+      // Mantém histórico para chamadas multi-turn no mesmo agente (ex: Maître retry)
+      this._messages.push(userMsg);
+      this._messages.push({ role: "assistant", content: normalized.text || "" });
 
-    this._chatConfig = config; // guardado para fallback
-    this.chat = createGeminiChat(config, history, apiKey);
+      return normalized;
+    } catch (error) {
+      const classified = classifyGroqError(error);
+      console.error(`[${this.name}] ${classified.type}:`, error.message);
+      const pe = new PipelineError(classified.userMessage, {
+        code:    `GROQ_${classified.type}`,
+        stage:   'provider',
+        details: { message: error?.message },
+        cause:   error,
+      });
+      pe.groqType     = classified.type;
+      pe.originalError = error;
+      throw pe;
+    }
   }
 
   // ── Resposta simples (texto) ──────────────────────────────────────────────────
   async sendMessage(message) {
-    try {
-      const response = await this.chat.sendMessage({ message });
-      return response.text;
-    } catch (error) {
-      // Quota / modelo indisponível → tenta os modelos da fila automaticamente
-      if (isRetryableGeminiError(error)) {
-        console.warn(`[${this.name}] Quota/indisponibilidade no modelo principal. A tentar fallback...`);
-        const { text } = await sendWithModelFallback(
-          this._chatConfig,
-          this._history,
-          message,
-          undefined,    // usa GEMINI_MODEL_QUEUE por defeito
-          this.apiKey,
-        );
-        return text;
-      }
-      const classified = classifyGeminiError(error);
-      console.error(`[${this.name}] ${classified.type}:`, error.message);
-      const pe = new PipelineError(classified.userMessage, {
-        code: `GEMINI_${classified.type}`,
-        stage: 'provider',
-        details: { message: error?.message },
-        cause: error,
-      });
-      pe.geminiType = classified.type;
-      pe.originalError = error;
-      throw pe;
-    }
+    const normalized = await this._call(message);
+    return normalized.text;
   }
 
-  // ── Resposta com thoughts (útil quando thinking está activo) ──────────────────
+  // ── Resposta com reasoning (captura reasoning_content / <think>) ──────────────
   async sendMessageWithThoughts(message) {
-    try {
-      const response = await this.chat.sendMessage({ message });
-      return parseThinkingResponse(response);
-    } catch (error) {
-      if (isRetryableGeminiError(error)) {
-        console.warn(`[${this.name}] Quota/indisponibilidade. A tentar fallback (sem thoughts)...`);
-        const { text } = await sendWithModelFallback(
-          this._chatConfig,
-          this._history,
-          message,
-          undefined,
-          this.apiKey,
-        );
-        return { text, thoughts: null }; // fallback não garante thoughts
-      }
-      const classified = classifyGeminiError(error);
-      console.error(`[${this.name}] ${classified.type}:`, error.message);
-      const pe = new PipelineError(classified.userMessage, {
-        code: `GEMINI_${classified.type}`,
-        stage: 'provider',
-        details: { message: error?.message },
-        cause: error,
-      });
-      pe.geminiType = classified.type;
-      pe.originalError = error;
-      throw pe;
-    }
+    const normalized = await this._call(message);
+    return { text: normalized.text, thoughts: normalized.thinking ?? null };
   }
 
-  // ── Streaming ─────────────────────────────────────────────────────────────────
+  // ── Streaming (compatibilidade — devolve resposta completa) ──────────────────
   async sendMessageStream(message) {
-    try {
-      return await this.chat.sendMessageStream({ message });
-    } catch (error) {
-      const classified = classifyGeminiError(error);
-      console.error(`[${this.name}] ${classified.type}:`, error.message);
-      const pe = new PipelineError(classified.userMessage, {
-        code: `GEMINI_${classified.type}`,
-        stage: 'provider',
-        details: { message: error?.message },
-        cause: error,
-      });
-      pe.geminiType = classified.type;
-      pe.originalError = error;
-      throw pe;
-    }
+    return this._call(message);
   }
 }
 

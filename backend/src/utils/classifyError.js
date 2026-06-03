@@ -1,57 +1,53 @@
-// ── Error classifier — compatível com @google/genai SDK v2 ────────────────────
-export function classifyGeminiError(error) {
-  // Normaliza campos do SDK v2 (@google/genai) e do SDK legacy (@google/generative-ai)
-  const msg  = (
-    error?.message ||
-    error?.errorDetails?.[0]?.message ||
-    error?.error?.message ||
-    ""
-  ).toLowerCase();
+const _TIMEOUT_MSG = "O assistente demorou demasiado tempo a responder. Tente novamente. ⏱️";
 
-  // status pode ser HTTP int (429), string gRPC ("RESOURCE_EXHAUSTED") ou code int
-  const httpStatus  = error?.status || error?.httpStatus || error?.code || 0;
-  const grpcStatus  = (error?.statusText || error?.error?.status || "").toLowerCase();
+// ── Error classifier — compatível com groq-sdk ───────────────────────────────
+export function classifyGroqError(error) {
+  // Erros já classificados internamente (ex: TIMEOUT de makeTimeout)
+  if (error?.groqType) {
+    const map = {
+      TIMEOUT:         { type: "TIMEOUT",         userMessage: _TIMEOUT_MSG },
+      RATE_LIMIT:      { type: "RATE_LIMIT",      userMessage: "Limite de pedidos atingido. Aguarde alguns segundos e tente novamente. ⏳" },
+      SERVICE_DOWN:    { type: "SERVICE_DOWN",    userMessage: "O serviço de IA está temporariamente indisponível. Tente novamente em alguns instantes. 🔧" },
+      AUTH_ERROR:      { type: "AUTH_ERROR",      userMessage: "Erro de autenticação com o serviço de IA. Contacte o administrador. 🔑" },
+      NETWORK_ERROR:   { type: "NETWORK_ERROR",   userMessage: "Não foi possível ligar ao serviço de IA. Verifique a sua ligação à internet. 🌐" },
+      INVALID_REQUEST: { type: "INVALID_REQUEST", userMessage: "O pedido não pôde ser processado. Tente reformular a mensagem. ✏️" },
+    };
+    return map[error.groqType] ?? { type: error.groqType, userMessage: error.message };
+  }
 
-  // Log completo para debugging (visível nos logs do servidor)
-  console.error("[Gemini Error]", {
-    httpStatus,
-    grpcStatus,
+  const msg    = (error?.message || "").toLowerCase();
+  const status = error?.status || error?.httpStatus || error?.code || 0;
+
+  console.error("[Groq Error]", {
+    status,
     message: error?.message,
     constructor: error?.constructor?.name,
   });
 
   // ── 503 / Service Unavailable / Overloaded ────────────────────────────────
   if (
-    httpStatus === 503 ||
-    grpcStatus.includes("unavailable") ||
+    status === 503 ||
     msg.includes("503") ||
     msg.includes("service unavailable") ||
-    msg.includes("overloaded") ||
-    msg.includes("the model is overloaded")
+    msg.includes("overloaded")
   ) return { type: "SERVICE_DOWN", userMessage: "O serviço de IA está temporariamente indisponível. Tente novamente em alguns instantes. 🔧" };
 
   // ── 429 / Rate Limit / Quota Exceeded ─────────────────────────────────────
   if (
-    httpStatus === 429 ||
-    grpcStatus.includes("resource_exhausted") ||
+    status === 429 ||
     msg.includes("429") ||
     msg.includes("quota") ||
     msg.includes("rate limit") ||
-    msg.includes("resource_exhausted") ||
     msg.includes("too many requests")
   ) return { type: "RATE_LIMIT", userMessage: "Limite de pedidos atingido. Aguarde alguns segundos e tente novamente. ⏳" };
 
   // ── 401 / 403 / Auth / Invalid API Key ────────────────────────────────────
   if (
-    httpStatus === 401 ||
-    httpStatus === 403 ||
-    grpcStatus.includes("unauthenticated") ||
-    grpcStatus.includes("permission_denied") ||
+    status === 401 ||
+    status === 403 ||
     msg.includes("api key") ||
-    msg.includes("api_key") ||
     msg.includes("permission denied") ||
     msg.includes("unauthenticated") ||
-    msg.includes("not valid") ||
     msg.includes("invalid key")
   ) return { type: "AUTH_ERROR", userMessage: "Erro de autenticação com o serviço de IA. Contacte o administrador. 🔑" };
 
@@ -61,14 +57,12 @@ export function classifyGeminiError(error) {
     msg.includes("econnrefused") ||
     msg.includes("fetch failed") ||
     msg.includes("network error") ||
-    msg.includes("enotfound") ||
     msg.includes("socket hang up")
   ) return { type: "NETWORK_ERROR", userMessage: "Não foi possível ligar ao serviço de IA. Verifique a sua ligação à internet. 🌐" };
 
   // ── 400 / Invalid Request ─────────────────────────────────────────────────
   if (
-    httpStatus === 400 ||
-    grpcStatus.includes("invalid_argument") ||
+    status === 400 ||
     msg.includes("400") ||
     msg.includes("invalid argument") ||
     msg.includes("bad request")
@@ -76,3 +70,6 @@ export function classifyGeminiError(error) {
 
   return { type: "UNKNOWN", userMessage: "O assistente de IA não está disponível de momento. Tente novamente. 🤖" };
 }
+
+// Alias para compatibilidade com código existente que importa classifyGeminiError
+export const classifyGeminiError = classifyGroqError;

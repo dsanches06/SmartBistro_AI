@@ -1,33 +1,19 @@
-import { ThinkingLevel } from "@google/genai";
 import { PipelineError } from './pipelineError.js';
 
-// Retorna o nível de pensamento com base na temperatura
-// temp 0.0–0.3 → LOW  (tarefas precisas/determinísticas)
-// temp 0.3–0.7 → MEDIUM (tarefas equilibradas)
-// temp 0.7–1.0 → HIGH  (tarefas criativas/complexas)
+// ── Mapeamento temperatura → reasoning_effort ─────────────────────────────────
+// temp 0.0–0.3 → low   (tarefas precisas/determinísticas)
+// temp 0.3–0.7 → medium (tarefas equilibradas)
+// temp 0.7–1.0 → high  (tarefas criativas/complexas)
+// O valor devolvido é usado directamente como reasoning_effort na API Groq.
 export function getThinkingLevel(temp) {
-  const normalizedTemp = Number(temp);
-  if (isNaN(normalizedTemp)) return ThinkingLevel.LOW;
-  return normalizedTemp <= 0.3
-    ? ThinkingLevel.LOW
-    : normalizedTemp <= 0.7
-      ? ThinkingLevel.MEDIUM
-      : ThinkingLevel.HIGH;
+  const t = Number(temp);
+  if (isNaN(t) || t <= 0.3) return "low";
+  if (t <= 0.7) return "medium";
+  return "high";
 }
 
-// Mapeamento ThinkingLevel → thinkingBudget (tokens)
-// A API Gemini aceita thinkingBudget (número), não thinkingLevel (enum)
-//   -1 = dinâmico (modelo decide)
-//    0 = sem thinking
-//   N+ = orçamento fixo em tokens
-const THINKING_BUDGET_MAP = {
-  [ThinkingLevel.LOW]:    1024,
-  [ThinkingLevel.MEDIUM]: 8192,
-  [ThinkingLevel.HIGH]:   24576,
-};
-
-// Monta a configuração de thinking — usa sempre thinkingBudget (campo válido na API)
-// Aceita thinkingLevel (enum) ou thinkingBudget (número) nas options; nunca ambos
+// Monta opções de raciocínio para a chamada Groq.
+// chatWithFallback filtra reasoning_effort para modelos que não o suportam.
 export function buildThinkingConfig(options = {}, temp = 0.3) {
   const hasLevel  = options.thinkingLevel  !== undefined;
   const hasBudget = options.thinkingBudget !== undefined;
@@ -39,27 +25,22 @@ export function buildThinkingConfig(options = {}, temp = 0.3) {
     );
   }
 
-  // Budget explícito tem prioridade
+  // Converte budget (número legado) → nível equivalente
+  let level;
   if (hasBudget) {
-    return { includeThoughts: true, thinkingBudget: options.thinkingBudget };
+    const budget = Number(options.thinkingBudget);
+    level = budget <= 1024 ? "low" : budget <= 8192 ? "medium" : "high";
+  } else {
+    level = hasLevel ? options.thinkingLevel : getThinkingLevel(temp);
   }
 
-  // Converte ThinkingLevel → thinkingBudget
-  const level  = hasLevel ? options.thinkingLevel : getThinkingLevel(temp);
-  const budget = THINKING_BUDGET_MAP[level] ?? 1024;
-
-  return { includeThoughts: true, thinkingBudget: budget };
+  return { reasoning_effort: level };
 }
 
-// Extrai thoughts e text final das partes da resposta
+// Extrai pensamento e texto final de uma resposta Groq normalizada.
 export function parseThinkingResponse(response) {
-  const parts = response.candidates?.[0]?.content?.parts ?? [];
-  const thoughts = parts
-    .filter((p) => p.text && p.thought)
-    .map((p) => p.text)
-    .join("\n");
-  const text =
-    parts.find((p) => p.text && !p.thought)?.text ??
-    parts.map((p) => p.text).join("\n");
-  return { text, thoughts };
+  return {
+    text:    response?.text    ?? "",
+    thoughts: response?.thinking ?? null,
+  };
 }

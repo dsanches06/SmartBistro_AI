@@ -1,6 +1,7 @@
 -- =========================================================================
 -- SEED DATA — SmartBistro AI
 -- Executar DEPOIS de schema.sql (DDL puro)
+-- Timestamps relativos a NOW() para demo sempre realista
 -- =========================================================================
 
 USE smartbistro;
@@ -35,33 +36,33 @@ INSERT INTO customers (id, name, phone) VALUES
 ( 16, 'Joana Martins',  '555-0116');
 
 -- =========================================================================
--- 3. MESAS  (id = posição na lista, 1-based)
--- Occupied → tem pedido activo  |  Reserved → reserva futura  |  Available → livre
+-- 3. MESAS
+-- Occupied → pedido activo  |  Reserved → reserva futura  |  Available → livre
 -- =========================================================================
 INSERT INTO tables (table_number, capacity, status) VALUES
 ('T01',  2, 'Available'),   -- id=1
 ('T02',  4, 'Available'),   -- id=2
-('T03',  4, 'Occupied'),    -- id=3  pedidos #125, #127
-('T04',  4, 'Reserved'),    -- id=4  reserva esta noite (res #2 Confirmed)
-('T05',  6, 'Occupied'),    -- id=5  pedido  #129
-('T06',  6, 'Occupied'),    -- id=6  pedido  #134
-('T07',  8, 'Occupied'),    -- id=7  pedido  #126
+('T03',  4, 'Occupied'),    -- id=3   pedido #5
+('T04',  4, 'Reserved'),    -- id=4   reserva confirmada esta noite
+('T05',  6, 'Occupied'),    -- id=5   pedido #9
+('T06',  6, 'Occupied'),    -- id=6   pedido #14
+('T07',  8, 'Occupied'),    -- id=7   pedido #6
 ('T08',  8, 'Available'),   -- id=8
 ('T09',  2, 'Available'),   -- id=9
 ('T10', 10, 'Available'),   -- id=10
-('T11',  2, 'Reserved'),    -- id=11 reserva esta noite
-('T12',  4, 'Occupied'),    -- id=12 pedidos #123, #128
-('T13',  4, 'Occupied'),    -- id=13 pedido  #135
-('T14',  6, 'Reserved'),    -- id=14 reserva esta noite
+('T11',  2, 'Reserved'),    -- id=11  reserva confirmada esta noite
+('T12',  4, 'Occupied'),    -- id=12  pedidos #3 e #8
+('T13',  4, 'Occupied'),    -- id=13  pedido #15
+('T14',  6, 'Reserved'),    -- id=14  reserva confirmada esta noite
 ('T15',  8, 'Available'),   -- id=15
-('T16',  2, 'Available'),   -- id=16 reserva Pending (não bloqueia mesa)
-('T17',  4, 'Occupied'),    -- id=17 pedido  #130
+('T16',  2, 'Available'),   -- id=16
+('T17',  4, 'Occupied'),    -- id=17  pedido #10
 ('T18',  4, 'Available'),   -- id=18
-('T19',  6, 'Reserved'),    -- id=19 reserva futura
+('T19',  6, 'Reserved'),    -- id=19  reserva futura
 ('T20', 10, 'Available'),   -- id=20
-('T21',  4, 'Occupied'),    -- id=21 pedido  #132
-('T22',  4, 'Occupied'),    -- id=22 pedido  #131
-('T23',  6, 'Occupied'),    -- id=23 pedido  #133
+('T21',  4, 'Occupied'),    -- id=21  pedido #12
+('T22',  4, 'Occupied'),    -- id=22  pedido #11
+('T23',  6, 'Occupied'),    -- id=23  pedido #13
 ('T24',  8, 'Available');   -- id=24
 
 -- =========================================================================
@@ -175,110 +176,139 @@ INSERT INTO recipe_items (item_id, ingredient_id, required_quantity) VALUES
 (25, 35, 0.33), (26, 36, 0.33), (27, 33, 0.01), (28, 17, 1.00);
 
 -- =========================================================================
--- 6. RESERVAS
--- Reservas futuras só em mesas Available ou Reserved (nunca Occupied)
+-- 6. RESERVAS (datas futuras a partir de hoje)
 -- =========================================================================
 INSERT INTO reservations (customer_id, table_id, reservation_date, party_size, status, phone, notes) VALUES
-(11, 11, '2026-05-30 19:00:00', 2, 'Confirmed', '555-0111', NULL),           -- T11 Reserved ✓
-(12,  4, '2026-05-30 20:00:00', 4, 'Confirmed', '555-0112', NULL),           -- T04 Available ✓ (was T05 Occupied)
-(14, 14, '2026-05-30 20:30:00', 5, 'Confirmed', '555-0114', 'Sem glúten'),   -- T14 Reserved ✓
-(15,  2, '2026-05-31 12:30:00', 2, 'Pending',   '555-0115', NULL),           -- T02 Available ✓
-(16,  9, '2026-05-31 13:00:00', 1, 'Pending',   '555-0116', 'Mesa na esplanada'), -- T09 Available ✓
-( 1, 10, '2026-05-31 19:00:00', 8, 'Confirmed', '555-0108', 'Reunião de empresa'), -- T10 Available ✓
-( 2, 18, '2026-05-31 19:30:00', 3, 'Confirmed', '555-0101', NULL),           -- T18 Available ✓ (was T12 Occupied)
-( 3, 16, '2026-06-01 12:00:00', 2, 'Pending',   '555-0110', NULL),           -- T16 Reserved ✓
-( 4, 15, '2026-06-01 20:00:00', 3, 'Pending',   '555-0102', NULL),           -- T15 Available ✓ (was T07 Occupied)
-( 5, 20, '2026-06-02 13:00:00', 9, 'Confirmed', '555-0109', 'Aniversário'), -- T20 Available ✓
-( 6, 19, '2026-06-02 19:00:00', 5, 'Confirmed', '555-0103', NULL),           -- T19 Reserved ✓
-( 7,  3, '2026-05-28 19:00:00', 4, 'Completed', '555-0106', NULL),           -- T03 histórico Completed ✓
-( 8, 15, '2026-05-29 20:00:00', 6, 'Completed', '555-0105', NULL),           -- T15 histórico Completed ✓
-( 9,  4, '2026-05-29 19:00:00', 2, 'Completed', '555-0104', NULL),           -- T04 histórico Completed ✓
-(10,  6, '2026-05-27 20:00:00', 5, 'Cancelled', '555-0107', 'Cancelado pelo cliente'); -- T06 histórico Cancelled ✓
+(11, 11, DATE_ADD(CURDATE(), INTERVAL  1 DAY) + INTERVAL 19 HOUR, 2, 'Confirmed', '555-0111', NULL),
+(12,  4, DATE_ADD(CURDATE(), INTERVAL  1 DAY) + INTERVAL 20 HOUR, 4, 'Confirmed', '555-0112', NULL),
+(14, 14, DATE_ADD(CURDATE(), INTERVAL  1 DAY) + INTERVAL 20 HOUR + INTERVAL 30 MINUTE, 5, 'Confirmed', '555-0114', 'Sem glúten'),
+(15,  2, DATE_ADD(CURDATE(), INTERVAL  2 DAY) + INTERVAL 12 HOUR + INTERVAL 30 MINUTE, 2, 'Pending',   '555-0115', NULL),
+(16,  9, DATE_ADD(CURDATE(), INTERVAL  2 DAY) + INTERVAL 13 HOUR, 1, 'Pending',   '555-0116', 'Mesa na esplanada'),
+( 1, 10, DATE_ADD(CURDATE(), INTERVAL  2 DAY) + INTERVAL 19 HOUR, 8, 'Confirmed', '555-0108', 'Reunião de empresa'),
+( 2, 18, DATE_ADD(CURDATE(), INTERVAL  2 DAY) + INTERVAL 19 HOUR + INTERVAL 30 MINUTE, 3, 'Confirmed', '555-0101', NULL),
+( 3, 16, DATE_ADD(CURDATE(), INTERVAL  3 DAY) + INTERVAL 12 HOUR, 2, 'Pending',   '555-0110', NULL),
+( 4, 15, DATE_ADD(CURDATE(), INTERVAL  3 DAY) + INTERVAL 20 HOUR, 3, 'Pending',   '555-0102', NULL),
+( 5, 20, DATE_ADD(CURDATE(), INTERVAL  5 DAY) + INTERVAL 13 HOUR, 9, 'Confirmed', '555-0109', 'Aniversário'),
+( 6, 19, DATE_ADD(CURDATE(), INTERVAL  5 DAY) + INTERVAL 19 HOUR, 5, 'Confirmed', '555-0103', NULL),
+( 7,  3, DATE_ADD(CURDATE(), INTERVAL -6 DAY) + INTERVAL 19 HOUR, 4, 'Completed', '555-0106', NULL),
+( 8, 15, DATE_ADD(CURDATE(), INTERVAL -5 DAY) + INTERVAL 20 HOUR, 6, 'Completed', '555-0105', NULL),
+( 9,  4, DATE_ADD(CURDATE(), INTERVAL -4 DAY) + INTERVAL 19 HOUR, 2, 'Completed', '555-0104', NULL),
+(10,  6, DATE_ADD(CURDATE(), INTERVAL -8 DAY) + INTERVAL 20 HOUR, 5, 'Cancelled', '555-0107', 'Cancelado pelo cliente');
 
 -- =========================================================================
 -- 7. PEDIDOS (KDS)
--- Mapeamento: #1-#13 = pedidos existentes  |  #14-#15 = novos (T06, T13)
+--
+-- Estados para demo com Chef AI:
+--   Delivered      → histórico (pago, concluído)           — 90-120 min atrás
+--   Ready          → preparado, aguarda entrega do Maître  — 25-35 min atrás
+--   In Preparation → Chef a preparar (updated_at = NOW())  — 10-20 min atrás (criado); timer KDS usa updated_at
+--   Pending        → Chef AI processa ao abrir KDS         — 2-5 min atrás
+--
+-- NOTA: updated_at é auto-set a NOW() no INSERT (ON UPDATE CURRENT_TIMESTAMP),
+--       por isso os pedidos "In Preparation" mostram o countdown correcto no KDS.
 -- =========================================================================
 INSERT INTO orders (customer_id, table_id, service_type, allergy_restrictions, kitchen_sequence_json, order_status, created_at) VALUES
-(16,  9, 'Table',    NULL, '["Grilled Salmon","Legumes Salteados","Sparkling Water"]',                        'Delivered',      DATE_ADD(CURRENT_DATE, INTERVAL '07:15' HOUR_MINUTE)), -- #1  T09
-(15,  2, 'Table',    NULL, '["Frango Assado","Craft Beer"]',                                                 'Delivered',      DATE_ADD(CURRENT_DATE, INTERVAL '08:22' HOUR_MINUTE)), -- #2  T02
-(14, 12, 'Table',    NULL, '["Bruschetta","Sumol","Esparguete Bolonhesa","Caesar Salad","Chocolate Mousse"]', 'Ready',          DATE_ADD(CURRENT_DATE, INTERVAL '09:05' HOUR_MINUTE)), -- #3  T12
-(13, NULL,'Takeaway',NULL, '["Hamburguer Gourmet","Batatas Fritas","Sparkling Water"]',                       'In Preparation', DATE_ADD(CURRENT_DATE, INTERVAL '10:40' HOUR_MINUTE)), -- #4  Takeaway
-(12,  3, 'Table',    NULL, '["Bruschetta","Sumol"]',                                                         'Ready',          DATE_ADD(CURRENT_DATE, INTERVAL '10:55' HOUR_MINUTE)), -- #5  T03
-(11,  7, 'Table',    NULL, '["Bife à Casa","Arroz de Marisco","Batatas Fritas","Coca-Cola"]',                 'Pending',        DATE_ADD(CURRENT_DATE, INTERVAL '11:30' HOUR_MINUTE)), -- #6  T07
-(12,  3, 'Table',    NULL, '["Pizza Margherita","Sumol"]',                                                   'Pending',        DATE_ADD(CURRENT_DATE, INTERVAL '12:10' HOUR_MINUTE)), -- #7  T03
-(14, 12, 'Table',    NULL, '["Bacalhau à Brás","Salada Mista","Red Wine Glass","Pão","Café"]',                'In Preparation', DATE_ADD(CURRENT_DATE, INTERVAL '12:47' HOUR_MINUTE)), -- #8  T12
-( 2,  5, 'Table',    NULL, '["Caesar Salad","Grilled Salmon","Orange Juice"]',                               'Pending',        DATE_ADD(CURRENT_DATE, INTERVAL '13:20' HOUR_MINUTE)), -- #9  T05
-( 1, 17, 'Table',    NULL, '["Esparguete Bolonhesa","Tiramisu"]',                                            'In Preparation', DATE_ADD(CURRENT_DATE, INTERVAL '14:05' HOUR_MINUTE)), -- #10 T17
-( 3, 22, 'Table',    NULL, '["Chicken Wings","Coca-Cola"]',                                                  'Ready',          DATE_ADD(CURRENT_DATE, INTERVAL '15:38' HOUR_MINUTE)), -- #11 T22
-( 4, 21, 'Table',    NULL, '["Creme Soup","Vegetarian Pasta","Cheesecake"]',                                 'Pending',        DATE_ADD(CURRENT_DATE, INTERVAL '16:50' HOUR_MINUTE)), -- #12 T21
-( 5, 23, 'Table',    NULL, '["Chicken Parmigiana","Craft Beer","Tiramisu"]',                                 'In Preparation', DATE_ADD(CURRENT_DATE, INTERVAL '17:25' HOUR_MINUTE)), -- #13 T23
-( 7,  6, 'Table',    NULL, '["Bife à Casa","Red Wine Glass"]',                                               'Pending',        DATE_ADD(CURRENT_DATE, INTERVAL '18:10' HOUR_MINUTE)), -- #14 T06
-( 8, 13, 'Table',    NULL, '["Caesar Salad","Grilled Salmon","Craft Beer"]',                                 'In Preparation', DATE_ADD(CURRENT_DATE, INTERVAL '18:53' HOUR_MINUTE)); -- #15 T13
+-- ── DELIVERED (histórico, pago) ──────────────────────────────────────────
+(16,  9, 'Table',    NULL, '["Grilled Salmon","Legumes Salteados","Sparkling Water"]',                        'Delivered',      NOW() - INTERVAL 110 MINUTE), -- #1  T09
+(15,  2, 'Table',    NULL, '["Frango Assado","Craft Beer"]',                                                 'Delivered',      NOW() - INTERVAL 95 MINUTE),  -- #2  T02
 
+-- ── READY (preparado, aguarda Maître) ────────────────────────────────────
+(14, 12, 'Table',    NULL, '["Bruschetta","Sumol","Esparguete Bolonhesa","Caesar Salad","Chocolate Mousse"]', 'Ready',          NOW() - INTERVAL 35 MINUTE),  -- #3  T12
+(13, NULL,'Takeaway',NULL, '["Hamburguer Gourmet","Batatas Fritas","Sparkling Water"]',                       'Ready',          NOW() - INTERVAL 28 MINUTE),  -- #4  Takeaway
+(12,  3, 'Table',    NULL, '["Bruschetta","Sumol"]',                                                         'Ready',          NOW() - INTERVAL 25 MINUTE),  -- #5  T03
 
+-- ── PENDING (Chef AI processa ao abrir o KDS) ────────────────────────────
+(11,  7, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL 5 MINUTE),   -- #6  T07
+(12,  3, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL 4 MINUTE),   -- #7  T03
+(14, 12, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL 3 MINUTE),   -- #8  T12
+( 2,  5, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL 3 MINUTE),   -- #9  T05
+
+-- ── IN PREPARATION (Chef já processou — countdown no KDS usa updated_at = NOW()) ──
+( 1, 17, 'Table',    NULL, '["Esparguete Bolonhesa","Tiramisu"]',                                            'In Preparation', NOW() - INTERVAL 18 MINUTE),  -- #10 T17
+( 3, 22, 'Table',    NULL, '["Chicken Wings","Coca-Cola"]',                                                  'In Preparation', NOW() - INTERVAL 14 MINUTE),  -- #11 T22
+( 4, 21, 'Table',    NULL, '["Creme Soup","Vegetarian Pasta","Cheesecake"]',                                 'In Preparation', NOW() - INTERVAL 12 MINUTE),  -- #12 T21
+( 5, 23, 'Table',    NULL, '["Chicken Parmigiana","Craft Beer","Tiramisu"]',                                 'In Preparation', NOW() - INTERVAL 10 MINUTE),  -- #13 T23
+
+-- ── PENDING (Chef AI processa ao abrir o KDS) ────────────────────────────
+( 7,  6, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL 2 MINUTE),   -- #14 T06
+( 8, 13, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL 1 MINUTE);   -- #15 T13
 
 -- =========================================================================
--- 8. ORDER ITEMS  (order_id começa em 1)
+-- 8. ORDER ITEMS
 -- =========================================================================
 INSERT INTO order_items (order_id, item_id, quantity) VALUES
-( 1,  7, 1), ( 1, 24, 1), ( 1, 16, 1),                              -- #1:  Grilled Salmon, Legumes Salteados, Sparkling Water
-( 2, 23, 1), ( 2, 14, 1),                                            -- #2:  Frango Assado, Craft Beer
-( 3,  3, 1), ( 3, 26, 1), ( 3,  1, 1), ( 3,  4, 1), ( 3, 10, 1),   -- #3:  Bruschetta, Sumol, Esp.Bolonhesa, Caesar Salad, Choc.Mousse
-( 4,  2, 1), ( 4, 19, 1), ( 4, 16, 1),                              -- #4:  Hamburguer, Batatas Fritas, Sparkling Water
-( 5,  3, 1), ( 5, 26, 1),                                            -- #5:  Bruschetta, Sumol
-( 6, 17, 1), ( 6, 18, 1), ( 6, 19, 1), ( 6, 25, 1),                 -- #6:  Bife à Casa, Arroz de Marisco, Batatas Fritas, Coca-Cola
-( 7, 20, 1), ( 7, 26, 1),                                            -- #7:  Pizza Margherita, Sumol
-( 8, 21, 1), ( 8, 22, 1), ( 8, 15, 1), ( 8, 28, 1), ( 8, 27, 1),   -- #8:  Bacalhau à Brás, Salada Mista, Red Wine, Pão, Café
-( 9,  4, 1), ( 9,  7, 1), ( 9, 13, 1),                              -- #9:  Caesar Salad, Grilled Salmon, Orange Juice
-(10,  1, 1), (10, 11, 1),                                            -- #10: Esparguete Bolonhesa, Tiramisu
-(11,  5, 1), (11, 25, 1),                                            -- #11: Chicken Wings, Coca-Cola
-(12,  6, 1), (12,  9, 1), (12, 12, 1),                              -- #12: Creme Soup, Vegetarian Pasta, Cheesecake
-(13,  8, 1), (13, 14, 1), (13, 11, 1),                              -- #13: Chicken Parmigiana, Craft Beer, Tiramisu
-(14, 17, 1), (14, 15, 1),                                            -- #14: Bife à Casa, Red Wine Glass  (T06)
-(15,  4, 1), (15,  7, 1), (15, 14, 1);                              -- #15: Caesar Salad, Grilled Salmon, Craft Beer  (T13)
+-- #1  Grilled Salmon, Legumes Salteados, Sparkling Water
+( 1,  7, 1), ( 1, 24, 1), ( 1, 16, 1),
+-- #2  Frango Assado, Craft Beer
+( 2, 23, 1), ( 2, 14, 1),
+-- #3  Bruschetta, Sumol, Esparguete Bolonhesa, Caesar Salad, Chocolate Mousse
+( 3,  3, 1), ( 3, 26, 1), ( 3,  1, 1), ( 3,  4, 1), ( 3, 10, 1),
+-- #4  Hamburguer Gourmet, Batatas Fritas, Sparkling Water
+( 4,  2, 1), ( 4, 19, 1), ( 4, 16, 1),
+-- #5  Bruschetta, Sumol
+( 5,  3, 1), ( 5, 26, 1),
+-- #6  Bife à Casa, Arroz de Marisco, Batatas Fritas, Coca-Cola
+( 6, 17, 1), ( 6, 18, 1), ( 6, 19, 1), ( 6, 25, 1),
+-- #7  Pizza Margherita, Sumol
+( 7, 20, 1), ( 7, 26, 1),
+-- #8  Bacalhau à Brás, Salada Mista, Red Wine Glass, Pão, Café
+( 8, 21, 1), ( 8, 22, 1), ( 8, 15, 1), ( 8, 28, 1), ( 8, 27, 1),
+-- #9  Caesar Salad, Grilled Salmon, Orange Juice
+( 9,  4, 1), ( 9,  7, 1), ( 9, 13, 1),
+-- #10 Esparguete Bolonhesa, Tiramisu
+(10,  1, 1), (10, 11, 1),
+-- #11 Chicken Wings, Coca-Cola
+(11,  5, 1), (11, 25, 1),
+-- #12 Creme Soup, Vegetarian Pasta, Cheesecake
+(12,  6, 1), (12,  9, 1), (12, 12, 1),
+-- #13 Chicken Parmigiana, Craft Beer, Tiramisu
+(13,  8, 1), (13, 14, 1), (13, 11, 1),
+-- #14 Bife à Casa, Red Wine Glass
+(14, 17, 1), (14, 15, 1),
+-- #15 Caesar Salad, Grilled Salmon, Craft Beer
+(15,  4, 1), (15,  7, 1), (15, 14, 1);
 
 -- =========================================================================
--- 9. FATURAS (orders Delivered + Ready)
+-- 9. FATURAS (apenas Delivered + Ready com fatura)
 -- IVA 13% (taxa intermédia restauração Portugal)
 -- =========================================================================
--- #1 · Grilled Salmon+Legumes+Água · subtotal=28.00 · tax=3.64 · total=31.64
+-- #1  Grilled Salmon(18.50)+Legumes Salteados(7.50)+Sparkling Water(2.00) = 28.00
 INSERT INTO invoices (order_id, subtotal_amount, tax_amount, total_amount, profit_margin, issued_at)
-VALUES (1, 28.00, 3.64, 31.64, 27.48, '2026-06-01 07:45:00');
+VALUES (1, 28.00, 3.64, 31.64, 27.48, NOW() - INTERVAL 90 MINUTE);
 
--- #2 · Frango Assado+Craft Beer · subtotal=19.00 · tax=2.47 · total=21.47
+-- #2  Frango Assado(14.50)+Craft Beer(4.50) = 19.00
 INSERT INTO invoices (order_id, subtotal_amount, tax_amount, total_amount, profit_margin, issued_at)
-VALUES (2, 19.00, 2.47, 21.47, 18.71, '2026-06-01 08:50:00');
+VALUES (2, 19.00, 2.47, 21.47, 18.71, NOW() - INTERVAL 75 MINUTE);
 
--- #3 · Bruschetta+Sumol+EspBol+Caesar+ChoMousse · subtotal=37.00 · tax=4.81 · total=41.81
+-- #3  Bruschetta(7.50)+Sumol(2.00)+EspBol(12.50)+Caesar(9.00)+ChoMousse(6.00) = 37.00
 INSERT INTO invoices (order_id, subtotal_amount, tax_amount, total_amount, profit_margin, issued_at)
-VALUES (3, 37.00, 4.81, 41.81, 36.40, '2026-06-01 09:30:00');
+VALUES (3, 37.00, 4.81, 41.81, 36.40, NOW() - INTERVAL 25 MINUTE);
 
--- #5 · Bruschetta+Sumol · subtotal=9.50 · tax=1.24 · total=10.74
+-- #4  Hamburguer(14.00)+Batatas(4.00)+Sparkling(2.00) = 20.00
 INSERT INTO invoices (order_id, subtotal_amount, tax_amount, total_amount, profit_margin, issued_at)
-VALUES (5, 9.50, 1.24, 10.74, 9.68, '2026-06-01 11:20:00');
+VALUES (4, 20.00, 2.60, 22.60, 19.80, NOW() - INTERVAL 18 MINUTE);
 
--- #11 · Chicken Wings+Coca-Cola · subtotal=13.50 · tax=1.76 · total=15.26
+-- #5  Bruschetta(7.50)+Sumol(2.00) = 9.50
 INSERT INTO invoices (order_id, subtotal_amount, tax_amount, total_amount, profit_margin, issued_at)
-VALUES (11, 13.50, 1.76, 15.26, 13.03, '2026-06-01 16:05:00');
+VALUES (5, 9.50, 1.24, 10.74, 9.68, NOW() - INTERVAL 15 MINUTE);
 
 -- =========================================================================
 -- 10. PAGAMENTOS
--- Delivered → Completed  |  Ready → Pending
+-- Delivered → Completed  |  Ready → Pending (cliente ainda não pagou)
 -- =========================================================================
 INSERT INTO payments (invoice_id, customer_id, amount, payment_method, payment_status, processed_at) VALUES
-(1, 16, 31.64, 'MB Way',      'Completed', '2026-06-01 07:50:00'),
-(2, 15, 21.47, 'Cash',        'Completed', '2026-06-01 08:55:00'),
-(3, 14, 41.81, 'Multibanco',  'Pending',   NULL),
-(4, 12, 10.74, 'MB Way',      'Pending',   NULL),
-(5,  3, 15.26, 'Credit Card', 'Pending',   NULL);
+(1, 16, 31.64, 'MB Way',      'Completed', NOW() - INTERVAL 85 MINUTE),  -- #1 Delivered ✓
+(2, 15, 21.47, 'Cash',        'Completed', NOW() - INTERVAL 70 MINUTE),  -- #2 Delivered ✓
+(3, 14, 41.81, 'Multibanco',  'Pending',   NULL),                         -- #3 Ready, aguarda pagamento
+(4, 13, 22.60, 'MB Way',      'Pending',   NULL),                         -- #4 Ready Takeaway
+(5, 12, 10.74, 'Credit Card', 'Pending',   NULL);                         -- #5 Ready, aguarda pagamento
 
 -- =========================================================================
 -- 11. NOTIFICAÇÕES
 -- =========================================================================
 INSERT INTO notification (customer_id, title, message, is_read, sent_at) VALUES
-(16, 'Pagamento recebido',      'O seu pagamento de 31,64 € foi processado com sucesso. Obrigado!',            FALSE, '2026-06-01 07:51:00'),
-(15, 'Pagamento recebido',      'O seu pagamento de 21,47 € foi processado com sucesso. Obrigado!',            FALSE, '2026-06-01 08:56:00'),
-(14, 'A sua conta está pronta', 'A sua fatura de 41,81 € está disponível. Confirme o pagamento no dashboard.', FALSE, '2026-06-01 09:31:00'),
-(12, 'A sua conta está pronta', 'A sua fatura de 10,74 € está disponível. Confirme o pagamento no dashboard.', FALSE, '2026-06-01 11:21:00'),
-( 3, 'A sua conta está pronta', 'A sua fatura de 15,26 € está disponível. Confirme o pagamento no dashboard.', FALSE, '2026-06-01 16:06:00');
+(16, 'Pagamento recebido',      'O seu pagamento de 31,64 € foi processado com sucesso. Obrigado!',            TRUE,  NOW() - INTERVAL 85 MINUTE),
+(15, 'Pagamento recebido',      'O seu pagamento de 21,47 € foi processado com sucesso. Obrigado!',            TRUE,  NOW() - INTERVAL 70 MINUTE),
+(14, 'A sua conta está pronta', 'A sua fatura de 41,81 € está disponível. Pode pagar ao balcão ou via app.',   FALSE, NOW() - INTERVAL 25 MINUTE),
+(13, 'A sua conta está pronta', 'A sua fatura de 22,60 € está disponível. Pode levantar o seu pedido.',        FALSE, NOW() - INTERVAL 18 MINUTE),
+(12, 'A sua conta está pronta', 'A sua fatura de 10,74 € está disponível. Pode pagar ao balcão ou via app.',   FALSE, NOW() - INTERVAL 15 MINUTE);

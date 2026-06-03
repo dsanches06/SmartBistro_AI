@@ -10,4 +10,5 @@ export const orderService = {
   updateStatus:     (id, status)    => api.patch(`/orders/${id}/status`, { order_status: status }),
   remove:           (id)            => api.delete(`/orders/${id}`),
   runPipeline:      (data)          => api.post('/orders/pipeline', data),
+  chefStart:        (id)            => api.post(`/orders/${id}/chef-start`),
 };

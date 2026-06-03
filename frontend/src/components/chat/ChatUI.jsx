@@ -48,10 +48,7 @@ export function ChatUI({ isOpen, onClose }) {
     chatService
       .getConversations()
       .then((all) => {
-        if (all?.length) {
-          setConversations(all);
-          setShowHistory(true);
-        }
+        if (all?.length) setConversations(all);
       })
       .catch(() => {});
   }, [isOpen]);

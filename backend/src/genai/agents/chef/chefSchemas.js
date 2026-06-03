@@ -67,7 +67,7 @@ const ChefResponseSchema = z.object({
       }),
     )
     .optional(),
-  estimated_minutes: z.preprocess(
+  estimated_seconds: z.preprocess(
     (val) => Number(val),
     z.number().int().nonnegative(),
   ),

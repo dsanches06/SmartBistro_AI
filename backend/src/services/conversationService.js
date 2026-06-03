@@ -1,9 +1,11 @@
 import { db } from "../db.js";
 import { mapConversationDTOResponse } from "../dto/mapDTO.js";
 
-// Devolve todas as conversas mapeadas para DTO
+// Devolve as últimas 5 conversas ordenadas por data de criação descendente
 export const getAllConversations = async () => {
-  const [r] = await db.query("SELECT * FROM conversations");
+  const [r] = await db.query(
+    "SELECT * FROM conversations ORDER BY created_at DESC LIMIT 5",
+  );
   return r.map(mapConversationDTOResponse);
 };
 

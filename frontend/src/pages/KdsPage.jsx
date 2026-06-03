@@ -101,11 +101,20 @@ function ActivityScreen({ events }) {
 }
 
 /* ── Card de pedido ── */
-function OrderCard({ order, cardBorder, now, firstSeenAt }) {
+function OrderCard({ order, cardBorder, now, firstSeenAt, estimatedSecsMap }) {
   const target      = order.table_id ? `Mesa ${order.table_id}` : "Takeaway";
   const refMs       = firstSeenAt.get(order.id) ?? now;
   const elapsed     = Math.max(0, Math.floor((now - refMs) / 1000));
-  const tTarget     = KDS_STATUS_TARGET_S[order.order_status] ?? 0;
+
+  // Em Preparação: usa estimated_seconds do Chef (máx 120s para simulação)
+  const MAX_PREP_S = 120;
+  let tTarget;
+  if (order.order_status === 'In Preparation') {
+    const secs = estimatedSecsMap?.get(order.id);
+    tTarget = secs != null ? Math.min(secs, MAX_PREP_S) : (KDS_STATUS_TARGET_S[order.order_status] ?? 60);
+  } else {
+    tTarget = KDS_STATUS_TARGET_S[order.order_status] ?? 0;
+  }
   const isDelivered = order.order_status === "Delivered";
 
   // Timer decrescente: conta a partir do alvo
@@ -163,10 +172,12 @@ function OrderCard({ order, cardBorder, now, firstSeenAt }) {
 
 // ── Stores de nível de módulo — persistem enquanto a app estiver aberta ──────
 // Sobrevivem a navegação (desmount/remount do componente), nunca são resetados
-const _firstSeenAt      = new Map();  // orderId → timestamp de 1ª aparição no KDS
-const _hiddenFromKanban = new Set();  // IDs removidos do kanban (não da DB)
-const _statusOverrides  = new Map();  // orderId → status local mais avançado
-const _autoAdvancing    = new Set();  // IDs em processo de auto-avanço
+const _firstSeenAt       = new Map();  // orderId → timestamp de 1ª aparição no KDS
+const _hiddenFromKanban  = new Set();  // IDs removidos do kanban (não da DB)
+const _statusOverrides   = new Map();  // orderId → status local mais avançado
+const _autoAdvancing     = new Set();  // IDs em processo de auto-avanço
+const _chefProcessing    = new Set();  // IDs a ser processados pelo Chef AI
+const _estimatedSecsMap  = new Map();  // orderId → estimated_seconds do Chef
 
 /* ── KDS Page ── */
 export default function KdsPage() {
@@ -217,7 +228,15 @@ export default function KdsPage() {
 
       /* firstSeenAt — registar novos IDs (mutação directa, não reseta ao navegar) */
       for (const o of list) {
-        if (!firstSeenAt.current.has(o.id)) firstSeenAt.current.set(o.id, ts);
+        if (!firstSeenAt.current.has(o.id)) {
+          // Para pedidos já em "In Preparation" usa o updated_at real do pedido,
+          // para que orders de seed data (muito antigas) avancem imediatamente
+          if (o.order_status === 'In Preparation' && o.updated_at) {
+            firstSeenAt.current.set(o.id, new Date(o.updated_at).getTime());
+          } else {
+            firstSeenAt.current.set(o.id, ts);
+          }
+        }
       }
 
       /* Gerar eventos de actividade */
@@ -270,6 +289,59 @@ export default function KdsPage() {
     return () => clearInterval(id);
   }, [loadData]);
 
+  /* ── Chef AI: processa pedidos Pending imediatamente ── */
+  useEffect(() => {
+    const pendingOrders = orders.filter(
+      o => o.order_status === 'Pending' && !_chefProcessing.has(o.id),
+    );
+    if (!pendingOrders.length) return;
+
+    for (const order of pendingOrders) {
+      _chefProcessing.add(order.id);
+      console.log(`[KDS] Chef AI a processar pedido #${order.id}...`);
+
+      orderService.chefStart(order.id)
+        .then(resp => {
+          if (!resp?.success) {
+            console.warn(`[KDS] Chef falhou no pedido #${order.id}:`, resp?.error);
+            return;
+          }
+          const secs = resp.estimated_seconds ?? 30;
+          _estimatedSecsMap.set(order.id, secs);
+
+          const ts = Date.now();
+          firstSeenAt.current.set(order.id, ts);
+          statusOverridesRef.current.set(order.id, 'In Preparation');
+
+          setOrders(prev => prev.map(o =>
+            o.id === order.id
+              ? {
+                  ...o,
+                  order_status:          'In Preparation',
+                  kitchen_sequence_json: resp.kitchen_sequence,
+                  updated_at:            new Date(ts).toISOString(),
+                }
+              : o,
+          ));
+
+          setActivityLog(prev => [{
+            id:      `chef-${order.id}-${ts}`,
+            icon:    '🍳',
+            color:   '#f59e0b',
+            time:    new Date(ts).toTimeString().slice(0, 5),
+            message: `Pedido #${order.id} · Mesa ${order.table_id ?? 'Takeaway'} entrou em preparação (${secs}s)`,
+          }, ...prev].slice(0, 100));
+
+          window.dispatchEvent(new CustomEvent('orders:statusChanged'));
+          console.log(`[KDS] Chef → Pedido #${order.id} Em Preparação (${secs}s)`);
+        })
+        .catch(err => {
+          console.error(`[KDS] Chef error pedido #${order.id}:`, err);
+          _chefProcessing.delete(order.id); // permite retry no próximo refresh
+        });
+    }
+  }, [orders]); // eslint-disable-line react-hooks/exhaustive-deps
+
 
   const ordersWithDetails = useMemo(() =>
     orders
@@ -297,7 +369,20 @@ export default function KdsPage() {
     const toRemove  = [];  // remover do kanban (Delivered após 30s)
 
     orders.forEach(o => {
-      const tTarget = KDS_STATUS_TARGET_S[o.order_status];
+      // Pending → Chef AI trata (não usar timer)
+      if (o.order_status === 'Pending') return;
+
+      // In Preparation → usa estimated_seconds do Chef (máx 120s), senão default
+      let tTarget;
+      if (o.order_status === 'In Preparation') {
+        const estimatedSecs = _estimatedSecsMap.get(o.id);
+        tTarget = estimatedSecs != null
+          ? Math.min(estimatedSecs, 120)
+          : KDS_STATUS_TARGET_S['In Preparation'];
+      } else {
+        tTarget = KDS_STATUS_TARGET_S[o.order_status];
+      }
+
       if (!tTarget || autoAdvancingRef.current.has(o.id)) return;
       const elapsed = Math.floor((now - (firstSeenAt.current.get(o.id) ?? now)) / 1000);
       if (elapsed < tTarget) return;
@@ -431,7 +516,7 @@ export default function KdsPage() {
                   </div>
                   <div style={{ backgroundColor: colBg, padding: 8, minHeight: 160, display: "flex", flexDirection: "column", gap: 8 }}>
                     {colOrders.map(order => (
-                      <OrderCard key={order.id} order={order} cardBorder={col.cardBorder} now={now} firstSeenAt={firstSeenAt.current} />
+                      <OrderCard key={order.id} order={order} cardBorder={col.cardBorder} now={now} firstSeenAt={firstSeenAt.current} estimatedSecsMap={_estimatedSecsMap} />
                     ))}
                     {colOrders.length === 0 && <p style={{ textAlign: "center", color: emptyColor, fontSize: 12, paddingTop: 20 }}>—</p>}
                   </div>

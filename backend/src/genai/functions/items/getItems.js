@@ -1,4 +1,4 @@
-import { Type } from '@google/genai';
+﻿import { Type } from '../../config/types.js';
 import { BaseFunction } from '../../models/BaseFunctions.js';
 
 class GetItemsFunction extends BaseFunction {
