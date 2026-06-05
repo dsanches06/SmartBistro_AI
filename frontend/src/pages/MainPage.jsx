@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { itemService } from "@/services";
+import { orderService }     from "@/services/orderService";
+import { orderItemService } from "@/services/orderItemService";
 import { MENU_CATEGORIES, MENU_CATEGORY_META, formatMenuPrice, getItemEmoji, ALL_KEY } from "@/utils";
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
@@ -301,13 +303,47 @@ function RegisterModal({ open, onClose, onSwitchToLogin, isDark, onRegister }) {
   );
 }
 
+/* ── NavTab (tab show/hide do BottomNav) ── */
+function NavTab({ onClick, open = false, isDark }) {
+  const bg     = isDark ? "rgba(28,28,30,0.97)"  : "rgba(208,214,220,0.97)";
+  const border = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.12)";
+  const iconBg = isDark ? "#3a3a3c" : "#b8c0c8";
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-2 select-none whitespace-nowrap"
+      style={{
+        background: bg,
+        borderTop: `1px solid ${border}`,
+        borderLeft: `1px solid ${border}`,
+        borderRight: `1px solid ${border}`,
+        borderBottom: "none",
+        borderRadius: "20px 20px 0 0",
+        padding: "10px 28px 11px",
+        boxShadow: "0 -4px 14px rgba(0,0,0,0.13)",
+        cursor: "pointer",
+      }}
+    >
+      <span
+        className="flex items-center justify-center w-6 h-6 rounded-lg flex-shrink-0"
+        style={{ background: iconBg }}
+      >
+        <i className={`fa-solid fa-chevron-${open ? "down" : "up"} text-[10px]`} style={{ color: "var(--primary)" }} />
+      </span>
+      <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--text-secondary)" }}>
+        {open ? "Ocultar Menu" : "Mostrar Menu"}
+      </span>
+    </button>
+  );
+}
+
 /* ══════════════════════════════════════════
    MainPage
 ══════════════════════════════════════════ */
 export default function MainPage() {
   const { theme } = useTheme();
   const isDark = theme === "dark";
-  const { user, login, register } = useAuth();
+  const { user, login, register, logout } = useAuth();
   const navigate = useNavigate();
 
   const [items, setItems]               = useState([]);
@@ -315,6 +351,58 @@ export default function MainPage() {
   const [activeCategory, setActiveCategory] = useState(ALL_KEY);
   const [showLogin, setShowLogin]       = useState(false);
   const [showRegister, setShowRegister] = useState(false);
+  const [navOpen, setNavOpen]           = useState(false);
+  const [cart, setCart]                 = useState({});
+  const [showCart, setShowCart]         = useState(false);
+  const [orderLoading, setOrderLoading] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState(false);
+
+  const isClient   = user && user.role_id !== 1;
+  const cartItems  = Object.values(cart).filter(c => c.qty > 0);
+  const cartTotal  = cartItems.reduce((s, c) => s + Number(c.item.price) * c.qty, 0);
+  const cartCount  = cartItems.reduce((s, c) => s + c.qty, 0);
+
+  const addToCart = (item) =>
+    setCart(prev => ({ ...prev, [item.id]: { item, qty: (prev[item.id]?.qty || 0) + 1 } }));
+
+  const removeFromCart = (itemId) =>
+    setCart(prev => {
+      const qty = (prev[itemId]?.qty || 0) - 1;
+      if (qty <= 0) { const next = { ...prev }; delete next[itemId]; return next; }
+      return { ...prev, [itemId]: { ...prev[itemId], qty } };
+    });
+
+  const handleSubmitOrder = async () => {
+    if (!cartItems.length) return;
+    setOrderLoading(true);
+    try {
+      // 1. Criar o pedido
+      const order = await orderService.create({
+        customer_id: user.id,
+        service_type: "Takeaway",
+        kitchen_sequence_json: JSON.stringify(cartItems.map(c => ({
+          name: c.item.name,
+          quantity: c.qty,
+          price: Number(c.item.price),
+        }))),
+        order_status: "In Preparation",
+      });
+
+      // 2. Guardar os order_items na DB (permite cálculos financeiros e Chef AI)
+      if (order?.id) {
+        await orderItemService.createBulk({
+          order_id: order.id,
+          items:    cartItems.map(c => ({ item_id: c.item.id, quantity: c.qty })),
+        }).catch(() => { /* silent — order já foi criado */ });
+      }
+
+      setCart({});
+      setShowCart(false);
+      setOrderSuccess(true);
+      setTimeout(() => setOrderSuccess(false), 4000);
+    } catch { /* silent */ }
+    finally { setOrderLoading(false); }
+  };
 
   useEffect(() => {
     itemService.getActive()
@@ -325,11 +413,13 @@ export default function MainPage() {
 
   const handleLogin = async (identifier, password) => {
     const u = await login(identifier, password);
+    setShowLogin(false);
     navigate(u.role_id === 1 ? "/dashboard" : "/", { replace: true });
   };
 
   const handleRegister = async (name, username, email, phone, password) => {
     const u = await register(name, username, email, phone, password);
+    setShowRegister(false);
     navigate(u.role_id === 1 ? "/dashboard" : "/", { replace: true });
   };
 
@@ -347,7 +437,7 @@ export default function MainPage() {
   };
 
   return (
-    <div style={{ minHeight: "100dvh", background: "var(--bg)", color: "var(--text)" }}>
+    <div style={{ minHeight: "100dvh", background: "var(--bg)", color: "var(--text)", overflowX: "hidden" }}>
       {/* Header */}
       <header
         className="sticky top-0 z-50 flex items-center justify-between px-4 sm:px-8 h-14 md:h-16"
@@ -389,21 +479,21 @@ export default function MainPage() {
               <button
                 onClick={() => setShowLogin(true)}
                 title="Entrar"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:border-[var(--primary)] hover:text-[var(--primary)]"
                 style={headerBtnStyle}
               >
                 <IconLogin />
-                <span className="hidden sm:inline">Entrar</span>
+                <span>Entrar</span>
               </button>
 
               <button
                 onClick={() => setShowRegister(true)}
                 title="Registar"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
                 style={{ background: "var(--primary)", color: "#fff", border: "1.5px solid var(--primary)" }}
               >
                 <IconRegister />
-                <span className="hidden sm:inline">Registar</span>
+                <span>Registar</span>
               </button>
             </>
           )}
@@ -467,7 +557,16 @@ export default function MainPage() {
       </div>
 
       {/* Content */}
-      <main className="px-4 sm:px-8 py-6 max-w-5xl mx-auto pb-32 sm:pb-12">
+      <main className="px-4 sm:px-8 py-6 max-w-5xl mx-auto pb-40 sm:pb-12">
+        {/* Banner sucesso */}
+        {orderSuccess && (
+          <div className="mb-4 flex items-center gap-2 px-4 py-3 rounded-2xl text-sm font-semibold"
+            style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", color: "#22c55e" }}>
+            <i className="fa-solid fa-circle-check" />
+            Pedido enviado com sucesso! Aguarda a confirmação.
+          </div>
+        )}
+
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <span style={{ color: "var(--text-muted)" }}>A carregar cardápio...</span>
@@ -491,15 +590,118 @@ export default function MainPage() {
                       {catItems.length} item{catItems.length !== 1 ? "s" : ""}
                     </span>
                   </div>
-                  <ItemGrid items={catItems} isDark={isDark} />
+                  <ItemGrid items={catItems} isDark={isDark} isClient={isClient} cart={cart} onAdd={addToCart} onRemove={removeFromCart} />
                 </section>
               ))
             )}
           </div>
         ) : (
-          <ItemGrid items={filteredItems} isDark={isDark} />
+          <ItemGrid items={filteredItems} isDark={isDark} isClient={isClient} cart={cart} onAdd={addToCart} onRemove={removeFromCart} />
         )}
       </main>
+
+      {/* Botão carrinho flutuante — igual ao estilo do chat */}
+      {isClient && cartCount > 0 && (
+        <button
+          onClick={() => setShowCart(true)}
+          aria-label="Ver pedido"
+          className="fixed right-4 z-[49] w-12 h-12 sm:w-14 sm:h-14 rounded-full text-white flex items-center justify-center shadow-2xl transition-all hover:scale-105 active:scale-95"
+          style={{
+            bottom: "5rem",
+            background: "var(--primary)",
+            boxShadow: "0 4px 20px rgba(99,102,241,0.5)",
+          }}
+        >
+          <i className="fa-solid fa-basket-shopping text-lg sm:text-xl" />
+          <span
+            className="absolute -top-1 -right-1 flex items-center justify-center rounded-full text-white font-bold"
+            style={{
+              minWidth: "20px", height: "20px",
+              background: "#FF3B30",
+              fontSize: "10px",
+              border: "2px solid var(--bg)",
+              padding: "0 3px",
+            }}
+          >
+            {cartCount > 9 ? "9+" : cartCount}
+          </span>
+        </button>
+      )}
+
+      {/* Modal carrinho */}
+      {showCart && (
+        <div
+          className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4"
+          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowCart(false); }}
+        >
+          <div
+            className="w-full sm:max-w-md flex flex-col rounded-t-3xl sm:rounded-2xl"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)", maxHeight: "88dvh" }}
+          >
+            {/* Header fixo */}
+            <div className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0" style={{ borderColor: "var(--border)" }}>
+              <h2 className="text-base font-bold" style={{ color: "var(--text)" }}>
+                <i className="fa-solid fa-basket-shopping mr-2" style={{ color: "var(--primary)" }} />
+                O meu pedido
+                <span className="ml-2 text-xs font-normal px-1.5 py-0.5 rounded-full" style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
+                  {cartCount} {cartCount === 1 ? "item" : "itens"}
+                </span>
+              </h2>
+              <button onClick={() => setShowCart(false)} className="p-1.5 rounded-lg" style={{ color: "var(--text-muted)" }}>
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+
+            {/* Lista de itens — scroll aqui */}
+            <div className="overflow-y-auto flex-1">
+              {cartItems.map(({ item, qty }) => (
+                <div key={item.id} className="flex items-center gap-3 px-5 py-3.5 border-b" style={{ borderColor: "var(--border)" }}>
+                  <span className="text-xl flex-shrink-0">{getItemEmoji(item.name)}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate" style={{ color: "var(--text)" }}>{item.name}</p>
+                    <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
+                      {formatMenuPrice(item.price)} × {qty} = <span style={{ color: "var(--primary)", fontWeight: 600 }}>{formatMenuPrice(Number(item.price) * qty)}</span>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button onClick={() => removeFromCart(item.id)}
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold"
+                      style={{ background: "var(--surface-2)", color: "var(--text)" }}>−</button>
+                    <span className="text-sm font-bold w-5 text-center" style={{ color: "var(--text)" }}>{qty}</span>
+                    <button onClick={() => addToCart(item)}
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold"
+                      style={{ background: "var(--primary)", color: "#fff" }}>+</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Footer fixo — sempre visível */}
+            <div
+              className="px-5 pt-4 pb-5 space-y-3 border-t flex-shrink-0"
+              style={{ borderColor: "var(--border)", paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))" }}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>Total</span>
+                <span className="text-xl font-bold" style={{ color: "var(--primary)" }}>{formatMenuPrice(cartTotal)}</span>
+              </div>
+              <p className="text-xs flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>
+                <i className="fa-solid fa-bag-shopping" />
+                Takeaway — preparado assim que confirmado.
+              </p>
+              <button
+                onClick={handleSubmitOrder}
+                disabled={orderLoading}
+                className="w-full py-3.5 rounded-2xl text-sm font-bold text-white disabled:opacity-60 transition-opacity"
+                style={{ background: "var(--primary)" }}
+              >
+                {orderLoading ? "A enviar pedido..." : "Confirmar pedido"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modais */}
       <LoginModal
@@ -517,55 +719,87 @@ export default function MainPage() {
         onRegister={handleRegister}
       />
 
-      {/* BottomNav mobile — só visível em mobile */}
-      <nav
-        className="sm:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around px-4 pt-2"
-        style={{
-          background: isDark ? "rgb(13,13,13)" : "rgb(248,250,252)",
-          backdropFilter: "blur(12px)",
-          borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`,
-          paddingBottom: "calc(env(safe-area-inset-bottom) + 1.25rem)",
-          boxShadow: "0 -4px 20px rgba(0,0,0,0.15)",
-        }}
-      >
-        <Link to="/" className="flex flex-col items-center gap-0.5 py-1 px-3">
-          <i className="fa-solid fa-utensils text-base" style={{ color: "var(--primary)" }} />
-          <span className="text-[10px] font-semibold" style={{ color: "var(--primary)" }}>Cardápio</span>
-        </Link>
-        {user ? (
-          <Link to="/perfil" className="flex flex-col items-center gap-0.5 py-1 px-3">
-            <i className="fa-solid fa-user text-base" style={{ color: "var(--text-muted)" }} />
-            <span className="text-[10px] font-semibold" style={{ color: "var(--text-muted)" }}>Perfil</span>
-          </Link>
-        ) : (
-          <>
-            <button onClick={() => setShowLogin(true)} className="flex flex-col items-center gap-0.5 py-1 px-3">
-              <i className="fa-solid fa-right-to-bracket text-base" style={{ color: "var(--text-muted)" }} />
-              <span className="text-[10px] font-semibold" style={{ color: "var(--text-muted)" }}>Entrar</span>
-            </button>
-            <button onClick={() => setShowRegister(true)} className="flex flex-col items-center gap-0.5 py-1 px-3">
-              <i className="fa-solid fa-user-plus text-base" style={{ color: "var(--text-muted)" }} />
-              <span className="text-[10px] font-semibold" style={{ color: "var(--text-muted)" }}>Registar</span>
-            </button>
-          </>
+      {/* BottomNav mobile — show/hide */}
+      <div className="sm:hidden">
+        {navOpen && (
+          <div className="fixed inset-0 z-40" onClick={() => setNavOpen(false)} />
         )}
-      </nav>
 
-      {/* Tape o fundo abaixo do BottomNav em mobile */}
-      <div
-        className="sm:hidden fixed bottom-0 left-0 right-0 z-30"
-        style={{
-          height: "env(safe-area-inset-bottom, 20px)",
-          minHeight: "20px",
-          background: isDark ? "rgb(13,13,13)" : "rgb(248,250,252)",
-        }}
-      />
+        {navOpen && (
+          <nav
+            className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-8"
+            style={{
+              height: "5rem",
+              background: isDark ? "rgba(28,28,30,0.97)" : "rgba(208,214,220,0.97)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.12)"}`,
+              boxShadow: "0 -4px 20px rgba(0,0,0,0.2)",
+            }}
+          >
+            <div
+              className="absolute left-1/2 z-10"
+              style={{ top: 0, transform: "translate(-50%, -100%)" }}
+            >
+              <NavTab open onClick={() => setNavOpen(false)} isDark={isDark} />
+            </div>
+
+            {user ? (
+              <>
+                <Link
+                  to="/perfil"
+                  onClick={() => setNavOpen(false)}
+                  className="flex flex-col items-center gap-1"
+                >
+                  <i className="fa-solid fa-user text-xl" style={{ color: "var(--primary)" }} />
+                  <span className="text-[11px] font-semibold" style={{ color: "var(--text)" }}>Meu Perfil</span>
+                </Link>
+                <button
+                  onClick={() => { setNavOpen(false); logout(); navigate("/"); }}
+                  className="flex flex-col items-center gap-1"
+                >
+                  <i className="fa-solid fa-right-from-bracket text-xl" style={{ color: "#ef4444" }} />
+                  <span className="text-[11px] font-semibold" style={{ color: "#ef4444" }}>Sair</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => { setNavOpen(false); setShowLogin(true); }}
+                  className="flex flex-col items-center gap-1"
+                >
+                  <i className="fa-solid fa-right-to-bracket text-xl" style={{ color: "var(--text-secondary)" }} />
+                  <span className="text-[11px] font-semibold" style={{ color: "var(--text)" }}>Entrar</span>
+                </button>
+                <button
+                  onClick={() => { setNavOpen(false); setShowRegister(true); }}
+                  className="flex flex-col items-center gap-1"
+                >
+                  <i className="fa-solid fa-user-plus text-xl" style={{ color: "var(--text-secondary)" }} />
+                  <span className="text-[11px] font-semibold" style={{ color: "var(--text)" }}>Registar</span>
+                </button>
+              </>
+            )}
+          </nav>
+        )}
+
+        {!navOpen && (
+          <div
+            className="fixed inset-x-0 bottom-0 z-50 flex justify-center pointer-events-none"
+            style={{ height: 0 }}
+          >
+            <div style={{ position: "absolute", bottom: 8, pointerEvents: "auto" }}>
+              <NavTab onClick={() => setNavOpen(true)} isDark={isDark} />
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 /* ── ItemGrid ── */
-function ItemGrid({ items, isDark }) {
+function ItemGrid({ items, isDark, isClient, cart, onAdd, onRemove }) {
   if (!items.length) {
     return (
       <div className="text-center py-10" style={{ color: "var(--text-muted)" }}>
@@ -576,41 +810,77 @@ function ItemGrid({ items, isDark }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {items.map(item => (
-        <ItemCard key={item.id} item={item} isDark={isDark} />
+        <ItemCard
+          key={item.id}
+          item={item}
+          isDark={isDark}
+          qty={cart?.[item.id]?.qty || 0}
+          isClient={isClient}
+          onAdd={() => onAdd?.(item)}
+          onRemove={() => onRemove?.(item.id)}
+        />
       ))}
     </div>
   );
 }
 
 /* ── ItemCard ── */
-function ItemCard({ item, isDark }) {
+function ItemCard({ item, isDark, qty, isClient, onAdd, onRemove }) {
   const meta = MENU_CATEGORY_META[item.category] ?? {};
   return (
     <div
-      className="flex items-center gap-3 rounded-2xl p-4 transition-transform hover:scale-[1.02]"
+      className="flex flex-col rounded-2xl p-4 transition-transform hover:scale-[1.02] gap-3"
       style={{
         background: "var(--surface)",
-        border: "1px solid var(--border)",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+        border: qty > 0 ? `1.5px solid var(--primary)` : "1px solid var(--border)",
+        boxShadow: qty > 0 ? "0 2px 12px rgba(99,102,241,0.15)" : "0 2px 8px rgba(0,0,0,0.06)",
       }}
     >
-      <div
-        className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-xl text-2xl"
-        style={{ background: isDark ? (meta.bgDark ?? "var(--surface-2)") : (meta.bg ?? "var(--surface-2)") }}
-      >
-        {getItemEmoji(item.name)}
+      <div className="flex items-center gap-3">
+        <div
+          className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-xl text-2xl"
+          style={{ background: isDark ? (meta.bgDark ?? "var(--surface-2)") : (meta.bg ?? "var(--surface-2)") }}
+        >
+          {getItemEmoji(item.name)}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm truncate" style={{ color: "var(--text)" }}>
+            {item.name}
+          </p>
+          <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
+            {meta.label ?? item.category}
+          </p>
+        </div>
+        <span className="flex-shrink-0 font-bold text-sm" style={{ color: meta.accent ?? "var(--primary)" }}>
+          {formatMenuPrice(item.price)}
+        </span>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold text-sm truncate" style={{ color: "var(--text)" }}>
-          {item.name}
-        </p>
-        <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-          {meta.label ?? item.category}
-        </p>
-      </div>
-      <span className="flex-shrink-0 font-bold text-sm" style={{ color: meta.accent ?? "var(--primary)" }}>
-        {formatMenuPrice(item.price)}
-      </span>
+
+      {isClient && (
+        qty > 0 ? (
+          <div className="flex items-center justify-between">
+            <button
+              onClick={onRemove}
+              className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-colors"
+              style={{ background: "var(--surface-2)", color: "var(--text)" }}
+            >−</button>
+            <span className="text-sm font-bold" style={{ color: "var(--primary)" }}>{qty} no pedido</span>
+            <button
+              onClick={onAdd}
+              className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm text-white"
+              style={{ background: "var(--primary)" }}
+            >+</button>
+          </div>
+        ) : (
+          <button
+            onClick={onAdd}
+            className="w-full py-1.5 rounded-xl text-xs font-semibold text-white transition-opacity hover:opacity-85"
+            style={{ background: "var(--primary)" }}
+          >
+            + Adicionar ao pedido
+          </button>
+        )
+      )}
     </div>
   );
 }

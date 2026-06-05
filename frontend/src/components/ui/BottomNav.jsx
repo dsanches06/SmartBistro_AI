@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 
 const menuLinks = [
   { to: '/dashboard',     label: 'Dashboard',    icon: 'fa-solid fa-house',               exact: true },
@@ -21,6 +22,8 @@ export const NAV_HANDLE_H = '2rem'; // altura visível do tab quando fechado
 export function BottomNav({ onOpenChange }) {
   const { pathname }    = useLocation();
   const { theme }       = useTheme();
+  const { user, logout } = useAuth();
+  const navigate        = useNavigate();
   const isDark          = theme === 'dark';
   const [open, setOpen] = useState(false);
 
@@ -33,17 +36,20 @@ export function BottomNav({ onOpenChange }) {
     return () => mq.removeEventListener('change', handler);
   }, []);
 
-  const bg     = isDark ? 'rgba(17,17,17,0.97)' : 'rgba(248,250,252,0.97)';
-  const border = isDark ? '#2a2a2a' : '#e2e8f0';
+  const bg     = isDark ? 'rgba(28,28,30,0.97)' : 'rgba(208,214,220,0.97)';
+  const border = isDark ? '#2a2a2a' : '#c8cfd8';
+  const iconBg = isDark ? '#2a2a2a' : '#b8c0c8';
 
-  /* ── Botão tab (meia lua) ── */
+  /* ── Botão tab (meia lua) — partilhado por admin e cliente ── */
   const Tab = ({ onClick, icon, label }) => (
     <button
       onClick={onClick}
       className="flex items-center gap-2 select-none whitespace-nowrap pointer-events-auto"
       style={{
         background: bg,
-        border: `1px solid ${border}`,
+        borderTop: `1px solid ${border}`,
+        borderLeft: `1px solid ${border}`,
+        borderRight: `1px solid ${border}`,
         borderBottom: 'none',
         borderRadius: '20px 20px 0 0',
         padding: '10px 28px 11px',
@@ -53,7 +59,7 @@ export function BottomNav({ onOpenChange }) {
     >
       <span
         className="flex items-center justify-center w-6 h-6 rounded-lg flex-shrink-0"
-        style={{ background: isDark ? '#2a2a2a' : '#e2e8f0' }}
+        style={{ background: iconBg }}
       >
         <i className={`fa-solid ${icon} text-[10px] text-[var(--primary)]`} />
       </span>
@@ -63,17 +69,60 @@ export function BottomNav({ onOpenChange }) {
     </button>
   );
 
+  const isClient = user && user.role_id !== 1;
+
+  /* ── Nav cliente (role ≠ 1) com show/hide ── */
+  if (isClient) {
+    return (
+      <div className="md:hidden">
+        {open && <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />}
+
+        {open && (
+          <div
+            className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around px-10"
+            style={{
+              height: '5rem',
+              background: bg,
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              borderTop: `1px solid ${border}`,
+              boxShadow: '0 -4px 20px rgba(0,0,0,0.2)',
+            }}
+          >
+            <div className="absolute left-1/2 z-10" style={{ top: 0, transform: 'translate(-50%, -100%)' }}>
+              <Tab onClick={() => setOpen(false)} icon="fa-chevron-down" label="Esconder Menu" />
+            </div>
+
+            <Link to="/" onClick={() => setOpen(false)} className="flex flex-col items-center gap-1">
+              <i className="fa-solid fa-utensils text-xl" style={{ color: 'var(--text-secondary)' }} />
+              <span className="text-[11px] font-semibold" style={{ color: 'var(--text)' }}>Cardápio</span>
+            </Link>
+
+            <button onClick={() => { setOpen(false); logout(); navigate('/'); }} className="flex flex-col items-center gap-1">
+              <i className="fa-solid fa-right-from-bracket text-xl" style={{ color: '#ef4444' }} />
+              <span className="text-[11px] font-semibold" style={{ color: '#ef4444' }}>Sair</span>
+            </button>
+          </div>
+        )}
+
+        {!open && (
+          <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center pointer-events-none" style={{ height: 0 }}>
+            <div style={{ position: 'absolute', bottom: 8, pointerEvents: 'auto' }}>
+              <Tab onClick={() => setOpen(true)} icon="fa-chevron-up" label="Mostrar Menu" />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  /* ── Nav admin (role === 1) ── */
   return (
     <div className="md:hidden">
-      {/* ── Overlay — fecha ao clicar fora do nav ── */}
       {open && (
-        <div
-          className="fixed inset-0 z-30"
-          onClick={() => setOpen(false)}
-        />
+        <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
       )}
 
-      {/* ── Nav aberto ── */}
       {open && (
         <div
           className="fixed bottom-0 left-0 right-0 z-40 flex flex-col"
@@ -86,11 +135,7 @@ export function BottomNav({ onOpenChange }) {
             paddingBottom: 'calc(var(--safe-bottom) + 0.9rem)',
           }}
         >
-          {/* Tab "Ocultar" flutuando acima da borda do nav */}
-          <div
-            className="absolute left-1/2 z-10"
-            style={{ top: 0, transform: 'translate(-50%, -100%)' }}
-          >
+          <div className="absolute left-1/2 z-10" style={{ top: 0, transform: 'translate(-50%, -100%)' }}>
             <Tab onClick={() => setOpen(false)} icon="fa-chevron-down" label="Esconder Menu" />
           </div>
 
@@ -116,12 +161,8 @@ export function BottomNav({ onOpenChange }) {
         </div>
       )}
 
-      {/* ── Tab "Mostrar" — só a parte de cima visível ── */}
       {!open && (
-        <div
-          className="fixed inset-x-0 bottom-0 z-40 flex justify-center pointer-events-none"
-          style={{ height: 0 }}
-        >
+        <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center pointer-events-none" style={{ height: 0 }}>
           <div style={{ position: 'absolute', bottom: 8, pointerEvents: 'auto' }}>
             <Tab onClick={() => setOpen(true)} icon="fa-chevron-up" label="Mostrar Menu" />
           </div>

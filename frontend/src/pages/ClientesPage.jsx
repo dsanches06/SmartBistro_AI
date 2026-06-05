@@ -187,15 +187,37 @@ function CustomerDetail({ customer, onBack }) {
       if (cancelled) return;
       setInvoiceMap(Object.fromEntries(invoicePairs));
 
-      // compute spending per category using item.price × quantity
+      // Gastos por categoria — com fallback para kitchen_sequence_json
+      const itemByName = Object.fromEntries(
+        Object.values(itemMap).map(i => [i.name?.toLowerCase(), i])
+      );
       const catTotals = {};
-      orderItemsPairs.forEach(([, items]) => {
-        (Array.isArray(items) ? items : []).forEach((oi) => {
-          const item = itemMap[oi.item_id];
-          if (!item) return;
-          const cat = item.category || "Other";
-          catTotals[cat] = (catTotals[cat] || 0) + Number(item.price) * Number(oi.quantity);
-        });
+      orderItemsPairs.forEach(([orderId, items]) => {
+        if (Array.isArray(items) && items.length > 0) {
+          items.forEach((oi) => {
+            const item = itemMap[oi.item_id];
+            if (!item) return;
+            const cat = item.category || "Other";
+            catTotals[cat] = (catTotals[cat] || 0) + Number(item.price) * Number(oi.quantity);
+          });
+        } else {
+          // Fallback: pedidos do carrinho sem order_items na DB
+          const order = rows.find(o => String(o.id) === String(orderId));
+          let kItems = [];
+          try {
+            const raw = typeof order?.kitchen_sequence_json === 'string'
+              ? JSON.parse(order.kitchen_sequence_json)
+              : order?.kitchen_sequence_json;
+            kItems = Array.isArray(raw) ? raw : [];
+          } catch { kItems = []; }
+          kItems.forEach(ki => {
+            if (typeof ki !== 'object' || !ki.name) return;
+            const found = itemByName[ki.name?.toLowerCase()];
+            if (!found) return;
+            const cat = found.category || "Other";
+            catTotals[cat] = (catTotals[cat] || 0) + Number(ki.price || found.price) * Number(ki.quantity || 1);
+          });
+        }
       });
       setCategoryData(catTotals);
     }).finally(() => {
@@ -700,25 +722,33 @@ export default function ClientesPage() {
           </div>
 
           {/* Filter controls */}
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex items-center gap-2">
             {showSearch && (
               <input
                 autoFocus
-                className="h-8 bg-surface border border-surface rounded-lg px-3 text-sm text-main placeholder:text-muted focus:outline-none focus:border-[var(--primary)] flex-1 min-w-0 sm:w-48 sm:flex-none"
+                className="flex-1 h-9 rounded-xl px-3 text-sm outline-none"
+                style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }}
                 placeholder="Procurar cliente…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             )}
+            <div className="ml-auto flex items-center gap-2">
             <span className="hidden sm:inline-flex text-xs text-muted px-3 py-1 rounded-full border border-surface bg-surface-2">
               Filtro: {filterLabel}
             </span>
             <button
               type="button"
               onClick={() => { setShowSearch((s) => !s); setSearch(""); }}
-              className="w-8 h-8 rounded-lg border border-surface bg-surface flex items-center justify-center text-muted hover:bg-surface-2 cursor-pointer"
+              className="w-8 h-8 rounded-lg border flex items-center justify-center cursor-pointer transition-colors"
+              style={{
+                background: showSearch ? "var(--primary)" : "var(--surface)",
+                borderColor: showSearch ? "var(--primary)" : "var(--border)",
+                color: showSearch ? "#fff" : "var(--text-muted)",
+              }}
+              title={showSearch ? "Fechar pesquisa" : "Pesquisar"}
             >
-              ⌕
+              <i className={`fa-solid ${showSearch ? "fa-xmark" : "fa-magnifying-glass"} text-xs`} />
             </button>
             <button
               type="button"
@@ -727,6 +757,7 @@ export default function ClientesPage() {
             >
               {sortDirection === "ASC" ? "⬆" : sortDirection === "DESC" ? "⬇" : "⇅"}
             </button>
+            </div>
           </div>
         </div>
 

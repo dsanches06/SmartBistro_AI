@@ -49,8 +49,10 @@ export function AuthProvider({ children }) {
     if (t) authService.logout(t).catch(() => {});
   }
 
+  function updateUser(data) { setUser(prev => ({ ...prev, ...data })); }
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -3,7 +3,8 @@ import { Link, useLocation, useNavigate } from "react-router";
 import { ThemeToggle } from "./ThemeToggle";
 import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext";
-import { getInitials, getPalette } from "../customers/CustomerCard";
+import { getInitials, getPalette, formatDate } from "../customers/CustomerCard";
+import { customerService } from "../../services/customerService";
 
 const navLinks = [
   { to: "/dashboard",  label: "Dashboard",  exact: true },
@@ -88,6 +89,154 @@ function UserMenu({ user, onLogout }) {
   );
 }
 
+const PAY_KEYWORDS = /pagamento|pagar|fatura|faturação|invoice|payment|valor/i;
+
+function NotificationBell({ user }) {
+  const [open, setOpen]               = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading]         = useState(false);
+  const ref      = useRef(null);
+  const navigate = useNavigate();
+
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const loadNotifs = () => {
+    if (!user?.id) return;
+    setLoading(true);
+    customerService.getNotifications(user.id)
+      .then(list => setNotifications(Array.isArray(list) ? list : []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadNotifs();
+    const interval = setInterval(loadNotifs, 30000);
+    return () => clearInterval(interval);
+  }, [user?.id]);
+
+  useEffect(() => { if (open) loadNotifs(); }, [open]);
+
+  const handleMarkRead = async (n) => {
+    if (n.is_read) return;
+    try {
+      await customerService.markNotificationRead(user.id, n.id);
+      setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, is_read: true } : x));
+    } catch { /* silent */ }
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="relative p-2 rounded-xl transition-colors hover:bg-[var(--surface-2)]"
+        title="Notificações"
+      >
+        <i className="fa-solid fa-bell text-base" style={{ color: open ? "var(--primary)" : "var(--text-secondary)" }} />
+        {unreadCount > 0 && (
+          <span
+            className="absolute flex items-center justify-center text-white font-bold"
+            style={{
+              top: "4px", right: "4px",
+              minWidth: "15px", height: "15px",
+              background: "#FF3B30",
+              borderRadius: "50%",
+              fontSize: "8px",
+              border: "2px solid var(--bg)",
+              lineHeight: 1,
+              padding: "0 2px",
+            }}
+          >
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div
+          className="fixed sm:absolute left-4 right-4 sm:left-auto sm:right-0 sm:w-80 top-[3.6rem] md:top-[4.1rem] sm:top-full sm:mt-2 z-[200] rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+          style={{
+            maxHeight: "440px",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+          }}
+        >
+          {/* Header do dropdown */}
+          <div className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0" style={{ borderColor: "var(--border)" }}>
+            <span className="text-sm font-bold" style={{ color: "var(--text)" }}>
+              Notificações
+            </span>
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold text-white" style={{ background: "#FF3B30" }}>
+                  {unreadCount} {unreadCount === 1 ? "nova" : "novas"}
+                </span>
+              )}
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
+                {notifications.length}
+              </span>
+            </div>
+          </div>
+
+          {/* Lista */}
+          <div className="overflow-y-auto flex-1">
+            {loading && notifications.length === 0 ? (
+              <p className="text-center py-6 text-xs" style={{ color: "var(--text-muted)" }}>A carregar...</p>
+            ) : notifications.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-10">
+                <i className="fa-regular fa-bell-slash text-2xl" style={{ color: "var(--text-muted)" }} />
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>Sem notificações.</p>
+              </div>
+            ) : (
+              notifications.map(n => {
+                const isRead    = !!n.is_read;
+                const isPayNotif = PAY_KEYWORDS.test(`${n.title} ${n.message}`);
+                return (
+                  <div
+                    key={n.id}
+                    onClick={() => handleMarkRead(n)}
+                    className="px-4 py-3 border-b last:border-0 cursor-pointer transition-colors hover:bg-[var(--surface-2)]"
+                    style={{
+                      borderBottom: "1px solid var(--border)",
+                      borderLeft: isRead ? "3px solid transparent" : "3px solid #E53535",
+                      opacity: isRead ? 0.65 : 1,
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs mb-0.5" style={{ color: "var(--text)", fontWeight: isRead ? 500 : 700 }}>
+                          {n.title}
+                        </p>
+                        <p className="text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>{n.message}</p>
+                        <p className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>{formatDate(n.sent_at)}</p>
+                      </div>
+                      {isPayNotif && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setOpen(false); navigate("/perfil"); }}
+                          className="flex-shrink-0 px-2 py-1 rounded-lg text-[10px] font-bold text-white whitespace-nowrap"
+                          style={{ background: "#22c55e" }}
+                        >
+                          Pagar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Header() {
   const { pathname } = useLocation();
   const { theme } = useTheme();
@@ -150,6 +299,7 @@ export function Header() {
         {/* Controls */}
         <div className="flex items-center gap-1 sm:gap-2">
           <ThemeToggle />
+          {user && <NotificationBell user={user} />}
           {user && <UserMenu user={user} onLogout={logout} />}
         </div>
       </header>

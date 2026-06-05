@@ -57,8 +57,35 @@ export async function chefStartOrder(req, res) {
       }),
     );
 
+    // Pedidos do carrinho digital não têm order_items — usam kitchen_sequence_json directamente
     if (!itemsWithDetails.length) {
-      return res.status(400).json({ success: false, error: `Pedido #${orderId} não tem itens.` });
+      let kitchenSeq = [];
+      try {
+        const raw = typeof order.kitchen_sequence_json === 'string'
+          ? JSON.parse(order.kitchen_sequence_json)
+          : order.kitchen_sequence_json;
+        kitchenSeq = Array.isArray(raw) && raw.length > 0 ? raw : [];
+      } catch { kitchenSeq = []; }
+
+      if (!kitchenSeq.length) {
+        return res.status(400).json({ success: false, error: `Pedido #${orderId} não tem itens.` });
+      }
+
+      // Avança directamente para "In Preparation" sem correr o Chef AI
+      await updateOrder(orderId, { order_status: 'In Preparation' });
+      console.log(`[KDS Chef] Pedido #${orderId} (carrinho) → Em Preparação (sem AI)`);
+
+      return res.json({
+        success:            true,
+        order_id:           orderId,
+        estimated_seconds:  60,
+        kitchen_sequence:   kitchenSeq,
+        sections:           {},
+        stock_status:       'ok',
+        stock_alerts:       [],
+        unavailable_items:  [],
+        notes:              'Pedido criado via cardápio digital.',
+      });
     }
 
     // 3. Constrói o input para o Chef

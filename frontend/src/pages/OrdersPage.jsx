@@ -307,6 +307,7 @@ export default function OrdersPage() {
   const [error,       setError]       = useState(null);
   const [tab,         setTab]         = useState("all");
   const [search,      setSearch]      = useState("");
+  const [showSearch,  setShowSearch]  = useState(false);
   const [page,        setPage]        = useState(1);
   const [showCreate,  setShowCreate]  = useState(false);
 
@@ -324,7 +325,11 @@ export default function OrdersPage() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    const id = setInterval(load, 30_000);
+    return () => clearInterval(id);
+  }, [load]);
   useEffect(() => { setPage(1); }, [tab, search]);
 
   const handleDelete = useCallback(async (id) => {
@@ -354,24 +359,6 @@ export default function OrdersPage() {
         {/* ── Header ── */}
         <div className="flex items-center justify-between gap-2 mb-5">
           <h1 className="text-xl sm:text-2xl font-bold" style={{ color: "var(--text)" }}>Pedidos</h1>
-          <div className="flex gap-2 flex-shrink-0">
-            <button
-              onClick={() => setShowCreate(true)}
-              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white whitespace-nowrap"
-              style={{ background: "var(--primary)" }}
-            >
-              <i className="fa-solid fa-plus text-[10px] sm:text-xs" />
-              Novo Pedido
-            </button>
-            <button
-              onClick={load}
-              title="Atualizar"
-              className="w-8 h-8 sm:w-9 sm:h-9 inline-flex items-center justify-center rounded-xl border border-[var(--border)] transition-colors flex-shrink-0"
-              style={{ color: "var(--text-secondary)", background: "var(--surface-2)" }}
-            >
-              <i className={`fa-solid fa-rotate-right text-xs sm:text-sm${loading ? " fa-spin" : ""}`} />
-            </button>
-          </div>
         </div>
 
         {/* ── Status Tabs ── */}
@@ -411,33 +398,30 @@ export default function OrdersPage() {
           })}
         </div>
 
-        {/* ── Search + Filter ── */}
-        <div className="flex items-center gap-2 mb-5">
-          <div
-            className="flex flex-1 items-center gap-2 rounded-xl px-3 py-2.5"
-            style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
-          >
-            <i className="fa-solid fa-magnifying-glass text-sm" style={{ color: "var(--text-muted)" }} />
+        {/* ── Search ── */}
+        <div className="flex items-center gap-2 mb-5 justify-end">
+          {showSearch && (
             <input
+              autoFocus
               type="text"
               placeholder="Pesquisar..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="flex-1 bg-transparent text-sm outline-none"
-              style={{ color: "var(--text)" }}
+              className="h-9 flex-1 sm:w-56 sm:flex-none rounded-xl px-3 text-sm outline-none transition-all"
+              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }}
             />
-            {search && (
-              <button onClick={() => setSearch("")} style={{ color: "var(--text-muted)" }}>
-                <i className="fa-solid fa-xmark text-xs" />
-              </button>
-            )}
-          </div>
+          )}
           <button
-            className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold"
-            style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}
+            onClick={() => { setShowSearch(s => !s); setSearch(""); }}
+            className="w-9 h-9 rounded-xl border flex items-center justify-center cursor-pointer transition-colors"
+            style={{
+              background: showSearch ? "var(--primary)" : "var(--surface-2)",
+              borderColor: showSearch ? "var(--primary)" : "var(--border)",
+              color: showSearch ? "#fff" : "var(--text-muted)",
+            }}
+            title={showSearch ? "Fechar pesquisa" : "Pesquisar"}
           >
-            <i className="fa-solid fa-sliders text-xs" />
-            <span className="hidden sm:inline">Filtros</span>
+            <i className={`fa-solid ${showSearch ? "fa-xmark" : "fa-magnifying-glass"} text-xs`} />
           </button>
         </div>
 

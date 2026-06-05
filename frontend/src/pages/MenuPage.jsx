@@ -248,7 +248,8 @@ export default function MenuPage() {
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState(null);
   const [catFilter,  setCatFilter]  = useState("all");
-  const [search,     setSearch]     = useState("");
+  const [search,      setSearch]     = useState("");
+  const [showSearch,  setShowSearch]  = useState(false);
   const [page,       setPage]       = useState(1);
   const [editingId,  setEditingId]  = useState(null);
   const [savingId,   setSavingId]   = useState(null);
@@ -269,7 +270,11 @@ export default function MenuPage() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    const id = setInterval(load, 30_000);
+    return () => clearInterval(id);
+  }, [load]);
 
   const filtered = items.filter(i => {
     const matchCat    = catFilter === "all" || i.category === catFilter;
@@ -327,26 +332,34 @@ export default function MenuPage() {
               <i className="fa-solid fa-plus text-[10px] sm:text-xs" />
               Novo Item
             </button>
-            <button onClick={load} title="Atualizar"
-              className="w-8 h-8 sm:w-9 sm:h-9 inline-flex items-center justify-center rounded-xl border border-[var(--border)] transition-colors flex-shrink-0"
-              style={{ color: "var(--text-secondary)", background: "var(--surface-2)" }}>
-              <i className={`fa-solid fa-rotate-right text-xs sm:text-sm${loading ? " fa-spin" : ""}`} />
-            </button>
           </div>
         </div>
 
-        {/* Search */}
-        <div className="flex items-center gap-2 rounded-xl px-3 py-2 mb-3"
-          style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
-          <i className="fa-solid fa-magnifying-glass text-sm" style={{ color: "var(--text-muted)" }} />
-          <input type="text" placeholder="Pesquisar item…" value={search}
-            onChange={e => handleSearch(e.target.value)}
-            className="flex-1 bg-transparent text-sm outline-none" style={{ color: "var(--text)" }} />
-          {search && (
-            <button onClick={() => handleSearch("")} style={{ color: "var(--text-muted)" }}>
-              <i className="fa-solid fa-xmark text-xs" />
-            </button>
+        {/* Search toggle */}
+        <div className="flex items-center gap-2 mb-3 justify-end">
+          {showSearch && (
+            <input
+              autoFocus
+              type="text"
+              placeholder="Pesquisar item…"
+              value={search}
+              onChange={e => handleSearch(e.target.value)}
+              className="h-9 flex-1 sm:w-56 sm:flex-none rounded-xl px-3 text-sm outline-none"
+              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }}
+            />
           )}
+          <button
+            onClick={() => { setShowSearch(s => !s); handleSearch(""); }}
+            className="w-9 h-9 rounded-xl border flex items-center justify-center cursor-pointer transition-colors"
+            style={{
+              background: showSearch ? "var(--primary)" : "var(--surface-2)",
+              borderColor: showSearch ? "var(--primary)" : "var(--border)",
+              color: showSearch ? "#fff" : "var(--text-muted)",
+            }}
+            title={showSearch ? "Fechar pesquisa" : "Pesquisar"}
+          >
+            <i className={`fa-solid ${showSearch ? "fa-xmark" : "fa-magnifying-glass"} text-xs`} />
+          </button>
         </div>
 
         {/* Category filters */}

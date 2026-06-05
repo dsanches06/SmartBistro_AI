@@ -149,9 +149,15 @@ function OrderCard({ order, cardBorder, now, firstSeenAt, estimatedSecsMap }) {
         Cliente {order.customer_id ?? "—"}
       </p>
       <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: 8 }}>
-        {order.kitchenItems.slice(0, 4).map((name, i) => (
-          <span key={i} style={{ fontSize: 12, color: "var(--text-secondary)" }}>1x {name}</span>
-        ))}
+        {order.kitchenItems.slice(0, 4).map((item, i) => {
+          const label = typeof item === "string" ? item : (item?.name ?? "—");
+          const qty   = typeof item === "object" && item?.quantity ? item.quantity : 1;
+          return (
+            <span key={i} style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+              {qty}x {label}
+            </span>
+          );
+        })}
         {order.kitchenItems.length > 4 && (
           <span style={{ fontSize: 11, color: "var(--text-muted)" }}>+{order.kitchenItems.length - 4} mais</span>
         )}
@@ -390,6 +396,8 @@ export default function KdsPage() {
       if (o.order_status === "Delivered") {
         toRemove.push(o);
       } else if (KDS_NEXT_STATUS[o.order_status]) {
+        // Takeaway em "Ready" aguarda pagamento — não avança automaticamente
+        if (o.order_status === "Ready" && o.service_type === "Takeaway") return;
         toAdvance.push({ ...o, nextStatus: KDS_NEXT_STATUS[o.order_status] });
       }
     });

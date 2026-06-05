@@ -7,7 +7,11 @@ import {
   updateOrder,
   updateOrderStatus,
   deleteOrder,
+  createInvoice,
+  invoiceExistsForOrder,
+  createNotification,
 } from "../services/index.js";
+import { calculateInvoiceTotals } from "../utils/financialUtil.js";
 
 const SERVICE_TYPE_OPTIONS = ["Table", "Takeaway"];
 
@@ -99,6 +103,45 @@ export const updateStatus = async (req, res) => {
 
     const affected = await updateOrderStatus(req.params.id, order_status);
     if (!affected) return res.status(404).json({ error: "Pedido não encontrado" });
+
+    // Criar fatura + notificação automaticamente quando pedido fica "Ready"
+    if (order_status === 'Ready') {
+      try {
+        const alreadyExists = await invoiceExistsForOrder(req.params.id);
+        if (!alreadyExists) {
+          const order = await getOrderById(req.params.id);
+          let items = [];
+          if (order?.kitchen_sequence_json) {
+            try {
+              const raw = typeof order.kitchen_sequence_json === 'string'
+                ? JSON.parse(order.kitchen_sequence_json)
+                : order.kitchen_sequence_json;
+              items = Array.isArray(raw) ? raw : [];
+            } catch { items = []; }
+          }
+          const { subtotal, taxAmount, total } = calculateInvoiceTotals({ items });
+          await createInvoice({
+            order_id:        req.params.id,
+            subtotal_amount: subtotal,
+            tax_amount:      taxAmount,
+            total_amount:    total,
+            profit_margin:   total,
+          });
+
+          // Notificar o cliente para efectuar o pagamento
+          if (order?.customer_id) {
+            await createNotification({
+              customer_id: order.customer_id,
+              title:       'Pedido pronto — pagamento pendente',
+              message:     `O teu pedido #${req.params.id} (${order.service_type ?? 'Takeaway'}) está pronto. Total a pagar: ${total.toFixed(2)} €.`,
+            }).catch(e => console.error('Auto-notif error:', e.message));
+          }
+        }
+      } catch (invoiceErr) {
+        console.error('Auto-invoice error:', invoiceErr.message);
+      }
+    }
+
     res.json({ message: `Status do pedido actualizado para ${order_status}` });
   } catch (err) {
     res.status(500).json({ error: err.message });
