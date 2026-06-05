@@ -240,9 +240,7 @@ function OrderRow({ order, onDelete }) {
 
   return (
     <tr
-      className="border-b border-[var(--border)] transition-colors"
-      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-2)"; }}
-      onMouseLeave={e => { e.currentTarget.style.background = ""; }}
+      className="border-b border-[var(--border)] transition-colors hover:bg-[var(--surface-2)]"
     >
       <td className="py-3 px-4 text-sm font-semibold" style={{ color: "var(--primary)" }}>
         #{order.id}
@@ -260,10 +258,8 @@ function OrderRow({ order, onDelete }) {
           <button
             onClick={() => onDelete(order.id)}
             title="Remover pedido"
-            className="inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors"
+            className="inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-[#fef2f2]"
             style={{ color: "#ef4444" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#fef2f2"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = ""; }}
           >
             <i className="fa-solid fa-trash text-xs" />
           </button>

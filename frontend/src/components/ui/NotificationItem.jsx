@@ -1,9 +1,7 @@
 import { useState } from "react";
-import { useTheme } from "@/context/ThemeContext";
 import { notificationService } from "@/services";
 
 export function NotificationItem({ notification, onRemove }) {
-  const { theme } = useTheme();
   const [isRead, setIsRead] = useState(notification.is_read ?? false);
 
   const handleRead = async () => {
@@ -20,22 +18,12 @@ export function NotificationItem({ notification, onRemove }) {
   return (
     <div
       onClick={handleRead}
+      className={`rounded-lg mb-1 transition-colors ${!isRead ? "hover:bg-[var(--surface-2)]" : ""}`}
       style={{
         padding: "12px",
-        borderRadius: "8px",
         cursor: isRead ? "default" : "pointer",
-        transition: "background 0.2s",
         opacity: isRead ? 0.55 : 1,
         borderLeft: isRead ? "4px solid transparent" : "4px solid #ef4444",
-        marginBottom: "4px",
-        backgroundColor: "transparent",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.backgroundColor =
-          theme === "dark" ? "#2a2a2a" : "#f5f5f5";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.backgroundColor = "transparent";
       }}
     >
       <p style={{ fontSize: 13, fontWeight: isRead ? 400 : 700, color: "var(--text)", marginBottom: 2 }}>

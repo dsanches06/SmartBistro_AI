@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { itemService } from "@/services";
 import { orderService }     from "@/services/orderService";
@@ -70,10 +70,8 @@ function Modal({ open, onClose, title, children, isDark, size = "lg" }) {
           <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>{title}</h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg transition-colors"
+            className="p-1.5 rounded-lg transition-colors hover:bg-[var(--surface-2)]"
             style={{ color: "var(--text-muted)" }}
-            onMouseEnter={e => e.currentTarget.style.background = "var(--surface-2)"}
-            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
           >
             <IconClose />
           </button>
@@ -357,10 +355,10 @@ export default function MainPage() {
   const [orderLoading, setOrderLoading] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
 
-  const isClient   = user && user.role_id !== 1;
-  const cartItems  = Object.values(cart).filter(c => c.qty > 0);
-  const cartTotal  = cartItems.reduce((s, c) => s + Number(c.item.price) * c.qty, 0);
-  const cartCount  = cartItems.reduce((s, c) => s + c.qty, 0);
+  const isClient  = user && user.role_id !== 1;
+  const cartItems = useMemo(() => Object.values(cart).filter(c => c.qty > 0), [cart]);
+  const cartTotal = useMemo(() => cartItems.reduce((s, c) => s + Number(c.item.price) * c.qty, 0), [cartItems]);
+  const cartCount = useMemo(() => cartItems.reduce((s, c) => s + c.qty, 0), [cartItems]);
 
   const addToCart = (item) =>
     setCart(prev => ({ ...prev, [item.id]: { item, qty: (prev[item.id]?.qty || 0) + 1 } }));
@@ -423,12 +421,18 @@ export default function MainPage() {
     navigate(u.role_id === 1 ? "/dashboard" : "/", { replace: true });
   };
 
-  const groupedAll = MENU_CATEGORIES.map(cat => ({
-    ...cat,
-    items: items.filter(i => i.category === cat.key),
-  })).filter(g => g.items.length > 0);
+  const groupedAll = useMemo(() =>
+    MENU_CATEGORIES.map(cat => ({
+      ...cat,
+      items: items.filter(i => i.category === cat.key),
+    })).filter(g => g.items.length > 0),
+    [items]
+  );
 
-  const filteredItems = items.filter(i => i.category === activeCategory);
+  const filteredItems = useMemo(() =>
+    items.filter(i => i.category === activeCategory),
+    [items, activeCategory]
+  );
 
   const headerBtnStyle = {
     color: "var(--text-secondary)",

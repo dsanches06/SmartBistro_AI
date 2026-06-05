@@ -33,8 +33,7 @@ export function ProviderErrorCard({ errorType = "UNKNOWN", message, onRetry }) {
             background: cfg.color,
             color:      "#fff",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.85")}
-          onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+          className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-opacity hover:opacity-85"
         >
           ↺ Tentar novamente
         </button>

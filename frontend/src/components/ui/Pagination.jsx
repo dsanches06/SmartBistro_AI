@@ -27,13 +27,11 @@ function PagBtn({ children, active, disabled, onClick }) {
     <button
       onClick={onClick}
       disabled={disabled}
-      className="min-w-[2rem] h-8 px-1 flex items-center justify-center rounded-lg text-sm font-semibold transition-colors disabled:opacity-40"
+      className={`min-w-[2rem] h-8 px-1 flex items-center justify-center rounded-lg text-sm font-semibold transition-colors disabled:opacity-40 ${!active && !disabled ? "hover:bg-[var(--surface-2)]" : ""}`}
       style={{
         background: active ? "var(--primary)" : "transparent",
         color: active ? "#fff" : "var(--text-secondary)",
       }}
-      onMouseEnter={e => { if (!active && !disabled) e.currentTarget.style.background = "var(--surface-2)"; }}
-      onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
     >
       {children}
     </button>

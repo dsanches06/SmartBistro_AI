@@ -310,10 +310,8 @@ export default function FaturacaoPage() {
           </button>
           <button
             onClick={() => exportInvoicesCSV(filteredInvoices)}
-            className="flex-1 flex items-center justify-center gap-2 font-semibold"
+            className="flex-1 flex items-center justify-center gap-2 font-semibold hover:bg-[var(--surface-3)]"
             style={{ background: "var(--surface-2)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: 8, padding: "6px 10px", fontSize: 13 }}
-            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-3)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface-2)"; }}
           >
             <i className="fa-solid fa-download text-xs" />
             Exportar
@@ -360,15 +358,13 @@ export default function FaturacaoPage() {
                       <tr
                         key={inv.id}
                         onClick={() => setSelectedInv(prev => prev?.id === inv.id ? null : inv)}
-                        className="cursor-pointer"
+                        className={`cursor-pointer${!active ? " hover:bg-[var(--surface-2)]" : ""}`}
                         style={{
                           borderBottom: "1px solid var(--border)",
                           background: active
                             ? (isDark ? "rgba(37,99,235,0.12)" : "rgba(37,99,235,0.07)")
                             : "",
                         }}
-                        onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface-2)"; }}
-                        onMouseLeave={e => { if (!active) e.currentTarget.style.background = ""; }}
                       >
                         <td className="py-2.5 pr-3 text-xs font-semibold" style={{ color: "var(--primary)" }}>
                           {fmtInvoiceNumber(inv)}
@@ -504,10 +500,8 @@ export default function FaturacaoPage() {
               <div className="flex gap-2 mt-4">
                 <button
                   onClick={() => window.print()}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold"
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold hover:bg-[var(--surface-3)]"
                   style={{ background: "var(--surface-2)", color: "var(--text)", border: "1px solid var(--border)" }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-3)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "var(--surface-2)"; }}
                 >
                   <i className="fa-solid fa-print text-xs" />
                   Imprimir

@@ -499,13 +499,11 @@ export default function RelatoriosPage() {
               <button
                 key={s.key}
                 onClick={() => setSection(s.key)}
-                className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors text-left"
+                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors text-left${section !== s.key ? " hover:bg-[var(--surface-2)]" : ""}`}
                 style={{
                   background: section === s.key ? "var(--primary)" : "transparent",
                   color: section === s.key ? "#fff" : "var(--text-muted)",
                 }}
-                onMouseEnter={e => { if (section !== s.key) e.currentTarget.style.background = "var(--surface-2)"; }}
-                onMouseLeave={e => { if (section !== s.key) e.currentTarget.style.background = "transparent"; }}
               >
                 <i className={`${s.icon} w-4 text-center`} />
                 {s.label}

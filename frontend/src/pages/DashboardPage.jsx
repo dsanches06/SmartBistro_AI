@@ -283,9 +283,8 @@ export default function DashboardPage() {
                   pagedOrders.map(order => (
                     <tr
                       key={order.id}
+                      className="hover:bg-[var(--surface-2)]"
                       style={{ borderBottom: "1px solid var(--border)" }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-2)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = ""; }}
                     >
                       <td className="py-2.5 pr-3 text-xs font-semibold" style={{ color: "var(--primary)" }}>
                         #{order.id}

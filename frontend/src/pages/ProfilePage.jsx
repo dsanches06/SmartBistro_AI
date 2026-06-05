@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler } from "chart.js";
 import { Doughnut, Line } from "react-chartjs-2";
@@ -378,15 +378,21 @@ export default function ProfilePage() {
   if (user.role_id === 1) { navigate("/dashboard", { replace: true }); return null; }
 
   const isAdmin     = user.role_id === 1;
-  const totalGasto  = Object.values(invoiceMap).filter(Boolean).reduce((s, inv) => s + Number(inv.total_amount ?? 0), 0);
+  const totalGasto = useMemo(
+    () => Object.values(invoiceMap).filter(Boolean).reduce((s, inv) => s + Number(inv.total_amount ?? 0), 0),
+    [invoiceMap]
+  );
 
-  const unpaidInvoices = Object.entries(invoiceMap)
-    .filter(([, inv]) => inv && !paidInvIds.has(inv.id))
-    .map(([orderId, inv]) => ({ orderId, inv }));
+  const unpaidInvoices = useMemo(
+    () => Object.entries(invoiceMap)
+      .filter(([, inv]) => inv && !paidInvIds.has(inv.id))
+      .map(([orderId, inv]) => ({ orderId, inv })),
+    [invoiceMap, paidInvIds]
+  );
 
   const totalOrders = orders.length;
-  const avgOrder    = totalOrders > 0 ? totalGasto / totalOrders : 0;
-  const catEntries  = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
+  const avgOrder    = useMemo(() => totalOrders > 0 ? totalGasto / totalOrders : 0, [totalOrders, totalGasto]);
+  const catEntries  = useMemo(() => Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]), [categoryTotals]);
 
   // Chart data
   const catLabels  = catEntries.map(([k]) => k);

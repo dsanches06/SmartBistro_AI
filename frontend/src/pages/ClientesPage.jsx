@@ -318,10 +318,8 @@ function CustomerDetail({ customer, onBack }) {
         </div>
 
         {/* Direita: botão Voltar */}
-        <button onClick={onBack} className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer"
-          style={{ background: "var(--surface-2)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}
-          onMouseEnter={e => e.currentTarget.style.borderColor = "var(--primary)"}
-          onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border)"}>
+        <button onClick={onBack} className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer hover:border-[var(--primary)]"
+          style={{ background: "var(--surface-2)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}>
           <i className="fa-solid fa-arrow-left text-[10px]" /> Voltar
         </button>
       </div>

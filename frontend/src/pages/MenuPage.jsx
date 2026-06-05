@@ -44,10 +44,8 @@ function GestaoRow({ item, editingId, savingId, togglingId, onEdit, onSave, onCa
   const isToggling = togglingId === item.id;
   return (
     <tr
-      className="border-b border-[var(--border)] transition-colors"
+      className="border-b border-[var(--border)] transition-colors hover:bg-[var(--surface-2)]"
       style={{ opacity: item.is_active ? 1 : 0.6 }}
-      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-2)"; }}
-      onMouseLeave={e => { e.currentTarget.style.background = ""; }}
     >
       <td className="py-3 px-4">
         <div className="flex items-center gap-2">
@@ -77,10 +75,8 @@ function GestaoRow({ item, editingId, savingId, togglingId, onEdit, onSave, onCa
         <div className="flex items-center gap-2">
           {!isEditing && (
             <button onClick={() => onEdit(item)}
-              className="text-xs px-2.5 py-1.5 rounded-lg border transition-colors"
+              className="text-xs px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-[var(--primary)] hover:text-white"
               style={{ color: "var(--primary)", borderColor: "var(--border)", background: "var(--surface-2)" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "var(--primary)"; e.currentTarget.style.color = "#fff"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "var(--surface-2)"; e.currentTarget.style.color = "var(--primary)"; }}
             >
               <i className="fa-solid fa-pen text-xs mr-1" />Preço
             </button>
@@ -137,10 +133,8 @@ function GestaoCard({ item, editingId, savingId, togglingId, onEdit, onSave, onC
       {!isEditing && (
         <div className="flex gap-2 pt-0.5">
           <button onClick={() => onEdit(item)}
-            className="flex-1 text-xs py-1.5 rounded-lg border font-semibold transition-colors"
-            style={{ color: "var(--primary)", borderColor: "var(--border)", background: "var(--surface-2)" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "var(--primary)"; e.currentTarget.style.color = "#fff"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface-2)"; e.currentTarget.style.color = "var(--primary)"; }}>
+            className="flex-1 text-xs py-1.5 rounded-lg border font-semibold transition-colors hover:bg-[var(--primary)] hover:text-white"
+            style={{ color: "var(--primary)", borderColor: "var(--border)", background: "var(--surface-2)" }}>
             <i className="fa-solid fa-pen text-xs mr-1" />Editar Preço
           </button>
           <button onClick={() => onToggle(item)} disabled={isToggling}

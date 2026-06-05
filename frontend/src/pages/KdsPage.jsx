@@ -128,19 +128,17 @@ function OrderCard({ order, cardBorder, now, firstSeenAt, estimatedSecsMap }) {
 
   return (
     <div
+      className="kds-card"
       style={{
         backgroundColor: "var(--surface-2)",
         borderLeft: `4px solid ${cardBorder}`,
         borderRadius: "0.5rem",
         padding: "10px 12px",
         boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-        transition: "transform 0.15s, box-shadow 0.15s",
         display: "flex",
         flexDirection: "column",
         gap: 0,
       }}
-      onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 4px 10px rgba(0,0,0,0.12)"; }}
-      onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.08)"; }}
     >
       <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 2 }}>
         #{order.id} · {target}

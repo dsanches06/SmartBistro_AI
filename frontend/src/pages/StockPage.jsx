@@ -109,9 +109,7 @@ function StockRow({ item, editingId, savingId, onEdit, onSave, onCancel }) {
 
   return (
     <tr
-      className="border-b border-[var(--border)] transition-colors"
-      onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-2)"; }}
-      onMouseLeave={e => { e.currentTarget.style.background = ""; }}
+      className="border-b border-[var(--border)] transition-colors hover:bg-[var(--surface-2)]"
     >
       <td className="py-2 pl-4 pr-2 w-12">
         <ProductIcon name={item.name} />
@@ -135,10 +133,8 @@ function StockRow({ item, editingId, savingId, onEdit, onSave, onCancel }) {
           <button
             onClick={() => onEdit(item)}
             title="Atualizar stock"
-            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold border transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold border transition-colors hover:bg-[var(--primary)] hover:text-white hover:border-[var(--primary)]"
             style={{ background: "var(--surface-2)", color: "var(--primary)", borderColor: "var(--border)" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "var(--primary)"; e.currentTarget.style.color = "#fff"; e.currentTarget.style.borderColor = "var(--primary)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "var(--surface-2)"; e.currentTarget.style.color = "var(--primary)"; e.currentTarget.style.borderColor = "var(--border)"; }}
           >
             <i className="fa-solid fa-pen-to-square text-xs" />
             Atualizar

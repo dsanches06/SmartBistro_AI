@@ -135,6 +135,15 @@ body {
   background-color: var(--primary);
 }
 
+/* ── KDS card hover — substitui onMouseEnter/Leave ─────────────────────── */
+.kds-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.kds-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+}
+
 /* ── Utility classes ─────────────────────────────────────────────────────── */
 .text-main       { color: var(--text); }
 .text-muted      { color: var(--text-muted); }
