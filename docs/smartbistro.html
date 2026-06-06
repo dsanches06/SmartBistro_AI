@@ -1,0 +1,1688 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SmartBistro AI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --primary: #2563eb;
+        --dark: #0f172a;
+        --light: #f8fafc;
+        --white: #ffffff;
+        --accent: #ef4444;
+        --code-bg: #1e293b;
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: "Poppins", sans-serif;
+        background-color: var(--white);
+        color: var(--dark);
+        height: 100vh;
+        width: 100vw;
+        overflow: hidden;
+      }
+
+      /* --- MODO LISTA --- */
+      body.list-mode {
+        overflow: auto;
+        height: auto;
+        padding: 40px;
+        background-color: #f1f5f9;
+      }
+      body.list-mode .slide {
+        position: relative;
+        opacity: 1;
+        visibility: visible;
+        height: auto;
+        min-height: 400px;
+        margin-bottom: 40px;
+        border: 1px solid #cbd5e1;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        display: flex;
+        z-index: 1;
+      }
+      body.list-mode .controls,
+      body.list-mode .progress-bar { display: none !important; }
+
+      /* --- SLIDESHOW --- */
+      .slide {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 4rem 6rem;
+        background: white;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.4s ease, visibility 0.4s ease;
+        z-index: 1;
+      }
+      .slide.active { opacity: 1; visibility: visible; z-index: 10; }
+
+      /* Slide com imagem full */
+      .slide-image {
+        padding: 2rem 4rem;
+        justify-content: flex-start;
+      }
+
+      /* Slide diagrama — sem padding, imagem ocupa todo o ecrã */
+      .slide-diagrama {
+        padding: 0;
+        justify-content: center;
+        align-items: center;
+        background: #f8fafc;
+      }
+      .slide-diagrama .img-full {
+        max-height: 100vh;
+        max-width: 100%;
+        width: auto;
+        border-radius: 0;
+        object-fit: contain;
+      }
+      .slide-diagrama .slide-footer {
+        left: 2rem;
+        background: rgba(255,255,255,0.85);
+        padding: 2px 10px;
+        border-radius: 4px;
+      }
+
+      /* Slide de secção — fundo branco */
+      .slide-section {
+        background: #ffffff;
+        justify-content: center;
+        align-items: center;
+      }
+
+      /* --- TIPOGRAFIA --- */
+      h1 { font-size: 3rem; font-weight: 800; color: var(--primary); margin-bottom: 0.5rem; line-height: 1.1; }
+      h2 { font-size: 2rem; font-weight: 600; color: var(--dark); margin-bottom: 1rem; position: relative; }
+      p, li { font-size: 1.1rem; color: #334155; line-height: 1.6; margin-bottom: 1rem; }
+      ul { list-style: none; }
+      .center { text-align: center; }
+
+      /* --- UI --- */
+      .card {
+        background: var(--light);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        text-align: left;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+      }
+      .card-blank {
+        background: #f8fafc;
+        border: 2px dashed #94a3b8;
+        border-radius: 12px;
+        min-height: 320px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+      .tag-pill {
+        display: inline-block;
+        background: var(--primary);
+        color: white;
+        padding: 2px 10px;
+        border-radius: 99px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-right: 4px;
+      }
+      .tag-pill.green  { background: #16a34a; }
+      .tag-pill.orange { background: #ea580c; }
+      .tag-pill.purple { background: #7c3aed; }
+      .tag-pill.gray   { background: #475569; }
+      .tag-pill.yellow { background: #ca8a04; }
+      .tag-pill.red    { background: #dc2626; }
+
+      table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+      th { background: var(--primary); color: white; padding: 8px 12px; text-align: left; }
+      td { padding: 7px 12px; border-bottom: 1px solid #e2e8f0; color: #334155; }
+      tr:nth-child(even) td { background: #f1f5f9; }
+
+      pre {
+        background: #f0f4f8;
+        padding: 0.75rem;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        overflow-x: auto;
+        margin-top: 0.5rem;
+      }
+      code { color: #334155; font-family: 'Fira Code', monospace; }
+      .kw  { color: #7c3aed; font-weight: 600; }
+      .fn  { color: #0891b2; }
+      .str { color: #16a34a; }
+      .cm  { color: #94a3b8; font-style: italic; }
+      .num { color: #ea580c; }
+      .attr{ color: #2563eb; }
+
+      /* --- IMAGENS --- */
+      .img-full {
+        width: auto;
+        max-width: 100%;
+        height: auto;
+        max-height: 72vh;
+        object-fit: contain;
+        border-radius: 8px;
+        display: block;
+        margin: 0 auto;
+      }
+      .img-centered {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex: 1;
+        padding: 0.5rem 0;
+      }
+
+      /* --- CONTROLES --- */
+      .slide-footer {
+        position: absolute;
+        bottom: 2rem; left: 6rem;
+        font-size: 0.9rem;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        z-index: 20;
+      }
+      .slide-section .slide-footer { color: #475569; }
+
+      .slide-counter { display: none; }
+
+      .controls {
+        position: fixed;
+        bottom: 2rem; right: 2rem;
+        display: flex; gap: 1rem;
+        z-index: 100;
+      }
+      .view-toggle {
+        position: fixed;
+        top: 2rem; right: 2rem;
+        z-index: 101;
+        padding: 10px 15px;
+        background: white;
+        border: 2px solid var(--primary);
+        color: var(--primary);
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      }
+      .view-toggle:hover { background: var(--primary); color: white; }
+      .btn {
+        background: var(--dark);
+        color: white;
+        border: none;
+        width: 50px; height: 50px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 1.2rem;
+        display: flex; align-items: center; justify-content: center;
+        transition: background 0.2s, transform 0.1s;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+      }
+      .btn:hover { background: var(--primary); }
+      .progress-bar {
+        position: fixed;
+        bottom: 0; left: 0;
+        height: 5px;
+        background: var(--primary);
+        width: 0%;
+        transition: width 0.3s;
+        z-index: 100;
+      }
+
+      .list-sm li { font-size: 0.65rem !important; line-height: 1.3 !important; margin-bottom: 0.15rem !important; }
+
+      @media print {
+        body { overflow: visible; height: auto; background: white; }
+        .slide { position: relative; opacity: 1; visibility: visible; display: flex; height: 100vh; page-break-after: always; border: none; box-shadow: none; padding: 2rem; }
+        .controls, .progress-bar, .view-toggle, .slide-counter { display: none !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <button class="view-toggle" onclick="toggleView()">
+      <i class="fa-solid fa-list"></i> Alternar Vista (Scroll)
+    </button>
+    <div class="slide-counter" id="slideCounter">1 / ?</div>
+    <div class="progress-bar" id="progressBar"></div>
+    <div class="controls">
+      <button class="btn" onclick="prevSlide()" title="Anterior"><i class="fa-solid fa-arrow-left"></i></button>
+      <button class="btn" onclick="nextSlide()" title="Próximo"><i class="fa-solid fa-arrow-right"></i></button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!--                   BACKEND                   -->
+    <!-- ═══════════════════════════════════════════ -->
+
+    <!-- B-01: CAPA -->
+    <div class="slide active" style="padding:2rem 4rem;justify-content:flex-start;">
+      <div style="text-align:center;margin-top:2.5rem;">
+        <p style="text-transform:uppercase;letter-spacing:4px;color:#64748b;margin-bottom:10px;">SmartBistro AI</p>
+        <h1 style="margin-bottom:8px;">Projecto Fullstack</h1>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;margin-top:0.75rem;">
+        <img src="assets/index.png" alt="SmartBistro AI" style="max-height:60vh;max-width:100%;width:auto;object-fit:contain;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.12);" loading="lazy" />
+      </div>
+      <div class="slide-footer">Capa</div>
+    </div>
+
+    <!-- B-02: IDENTIFICAÇÃO -->
+    <div class="slide">
+      <h2 class="center">Identificação do Aluno</h2>
+      <div class="card">
+        <p><strong>Nome:</strong> Danilson Sanches</p>
+        <p><strong>Número:</strong> upskill217</p>
+        <p><strong>Formação:</strong> Frontend Javascript + IA (UPskill — Universidade de Lisboa)</p>
+        <p><strong>Projecto Fullstack:</strong> SmartBistro AI — Sistema de gestão de restaurante com agentes de IA</p>
+        <p><strong>Objectivo:</strong> Apresentação da arquitectura e implementação do projecto</p>
+      </div>
+      <div style="display:flex;justify-content:center;align-items:center;gap:2.5rem;margin-top:1.5rem;">
+        <img src="assets/upskill_logo.png" alt="UPskill" style="height:56px;object-fit:contain;" />
+        <img src="assets/fcul_logo.png" alt="FCUL" style="height:56px;object-fit:contain;" />
+      </div>
+      <div class="slide-footer">Identificação</div>
+    </div>
+
+    <!-- B-03: O QUE É O SMARTBISTRO AI -->
+    <div class="slide">
+      <h2 class="center">O que é o SmartBistro AI?</h2>
+      <p>Sistema completo de gestão de restaurante com inteligência artificial integrada. O backend serve de motor de processamento para pedidos em linguagem natural, chatbot e KDS.</p>
+      <div class="card" style="margin-top:1rem;">
+        <ul>
+          <li><strong>Pipeline de 3 Agentes AI</strong> — interpreta linguagem natural e cria pedidos reais na BD</li>
+          <li><strong>Chatbot com SSE + Function Calling</strong> — atendimento em tempo real via streaming</li>
+          <li><strong>KDS (Kitchen Display System)</strong> — Chef AI gera sequência de preparação</li>
+          <li><strong>Auth JWT</strong> — ligação inteligente entre clientes do chatbot e contas registadas</li>
+          <li><strong>Cálculo financeiro determinístico</strong> — IVA, descontos e totais nunca delegados à IA</li>
+        </ul>
+      </div>
+      <div class="slide-footer">Visão Geral</div>
+    </div>
+
+    <!-- B-04: ARQUITECTURA GERAL -->
+    <div class="slide slide-image">
+      <h2 class="center">Arquitectura Geral</h2>
+      <div class="img-centered">
+        <img src="assets/01-arquitetura.png" alt="Diagrama de arquitectura do SmartBistro AI" class="img-full" loading="lazy" />
+      </div>
+      <div class="slide-footer">Arquitectura</div>
+    </div>
+
+    <!-- SECÇÃO: BACKEND (divisor) -->
+    <div class="slide slide-section">
+      <div style="text-align:center;">
+        <p style="text-transform:uppercase;letter-spacing:6px;color:#475569;margin-bottom:16px;font-size:0.9rem;">SmartBistro AI</p>
+        <h1 style="font-size:4rem;color:var(--dark);margin-bottom:8px;">Backend</h1>
+        <p style="color:#60a5fa;font-family:'Fira Code',monospace;font-size:1rem;margin-bottom:0;">
+          Express.js · MySQL · Groq SDK · SSE · JWT
+        </p>
+        <div style="margin-top:48px;font-size:3.5rem;color:#1e40af;gap:40px;display:flex;justify-content:center;">
+          <i class="fa-solid fa-server"></i>
+          <i class="fa-solid fa-brain"></i>
+          <i class="fa-solid fa-database"></i>
+        </div>
+      </div>
+      <div class="slide-footer" style="color:#475569;">Secção — Backend</div>
+    </div>
+
+    <!-- B-05: STACK TECNOLÓGICO -->
+    <div class="slide">
+      <h2 class="center">Stack Tecnológico</h2>
+      <div class="card">
+        <table>
+          <thead>
+            <tr><th>Camada</th><th>Tecnologia</th><th>Função</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>HTTP Server</td><td>Express.js</td><td>Routing, middleware, SSE</td></tr>
+            <tr><td>Base de Dados</td><td>MySQL (pool)</td><td>Persistência de pedidos, clientes, faturas</td></tr>
+            <tr><td>IA / LLM</td><td>Groq SDK</td><td>llama-3.3-70b + fila de fallback</td></tr>
+            <tr><td>Autenticação</td><td>JWT + bcrypt</td><td>Tokens de 8h, passwords hasheadas</td></tr>
+            <tr><td>Streaming</td><td>SSE</td><td>Chatbot em tempo real palavra a palavra</td></tr>
+            <tr><td>Validação</td><td>Zod</td><td>Schemas de saída dos agentes AI</td></tr>
+            <tr><td>Testes</td><td>Vitest + Supertest</td><td>261 testes de integração — todos os endpoints HTTP sem BD real</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="slide-footer">Stack</div>
+    </div>
+
+    <!-- B-06: ESTRUTURA DE PASTAS — BACKEND (1/2) -->
+    <div class="slide" style="padding:1rem 2rem;">
+      <h2 class="center" style="margin-bottom:0.4rem;">Estrutura de Pastas — Backend (1/3)</h2>
+      <div style="display:flex;gap:0.6rem;margin-top:0.2rem;">
+
+        <!-- COLUNA ESQUERDA: src raiz + controllers -->
+        <div class="card" style="flex:1;padding:0.6rem;">
+          <p style="font-size:0.6rem;font-weight:700;color:#64748b;margin-bottom:0.15rem;">backend/src/</p>
+          <pre style="font-size:0.68rem;line-height:1.38;margin:0 0 0.4rem 0;"><code>├── app.js      <span class="cm">← Express: middlewares, rotas, erro global</span>
+├── db.js       <span class="cm">← pool MySQL2 + helper query()</span>
+└── dto/
+    └── mapDTO.js <span class="cm">← mapeamento de resultados DB → objecto limpo</span></code></pre>
+          <p style="font-size:0.62rem;font-weight:700;color:var(--primary);margin-bottom:0.15rem;">controllers/ <span style="font-weight:400;color:#94a3b8;">(20)</span></p>
+          <pre style="font-size:0.68rem;line-height:1.38;margin:0;"><code>├── authController.js          <span class="cm">← JWT, login, registo</span>
+├── chatBotController.js       <span class="cm">← SSE streaming</span>
+├── orderPipelineController.js <span class="cm">← 3 agentes AI</span>
+├── kdsController.js           <span class="cm">← Kitchen Display</span>
+├── orderController.js         <span class="cm">← CRUD + updateStatus</span>
+├── orderItemController.js     <span class="cm">← itens do pedido</span>
+├── customerController.js      <span class="cm">← gestão clientes</span>
+├── itemController.js          <span class="cm">← gestão menu</span>
+├── invoiceController.js       <span class="cm">← faturas</span>
+├── paymentController.js       <span class="cm">← pagamentos</span>
+├── stockController.js         <span class="cm">← inventário</span>
+├── tableController.js         <span class="cm">← mesas</span>
+├── reservationController.js   <span class="cm">← reservas</span>
+├── notificationController.js  <span class="cm">← notificações</span>
+├── ingredientController.js    <span class="cm">← ingredientes</span>
+├── recipeItemController.js    <span class="cm">← receitas</span>
+├── chatHistoryController.js   <span class="cm">← histórico chat</span>
+├── conversationController.js  <span class="cm">← conversas</span>
+├── logController.js           <span class="cm">← logs</span>
+└── roleController.js          <span class="cm">← roles/permissões</span></code></pre>
+        </div>
+
+        <!-- COLUNA DIREITA: routes + services -->
+        <div class="card" style="flex:1;padding:0.6rem;">
+          <p style="font-size:0.62rem;font-weight:700;color:var(--primary);margin-bottom:0.15rem;">routes/ <span style="font-weight:400;color:#94a3b8;">(18)</span></p>
+          <pre style="font-size:0.68rem;line-height:1.38;margin:0 0 0.4rem 0;"><code>├── authRoutes.js          <span class="cm">← /auth/*</span>
+├── chatRoutes.js          <span class="cm">← /chatbot/*</span>
+├── chatHistoryRoutes.js   <span class="cm">← /chat-history/*</span>
+├── conversationRoutes.js  <span class="cm">← /conversations/*</span>
+├── customerRoutes.js      <span class="cm">← /customers/*</span>
+├── ingredientRoutes.js    <span class="cm">← /ingredients/*</span>
+├── invoiceRoutes.js       <span class="cm">← /invoices/*</span>
+├── itemRoutes.js          <span class="cm">← /items/*</span>
+├── logRoutes.js           <span class="cm">← /logs/*</span>
+├── notificationRoutes.js  <span class="cm">← /notifications/*</span>
+├── orderItemRoutes.js     <span class="cm">← /order-items/*</span>
+├── orderRoutes.js         <span class="cm">← /orders/*</span>
+├── paymentRoutes.js       <span class="cm">← /payments/*</span>
+├── recipeItemRoutes.js    <span class="cm">← /recipe-items/*</span>
+├── reservationRoutes.js   <span class="cm">← /reservations/*</span>
+├── roleRoutes.js          <span class="cm">← /roles/*</span>
+├── stockRoutes.js         <span class="cm">← /stock/*</span>
+└── tableRoutes.js         <span class="cm">← /tables/*</span></code></pre>
+          <p style="font-size:0.62rem;font-weight:700;color:var(--primary);margin-bottom:0.15rem;">services/ <span style="font-weight:400;color:#94a3b8;">(17)</span></p>
+          <pre style="font-size:0.68rem;line-height:1.38;margin:0;"><code>├── orderService.js        <span class="cm">← queries pedidos</span>
+├── orderItemService.js    <span class="cm">← queries itens pedido</span>
+├── customerService.js     <span class="cm">← queries clientes</span>
+├── itemService.js         <span class="cm">← queries menu</span>
+├── invoiceService.js      <span class="cm">← queries faturas</span>
+├── paymentService.js      <span class="cm">← queries pagamentos</span>
+├── stockService.js        <span class="cm">← queries inventário</span>
+├── tableService.js        <span class="cm">← queries mesas</span>
+├── reservationService.js  <span class="cm">← queries reservas</span>
+├── notificationService.js <span class="cm">← queries notificações</span>
+├── ingredientService.js   <span class="cm">← queries ingredientes</span>
+├── recipeItemService.js   <span class="cm">← queries receitas</span>
+├── chatHistoryService.js  <span class="cm">← queries histórico</span>
+├── conversationService.js <span class="cm">← queries conversas</span>
+├── logService.js          <span class="cm">← queries logs</span>
+└── roleService.js         <span class="cm">← queries roles</span></code></pre>
+        </div>
+
+      </div>
+      <div class="slide-footer">Estrutura Backend (1/3)</div>
+    </div>
+
+    <!-- B-06B: ESTRUTURA DE PASTAS — BACKEND (2/3) -->
+    <div class="slide" style="padding:1rem 2rem;">
+      <h2 class="center" style="margin-bottom:0.4rem;">Estrutura de Pastas — Backend (2/3)</h2>
+      <div style="display:flex;gap:0.6rem;margin-top:0.2rem;">
+
+        <!-- COLUNA ESQUERDA: middlewares + utils + database -->
+        <div class="card" style="flex:1;padding:0.6rem;">
+          <p style="font-size:0.62rem;font-weight:700;color:var(--primary);margin-bottom:0.15rem;">middlewares/</p>
+          <pre style="font-size:0.68rem;line-height:1.38;margin:0 0 0.5rem 0;"><code>├── authMiddleware.js          <span class="cm">← verifyToken + requireRole</span>
+├── createExistsMiddleware.js  <span class="cm">← factory de verificação 404</span>
+└── loggerMiddleware.js        <span class="cm">← regista todos os pedidos HTTP</span></code></pre>
+          <p style="font-size:0.62rem;font-weight:700;color:var(--primary);margin-bottom:0.15rem;">utils/</p>
+          <pre style="font-size:0.68rem;line-height:1.38;margin:0 0 0.5rem 0;"><code>├── financialUtil.js    <span class="cm">← IVA, subtotal, roundMoney</span>
+├── groqUtil.js         <span class="cm">← isRetryable, streamFilter</span>
+├── classifyError.js    <span class="cm">← erro técnico → tipo + mensagem PT</span>
+├── pipelineError.js    <span class="cm">← classe PipelineError</span>
+├── thinkingBotUtil.js  <span class="cm">← reasoning_effort por agente</span>
+├── chatBotUtil.js      <span class="cm">← writeSseError</span>
+└── fallbackMessages.js <span class="cm">← mensagens PT sem texto LLM</span></code></pre>
+          <p style="font-size:0.6rem;font-weight:700;color:#64748b;margin-bottom:0.15rem;">database/ &nbsp;·&nbsp; raiz do projecto</p>
+          <pre style="font-size:0.68rem;line-height:1.38;margin:0;"><code>├── schema.sql  <span class="cm">← DDL completo: tabelas, FKs, índices</span>
+└── seed.sql    <span class="cm">← dados iniciais: menu, roles, utilizadores</span></code></pre>
+        </div>
+
+        <!-- COLUNA DIREITA: tests -->
+        <div class="card" style="flex:1;padding:0.6rem;">
+          <p style="font-size:0.62rem;font-weight:700;color:var(--primary);margin-bottom:0.15rem;">tests/ <span style="font-weight:400;color:#94a3b8;">(19 ficheiros · 261 testes · Vitest + Supertest)</span></p>
+          <pre style="font-size:0.63rem;line-height:1.33;margin:0;"><code>├── auth.test.js              <span class="cm">← register, login, /me</span>
+├── chatBot.test.js           <span class="cm">← SSE streaming, mensagens</span>
+├── orderPipeline.test.js     <span class="cm">← pipeline 3 agentes</span>
+├── kds.test.js               <span class="cm">← Chef AI, sequências cozinha</span>
+├── orders.test.js            <span class="cm">← CRUD + status + auto-fatura</span>
+├── tables.test.js            <span class="cm">← CRUD + ocupação + detalhes</span>
+├── customers.test.js         <span class="cm">← CRUD + duplicados</span>
+├── items.test.js             <span class="cm">← CRUD + activo/inactivo</span>
+├── ingredients.test.js       <span class="cm">← CRUD + nome único</span>
+├── invoices.test.js          <span class="cm">← CRUD + validação pedido</span>
+├── payments.test.js          <span class="cm">← CRUD + process + fail</span>
+├── reservations.test.js      <span class="cm">← CRUD + cancel + mesa</span>
+├── stock.test.js             <span class="cm">← CRUD + adjust quantidade</span>
+├── notifications.test.js     <span class="cm">← CRUD + read/unread status</span>
+├── orderItems.test.js        <span class="cm">← CRUD + bulk create</span>
+├── recipeItems.test.js       <span class="cm">← CRUD + by item/ingredient</span>
+├── conversations.test.js     <span class="cm">← CRUD + title validation</span>
+├── logs.test.js              <span class="cm">← CRUD + by order/agent</span>
+└── roles.test.js             <span class="cm">← GET list + getById</span></code></pre>
+        </div>
+
+      </div>
+      <div class="slide-footer">Estrutura Backend (2/3)</div>
+    </div>
+
+    <!-- B-07: ESTRUTURA DE PASTAS — GENAI (3/3) -->
+    <div class="slide" style="padding:1rem 2rem;">
+      <h2 class="center" style="margin-bottom:0.4rem;">Estrutura de Pastas — GenAI · Backend (3/3)</h2>
+      <div style="display:flex;gap:0.6rem;margin-top:0.2rem;">
+
+        <!-- COLUNA ESQUERDA: agents + models + orchestrations + config -->
+        <div class="card" style="flex:1;padding:0.6rem;">
+          <p style="font-size:0.6rem;font-weight:700;color:#64748b;margin-bottom:0.3rem;">backend/src/genai/</p>
+          <p style="font-size:0.62rem;font-weight:700;color:var(--primary);margin-bottom:0.15rem;">agents/</p>
+          <pre style="font-size:0.68rem;line-height:1.38;margin:0 0 0.4rem 0;"><code>├── maitre/
+│   ├── MaitreAgent.js      <span class="cm">← interpreta pedido</span>
+│   ├── maitreMessages.js   <span class="cm">← prompt builder</span>
+│   ├── maitreSchemas.js    <span class="cm">← Zod schemas</span>
+│   └── maitreHelpers.js    <span class="cm">← helpers do agente</span>
+├── chef/
+│   ├── ChefAgent.js        <span class="cm">← sequência cozinha</span>
+│   ├── chefMessages.js     <span class="cm">← prompt builder</span>
+│   ├── chefSchemas.js      <span class="cm">← Zod schemas</span>
+│   └── chefHelpers.js      <span class="cm">← helpers do agente</span>
+└── manager/
+    ├── ManagerAgent.js     <span class="cm">← confirma fatura</span>
+    ├── managerMessages.js  <span class="cm">← prompt builder</span>
+    ├── managerSchemas.js   <span class="cm">← Zod schemas</span>
+    └── managerHelpers.js   <span class="cm">← helpers do agente</span></code></pre>
+          <p style="font-size:0.62rem;font-weight:700;color:var(--primary);margin-bottom:0.15rem;">models/</p>
+          <pre style="font-size:0.68rem;line-height:1.38;margin:0 0 0.4rem 0;"><code>├── BaseAgentAI.js        <span class="cm">← superclasse dos 3 agentes</span>
+├── BaseChatProcessor.js  <span class="cm">← loop agêntico + SSE</span>
+└── BaseFunctions.js      <span class="cm">← superclasse function calling</span></code></pre>
+          <p style="font-size:0.62rem;font-weight:700;color:var(--primary);margin-bottom:0.15rem;">orchestrations/</p>
+          <pre style="font-size:0.68rem;line-height:1.38;margin:0 0 0.4rem 0;"><code>├── orderOrchestrator.js  <span class="cm">← Maître → Chef → Manager</span>
+└── chatBotProcessor.js   <span class="cm">← sessões + streaming</span></code></pre>
+          <p style="font-size:0.62rem;font-weight:700;color:var(--primary);margin-bottom:0.15rem;">config/</p>
+          <pre style="font-size:0.68rem;line-height:1.38;margin:0 0 0.4rem 0;"><code>├── groq.js          <span class="cm">← cliente + fallback 8 modelos</span>
+├── systemPrompt.js  <span class="cm">← prompts dos 4 agentes</span>
+└── types.js         <span class="cm">← tipos partilhados</span></code></pre>
+          <p style="font-size:0.62rem;font-weight:700;color:var(--primary);margin-bottom:0.15rem;">helpers/</p>
+          <pre style="font-size:0.68rem;line-height:1.38;margin:0;"><code>└── jsonHelpers.js   <span class="cm">← extractJSON + Zod</span></code></pre>
+        </div>
+
+        <!-- COLUNA DIREITA: functions (19 funções, 12 categorias) -->
+        <div class="card" style="flex:1;padding:0.6rem;">
+          <p style="font-size:0.62rem;font-weight:700;color:var(--primary);margin-bottom:0.15rem;">functions/ <span style="font-weight:400;color:#94a3b8;">(19 funções, 12 categorias)</span></p>
+          <pre style="font-size:0.68rem;line-height:1.38;margin:0;"><code>├── customers/
+│   ├── get.js           <span class="cm">← buscar cliente</span>
+│   ├── create.js        <span class="cm">← criar cliente</span>
+│   └── findOrCreate.js  <span class="cm">← upsert cliente</span>
+├── orders/
+│   ├── create.js        <span class="cm">← criar pedido</span>
+│   └── update_status.js <span class="cm">← mudar estado</span>
+├── items/
+│   ├── get.js           <span class="cm">← buscar item</span>
+│   └── getItems.js      <span class="cm">← listar menu activo</span>
+├── invoices/
+│   ├── create.js        <span class="cm">← criar fatura</span>
+│   └── calculateTotals.js <span class="cm">← totais IVA</span>
+├── payments/
+│   ├── create.js        <span class="cm">← criar pagamento</span>
+│   └── update_status.js <span class="cm">← estado pagamento</span>
+├── tables/
+│   ├── get.js           <span class="cm">← listar mesas</span>
+│   └── update_status.js <span class="cm">← ocupar/libertar</span>
+├── stock/
+│   ├── get.js           <span class="cm">← consultar stock</span>
+│   └── adjust.js        <span class="cm">← ajustar quantidade</span>
+├── reservations/
+│   ├── get.js           <span class="cm">← listar reservas</span>
+│   ├── create.js        <span class="cm">← criar reserva</span>
+│   └── cancel.js        <span class="cm">← cancelar reserva</span>
+├── notifications/
+│   └── create.js        <span class="cm">← notificar cliente</span>
+├── order_items/
+│   └── create.js        <span class="cm">← adicionar item ao pedido</span>
+├── recipe_items/
+│   └── get.js           <span class="cm">← receita do item</span>
+└── logs/
+    └── create.js        <span class="cm">← registar log</span></code></pre>
+        </div>
+
+      </div>
+      <div class="slide-footer">Estrutura Backend (3/3) — GenAI</div>
+    </div>
+
+    <!-- B-08: BASE DE DADOS — DIAGRAMA RELACIONAL -->
+    <div class="slide slide-diagrama">
+      <h2 class="center" style="position:absolute;top:1.2rem;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:1.4rem;color:var(--dark);background:rgba(255,255,255,0.92);padding:0.25rem 1.4rem;border-radius:8px;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,0.08);">Base de Dados — Diagrama Relacional</h2>
+      <img src="assets/diagrama_relacional.png" alt="Diagrama relacional do SmartBistro AI" class="img-full" loading="lazy" />
+      <div class="slide-footer">Base de Dados — Diagrama Relacional</div>
+    </div>
+
+    <!-- B-09: AUTHCONTROLLER -->
+    <div class="slide slide-image">
+      <h2 class="center">AuthController — Registo Inteligente</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.4rem;text-align:center;color:#64748b;">Responsável pelo registo e autenticação de utilizadores, com ligação automática a clientes existentes e emissão de JWT com duração de 8 horas</p>
+      <p style="font-size:0.82rem;margin:0 auto 0.5rem;max-width:75%;text-align:center;color:#475569;"><strong>Nota:</strong> se já existir um cliente <code>customers</code> com o mesmo nome, email ou telefone mas sem conta <code>auth_accounts</code>, a nova conta é ligada a esse cliente em vez de criar um duplicado — garante que clientes criados pelo Maître AI ficam ligados à conta que criam depois.</p>
+      <div class="img-centered" style="flex:1;">
+        <img src="assets/02-registo.png" alt="Fluxo de registo do AuthController" class="img-full" loading="lazy" />
+      </div>
+      <div class="slide-footer">AuthController</div>
+    </div>
+
+    <!-- B-10: CHATBOTCONTROLLER -->
+    <div class="slide slide-image">
+      <h2 class="center">ChatbotController — SSE Streaming</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">Responsável por gerenciar o streaming de mensagens do chatbot em tempo real usando SSE</p>
+      <div class="img-centered" style="flex:1;">
+        <img src="assets/03-chatbotcontroller.png" alt="Fluxo SSE do ChatbotController" class="img-full" loading="lazy" />
+      </div>
+      <div class="slide-footer">ChatbotController</div>
+    </div>
+
+    <!-- B-11: ORDERPIPELINECONTROLLER -->
+    <div class="slide slide-image">
+      <h2 class="center">OrderPipelineController — Pipeline de Pedidos</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">Responsável por receber a requisição e iniciar o processamento do pedido, usando os 3 agentes</p>
+      <div class="img-centered" style="flex:1;">
+        <img src="assets/04-orderpipeline.png" alt="Pipeline do OrderPipelineController" class="img-full" loading="lazy" />
+      </div>
+      <div class="slide-footer">OrderPipelineController</div>
+    </div>
+
+    <!-- B-12: KDSCONTROLLER -->
+    <div class="slide slide-image">
+      <h2 class="center">KDSController — Kitchen Display System</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">A sequência de cozinha é gerada pelo Chef AI — o KDS exibe a ordem de preparação e o tempo estimado por secção</p>
+      <div class="img-centered" style="flex:1;">
+        <img src="assets/05-kdscontroller.png" alt="Fluxo do KDSController" class="img-full" loading="lazy" />
+      </div>
+      <div class="slide-footer">KDSController</div>
+    </div>
+
+    <!-- B-13: OS TRÊS AGENTES -->
+    <div class="slide">
+      <h2 class="center">GenAI — Os Três Agentes</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.5rem;"><code>BaseAgentAI</code> é a superclasse que todos os agentes estendem — define a temperatura, o modelo a chamar e o prompt base de cada agente, orquestrando qual modelo Groq deve ser usado em cada fluxo de pedido.</p>
+      <div class="card" style="margin-top:0.5rem;">
+        <table>
+          <thead>
+            <tr><th>Agente</th><th>Temperatura</th><th>Reasoning</th><th>Papel</th><th>Funções próprias</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>MaitreAgent</strong></td><td>0.4 (médio)</td><td>medium</td><td>Interpreta linguagem natural → JSON estruturado</td><td>Validação, normalização, service_type</td></tr>
+            <tr><td><strong>ChefAgent</strong></td><td>0.2 (baixo)</td><td>low</td><td>Verifica stock, cria sequência de cozinha</td><td>Verificação de stock, kitchen_sequence</td></tr>
+            <tr><td><strong>ManagerAgent</strong></td><td>0.3 (baixo)</td><td>low</td><td>Confirma fatura com dados pré-calculados</td><td>Validação financeira, confirmação final</td></tr>
+          </tbody>
+        </table>
+        <p style="margin-top:0.6rem;font-size:0.85rem;"><strong>Multi-turn:</strong> histórico partilhado — Maître ajusta o pedido após feedback de stock do Chef, e recebe também o feedback do Chef quando o pedido está pronto para entrega.</p>
+      </div>
+      <div class="slide-footer">Os Três Agentes</div>
+    </div>
+
+    <!-- B-14: ORDER ORCHESTRATOR -->
+    <div class="slide slide-image">
+      <h2 class="center">Order Orchestrator — Pipeline de 3 Agentes</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">Responsável por coordenar a execução sequencial dos 3 agentes, com loop automático de correcção de stock</p>
+      <div class="img-centered" style="flex:1;">
+        <img src="assets/06-orquestracao de pipeline.png" alt="Orquestração do pipeline de 3 agentes" class="img-full" loading="lazy" />
+      </div>
+      <div class="slide-footer">Order Orchestrator</div>
+    </div>
+
+    <!-- B-15: CHATBOT PROCESSOR -->
+    <div class="slide slide-image">
+      <h2 class="center">Chatbot Processor — Loop Agêntico</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">Responsável por gerir o loop agêntico do chatbot — até 5 iterações por mensagem, com o LLM a decidir as funções a executar</p>
+      <div class="img-centered" style="flex:1;">
+        <img src="assets/07-chatbot processor.png" alt="Loop agêntico do ChatbotProcessor" class="img-full" loading="lazy" />
+      </div>
+      <div class="slide-footer">Chatbot Processor</div>
+    </div>
+
+    <!-- B-16: FUNCTION CALLING -->
+    <div class="slide slide-image">
+      <h2 class="center">Function Calling — 19 Funções</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">19 funções disponíveis que o chatbot pode invocar durante a conversa para operar sobre a base de dados</p>
+      <div class="img-centered" style="flex:1;">
+        <img src="assets/08-functions_call.png" alt="Diagrama de function calling" class="img-full" loading="lazy" />
+      </div>
+      <div class="slide-footer">Function Calling</div>
+    </div>
+
+    <!-- B-17: FLUXO A — CHATBOT -->
+    <div class="slide slide-image">
+      <h2 class="center">Fluxo A — Pedido via Chatbot (SSE + Function Calling)</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">O cliente faz um pedido em linguagem natural via chatbot, com resposta em streaming SSE e function calling</p>
+      <div class="img-centered">
+        <img src="assets/09-Fluxo A — Pedido via Chatbot (SSE + function calling).png" alt="Fluxo A — Chatbot" class="img-full" loading="lazy" />
+      </div>
+      <div class="slide-footer">Fluxo A — Chatbot</div>
+    </div>
+
+    <!-- B-18: FLUXO B — PIPELINE -->
+    <div class="slide slide-image" style="padding:1rem 2rem;">
+      <h2 class="center">Fluxo B — Pedido via Pipeline (Linguagem Natural → BD)</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.4rem;text-align:center;color:#64748b;">Pedido em linguagem natural interpretado pelos 3 agentes AI e persistido automaticamente na base de dados</p>
+      <div class="img-centered" style="flex:1;">
+        <img src="assets/10-Fluxo B — Pedido via Pipeline (linguagem natural → BD).png" alt="Fluxo B — Pipeline" class="img-full" style="max-height:78vh;" loading="lazy" />
+      </div>
+      <div class="slide-footer">Fluxo B — Pipeline</div>
+    </div>
+
+    <!-- B-19: FLUXO D — CARRINHO DIGITAL -->
+    <div class="slide slide-image" style="padding:1rem 2rem;">
+      <h2 class="center">Fluxo D — Pedido via Carrinho Digital (Cliente Autenticado)</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.4rem;text-align:center;color:#64748b;">Cliente autenticado selecciona itens pelo carrinho digital, com fatura e notificação de pagamento automáticas</p>
+      <div class="img-centered" style="flex:1;">
+        <img src="assets/11-Fluxo D — Pedido via Carrinho Digital (cliente autenticado).png" alt="Fluxo D — Carrinho Digital" class="img-full" style="max-height:78vh;" loading="lazy" />
+      </div>
+      <div class="slide-footer">Fluxo D — Carrinho</div>
+    </div>
+
+    <!-- B-20: FLUXO C — KDS -->
+    <div class="slide slide-image">
+      <h2 class="center">Fluxo C — KDS (Staff da Cozinha Inicia Pedido)</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">Staff de cozinha inicia o pedido no KDS e o Chef AI gera a sequência de preparação com tempo estimado</p>
+      <div class="img-centered">
+        <img src="assets/12-Fluxo C — KDS (staff da cozinha inicia pedido).png" alt="Fluxo C — KDS" class="img-full" loading="lazy" />
+      </div>
+      <div class="slide-footer">Fluxo C — KDS</div>
+    </div>
+
+    <!-- B-21: DE GEMINI PARA GROQ -->
+    <div class="slide">
+      <h2 class="center">Escolha do Modelo — De Gemini para Groq</h2>
+      <div class="card">
+        <p><strong>Ponto de partida:</strong> o projecto começou com o modelo <span class="tag-pill purple">Gemini (Google AI)</span> para todas as chamadas de LLM.</p>
+        <p><strong>O problema:</strong> o pipeline cria <strong>3 chamadas ao LLM por pedido</strong> (Maître + Chef + Manager) mais as chamadas contínuas do chatbot. Com o volume de testes e desenvolvimento, os limites de rate do Gemini gratuito tornaram-se um obstáculo recorrente.</p>
+        <div style="display:flex;gap:1rem;margin-top:0.75rem;flex-wrap:wrap;">
+          <div style="flex:1;min-width:200px;background:#fef2f2;border-radius:8px;padding:1rem;border:1px solid #fecaca;">
+            <p style="color:#dc2626;font-weight:600;margin-bottom:0.5rem;"><i class="fa-solid fa-triangle-exclamation"></i> Gemini — Limitações</p>
+            <ul style="font-size:0.9rem;">
+              <li>Rate limit apertado no tier gratuito</li>
+              <li>Latência elevada em respostas longas</li>
+              <li>Sem suporte nativo a <code>reasoning_effort</code></li>
+              <li>SDK menos estável para streaming SSE</li>
+            </ul>
+          </div>
+          <div style="flex:1;min-width:200px;background:#f0fdf4;border-radius:8px;padding:1rem;border:1px solid #bbf7d0;">
+            <p style="color:#16a34a;font-weight:600;margin-bottom:0.5rem;"><i class="fa-solid fa-bolt"></i> Groq — Vantagens</p>
+            <ul style="font-size:0.9rem;">
+              <li>Inferência ultrarrápida (GroqCloud)</li>
+              <li>Fila de fallback com 8 modelos</li>
+              <li>Suporte a <code>reasoning_effort</code> (modelos OpenAI)</li>
+              <li>Tags <code>&lt;think&gt;</code> nos modelos Qwen/Llama</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">Gemini → Groq</div>
+    </div>
+
+    <!-- B-22: CONFIG GROQ — FALLBACK -->
+    <div class="slide">
+      <h2 class="center">Config Groq — Fila de Fallback</h2>
+      <p>Se o modelo falhar, tenta automaticamente o seguinte — transparente para o utilizador.</p>
+      <div class="card" style="margin-top:0.75rem;">
+        <pre><code><span class="kw">const</span> GROQ_MODEL_QUEUE = [
+  <span class="str">"llama-3.3-70b-versatile"</span>,     <span class="cm">// modelo principal</span>
+  <span class="str">"openai/gpt-oss-120b"</span>,          <span class="cm">// OpenAI reasoning — máxima capacidade</span>
+  <span class="str">"openai/gpt-oss-20b"</span>,           <span class="cm">// OpenAI reasoning — rápido</span>
+  <span class="str">"meta-llama/llama-4-scout-17b-16e-instruct"</span>,
+  <span class="str">"qwen/qwen3-32b"</span>,               <span class="cm">// Qwen3 com &lt;think&gt;</span>
+  <span class="str">"groq/compound"</span>,
+  <span class="str">"llama-3.1-8b-instant"</span>,
+  <span class="str">"groq/compound-mini"</span>,           <span class="cm">// último recurso</span>
+];
+
+<span class="cm">// 429 / 502 / 503 / timeout → tenta próximo modelo recursivamente</span>
+<span class="kw">async function</span> <span class="fn">chatWithFallback</span>(messages, options, queue, idx = <span class="num">0</span>) {
+  <span class="kw">if</span> (idx >= queue.length) <span class="kw">throw new</span> Error(<span class="str">"Todos os modelos indisponíveis"</span>);
+  <span class="kw">try</span> {
+    <span class="kw">return await</span> groq.chat.completions.create({ model: queue[idx], ...options });
+  } <span class="kw">catch</span> (error) {
+    <span class="kw">if</span> (<span class="fn">isRetryableGroqError</span>(error) && idx &lt; queue.length - <span class="num">1</span>)
+      <span class="kw">return</span> <span class="fn">chatWithFallback</span>(messages, options, queue, idx + <span class="num">1</span>);
+    <span class="kw">throw</span> error;
+  }
+}</code></pre>
+      </div>
+      <div class="slide-footer">Config Groq — Fallback</div>
+    </div>
+
+    <!-- B-23: THINKING COM GROQ -->
+    <div class="slide slide-image">
+      <h2 class="center">Thinking com Groq — Reasoning por Agente</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">O modelo raciocina internamente antes de responder, com nível de thinking adaptado pelo perfil de cada agente</p>
+      <div class="img-centered" style="flex:1;">
+        <img src="assets/16-thinkingBotUtil — Reasoning com Groq.png" alt="thinkingBotUtil — Reasoning com Groq" class="img-full" loading="lazy" />
+      </div>
+      <div class="slide-footer">Thinking com Groq</div>
+    </div>
+
+    <!-- B-24: UTILS — FINANCIALUTIL -->
+    <div class="slide">
+      <h2 class="center">Utils — financialUtil</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">Cálculos determinísticos em JS puro — a IA nunca faz aritmética financeira. <code>roundMoney</code> usa <code>Number.EPSILON</code> para evitar erros de vírgula flutuante.</p>
+      <div class="card">
+        <pre><code><span class="cm">// Taxas IVA Portugal (restauração)</span>
+<span class="kw">export const</span> TAX_RATES = {
+  NORMAL:       <span class="num">0.23</span>,  <span class="cm">// bebidas alcoólicas</span>
+  INTERMEDIATE: <span class="num">0.13</span>,  <span class="cm">// refeições no local ← default</span>
+  REDUCED:      <span class="num">0.06</span>,  <span class="cm">// bens essenciais embalados</span>
+};
+
+<span class="kw">export function</span> <span class="fn">calculateInvoiceTotals</span>({ items, taxRate = <span class="num">0.13</span>, discount = <span class="num">0</span> }) {
+  <span class="kw">const</span> subtotal      = <span class="fn">calculateSubtotal</span>(items);
+  <span class="kw">const</span> discountAmt   = <span class="fn">applyDiscount</span>(subtotal, discount);
+  <span class="kw">const</span> taxableAmount = <span class="fn">roundMoney</span>(subtotal - discountAmt);
+  <span class="kw">const</span> taxAmount     = <span class="fn">applyTax</span>(taxableAmount, taxRate);
+  <span class="kw">const</span> total         = <span class="fn">roundMoney</span>(taxableAmount + taxAmount);
+  <span class="kw">return</span> { subtotal, discountAmt, taxAmount, total };
+}</code></pre>
+      </div>
+      <div class="slide-footer">Utils — financialUtil</div>
+    </div>
+
+    <!-- B-25: MIDDLEWARE — AUTH -->
+    <div class="slide">
+      <h2 class="center">Middleware — authMiddleware</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">Protege rotas com JWT. <span class="tag-pill">role_id 1</span> Admin &nbsp;<span class="tag-pill green">role_id 2</span> Cliente.</p>
+      <div class="card">
+        <pre><code><span class="kw">export function</span> <span class="fn">verifyToken</span>(req, res, next) {
+  <span class="kw">const</span> token = req.headers[<span class="str">'authorization'</span>]?.slice(<span class="num">7</span>);
+  req.user = jwt.<span class="fn">verify</span>(token, process.env.JWT_SECRET); <span class="cm">// { id, role_id }</span>
+  <span class="fn">next</span>();
+}
+
+<span class="kw">export function</span> <span class="fn">requireRole</span>(...roles) {
+  <span class="kw">return</span> (req, res, next) => {
+    <span class="kw">if</span> (!roles.includes(req.user?.role_id))
+      <span class="kw">return</span> res.<span class="fn">status</span>(<span class="num">403</span>).json({ error: <span class="str">'Acesso negado'</span> });
+    <span class="fn">next</span>();
+  };
+}
+
+<span class="cm">// Uso nas rotas</span>
+router.<span class="fn">get</span>(<span class="str">'/me'</span>,           verifyToken,                         getProfile);
+router.<span class="fn">get</span>(<span class="str">'/admin/users'</span>, verifyToken, <span class="fn">requireRole</span>(<span class="num">1</span>), getAllUsers);
+router.<span class="fn">get</span>(<span class="str">'/invoices'</span>,    verifyToken, <span class="fn">requireRole</span>(<span class="num">2</span>), getMyInvoices);</code></pre>
+      </div>
+      <div class="slide-footer">Middleware — authMiddleware</div>
+    </div>
+
+    <!-- B-26: MIDDLEWARE — CREATEEXISTSMIDDLEWARE -->
+    <div class="slide">
+      <h2 class="center">Middleware — createExistsMiddleware</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">Factory que gera middlewares de validação de existência para qualquer entidade — evita repetir a verificação em cada controller.</p>
+      <div class="card">
+        <pre><code><span class="cm">// Factory: recebe uma função de BD e o nome da entidade</span>
+<span class="kw">export function</span> <span class="fn">createExistsMiddleware</span>(findFn, entityName) {
+  <span class="kw">return async</span> (req, res, next) => {
+    <span class="kw">const</span> resource = <span class="kw">await</span> <span class="fn">findFn</span>(req.params.id);
+    <span class="kw">if</span> (!resource)
+      <span class="kw">return</span> res.<span class="fn">status</span>(<span class="num">404</span>).json({ error: <span class="str">`${entityName} not found`</span> });
+    req[entityName.toLowerCase()] = resource; <span class="cm">// disponível no controller</span>
+    <span class="fn">next</span>();
+  };
+}
+
+<span class="cm">// Uso — gerado uma vez, reutilizado em qualquer rota</span>
+<span class="kw">const</span> orderExists    = <span class="fn">createExistsMiddleware</span>(getOrderById,    <span class="str">'Order'</span>);
+<span class="kw">const</span> customerExists = <span class="fn">createExistsMiddleware</span>(getCustomerById, <span class="str">'Customer'</span>);
+<span class="kw">const</span> itemExists     = <span class="fn">createExistsMiddleware</span>(getItemById,     <span class="str">'Item'</span>);
+
+router.<span class="fn">put</span>   (<span class="str">'/orders/:id'</span>,    orderExists,    updateOrder);
+router.<span class="fn">delete</span>(<span class="str">'/customers/:id'</span>, customerExists, deleteCustomer);
+router.<span class="fn">patch</span> (<span class="str">'/items/:id'</span>,     itemExists,     updateItem);</code></pre>
+      </div>
+      <div class="slide-footer">Middleware — createExistsMiddleware</div>
+    </div>
+
+    <!-- B-27: TRATAMENTO DE ERROS DO BOT -->
+    <div class="slide slide-image">
+      <h2 class="center">Tratamento de Erros do Bot — 4 Camadas</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">Cada camada isola e transforma o erro até entregar ao utilizador uma mensagem clara em português</p>
+      <div class="img-centered" style="flex:1;">
+        <img src="assets/13-Tratamento de Erros do Bot (Chatbot).png" alt="Tratamento de erros do chatbot" class="img-full" loading="lazy" />
+      </div>
+      <div class="slide-footer">Tratamento de Erros</div>
+    </div>
+
+    <!-- B-28: FLUXO REAL DE UM ERRO -->
+    <div class="slide slide-image">
+      <h2 class="center">Fluxo Real de um Erro — Exemplo com 429</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">Quando um modelo falha com 429, o sistema tenta automaticamente todos os modelos da fila antes de reportar ao utilizador</p>
+      <div class="img-centered">
+        <img src="assets/14-Fluxo real de um erro — exemplo com 429.png" alt="Fluxo real de um erro 429" class="img-full" loading="lazy" />
+      </div>
+      <div class="slide-footer">Fluxo de Erro 429</div>
+    </div>
+
+    <!-- B-29: DIAGRAMA ERRO → UTILIZADOR -->
+    <div class="slide slide-image">
+      <h2 class="center">Diagrama — Do Erro ao Utilizador</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">Mapeamento do ponto de falha técnico até à mensagem apresentada ao utilizador, atravessando as 4 camadas</p>
+      <div class="img-centered">
+        <img src="assets/15-Diagrama de erro ao utilizador.png" alt="Diagrama erro ao utilizador" class="img-full" loading="lazy" />
+      </div>
+      <div class="slide-footer">Diagrama de Erro</div>
+    </div>
+
+    <!-- B-30: CLASSIFYERROR — TABELA DE ERROS -->
+    <div class="slide">
+      <h2 class="center">classifyError — Tipos de Erro</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">Camada 2 do pipeline de erros. Transforma qualquer erro técnico do Groq num tipo estruturado com mensagem em português.</p>
+      <div class="card">
+        <table>
+          <thead><tr><th>Tipo</th><th>HTTP</th><th>Mensagem ao utilizador</th></tr></thead>
+          <tbody>
+            <tr><td>TIMEOUT</td><td>—</td><td>"O assistente demorou demasiado... ⏱️"</td></tr>
+            <tr><td>RATE_LIMIT</td><td>429</td><td>"Limite de pedidos atingido... ⏳"</td></tr>
+            <tr><td>SERVICE_DOWN</td><td>503</td><td>"Serviço de IA temporariamente indisponível... 🔧"</td></tr>
+            <tr><td>AUTH_ERROR</td><td>502</td><td>"Erro de autenticação com o serviço de IA... 🔑"</td></tr>
+            <tr><td>NETWORK_ERROR</td><td>502</td><td>"Não foi possível ligar ao serviço de IA... 🌐"</td></tr>
+            <tr><td>INVALID_REQUEST</td><td>400</td><td>"Pedido não pôde ser processado... ✏️"</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="slide-footer">classifyError — Tipos de Erro</div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!--           DIVISOR DE SECÇÃO — FRONTEND      -->
+    <!-- ═══════════════════════════════════════════ -->
+
+    <!-- SECÇÃO: FRONTEND -->
+    <div class="slide slide-section">
+      <div style="text-align:center;">
+        <p style="text-transform:uppercase;letter-spacing:6px;color:#475569;margin-bottom:16px;font-size:0.9rem;">SmartBistro AI</p>
+        <h1 style="font-size:4rem;color:var(--dark);margin-bottom:8px;">Frontend</h1>
+        <p style="color:#60a5fa;font-family:'Fira Code',monospace;font-size:1rem;margin-bottom:0;">
+          React 19 · Vite · Tailwind CSS 4 · SSE · React Router
+        </p>
+        <div style="margin-top:48px;font-size:3.5rem;color:#1e40af;gap:40px;display:flex;justify-content:center;">
+          <i class="fa-brands fa-react"></i>
+          <i class="fa-solid fa-mobile-screen"></i>
+          <i class="fa-solid fa-palette"></i>
+        </div>
+      </div>
+      <div class="slide-footer" style="color:#475569;">Secção — Frontend</div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!--                  FRONTEND                   -->
+    <!-- ═══════════════════════════════════════════ -->
+
+    <!-- F-01: VISÃO GERAL -->
+    <div class="slide">
+      <h2 class="center">Frontend — Visão Geral</h2>
+      <p style="font-size:0.95rem;margin-bottom:0.75rem;">SPA React com routing protegido por roles, service layer abstraído e integração SSE com o chatbot AI. Toda a interface segue abordagem mobile-first com dois layouts distintos por página.</p>
+      <div class="card" style="margin-top:0.5rem;">
+        <ul>
+          <li><strong>Routing por roles</strong> — rotas públicas, protegidas (JWT) e de admin (role_id 1)</li>
+          <li><strong>AuthContext</strong> — estado global de autenticação partilhado por toda a app</li>
+          <li><strong>Service Layer</strong> — 16 services que estendem BaseService (fetch nativo + SSE)</li>
+          <li><strong>Chatbot SSE</strong> — streaming palavra a palavra com function calling e retry automático</li>
+          <li><strong>Responsividade</strong> — tabela (desktop) e cards (mobile) em todas as páginas operacionais</li>
+          <li><strong>Sem Redux / sem Axios</strong> — Context API nativo + fetch nativo + EventSource</li>
+        </ul>
+      </div>
+      <div class="slide-footer">Visão Geral — Frontend</div>
+    </div>
+
+    <!-- F-02: STACK TECNOLÓGICO -->
+    <div class="slide">
+      <h2 class="center">Stack Tecnológico</h2>
+      <div class="card" style="margin-top:0.5rem;">
+        <table>
+          <thead>
+            <tr><th>Tecnologia</th><th>Versão</th><th>Para quê</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>React</strong></td><td>19.2.7</td><td>Framework UI — componentes e estado</td></tr>
+            <tr><td><strong>Vite</strong></td><td>8.0.16</td><td>Build tool + servidor de dev com proxy</td></tr>
+            <tr><td><strong>Tailwind CSS</strong></td><td>4.3.0</td><td>Estilos utilitários e responsividade</td></tr>
+            <tr><td><strong>React Router</strong></td><td>7.16.0</td><td>SPA routing com rotas protegidas</td></tr>
+            <tr><td><strong>Chart.js + react-chartjs-2</strong></td><td>4.5.1</td><td>Gráficos doughnut e line no perfil</td></tr>
+            <tr><td><strong>Framer Motion</strong></td><td>12.40.0</td><td>Animações de entrada/saída</td></tr>
+            <tr><td><strong>ESLint</strong></td><td>—</td><td>Qualidade de código</td></tr>
+            <tr><td><strong>Vitest + jsdom</strong></td><td>4.1.8</td><td>Testes unitários de todos os services — ambiente browser simulado</td></tr>
+          </tbody>
+        </table>
+        <p style="margin-top:0.75rem;font-size:0.85rem;color:#475569;"><strong>Sem Redux / Zustand</strong> — usa Context API nativo &nbsp;·&nbsp; <strong>Sem Axios</strong> — usa <code>fetch</code> nativo + <code>EventSource</code> para SSE</p>
+      </div>
+      <div class="slide-footer">Stack Tecnológico</div>
+    </div>
+
+    <!-- F-03: ESTRUTURA DE PASTAS — PÁG 1 -->
+    <div class="slide">
+      <h2 class="center">Estrutura de Pastas — Frontend (1/2)</h2>
+      <div style="display:flex;gap:0.6rem;margin-top:0.5rem;flex:1;min-height:0;">
+        <!-- COLUNA ESQUERDA -->
+        <div class="card" style="flex:1;overflow:hidden;padding:0.7rem 0.9rem;">
+          <p style="font-size:0.72rem;font-weight:600;color:var(--primary);margin-bottom:0.4rem;">frontend/src/components/</p>
+          <pre style="background:transparent;padding:0;margin:0;font-size:0.62rem;line-height:1.32;overflow:hidden;"><code><span class="attr">auth/</span>  <span class="cm">(2)</span>
+  <span class="fn">ProtectedRoute.jsx</span>     <span class="cm">← redireciona se sem token JWT</span>
+  <span class="fn">AdminRoute.jsx</span>         <span class="cm">← redireciona role 2 para /perfil</span>
+
+<span class="attr">chat/</span>  <span class="cm">(7)</span>
+  <span class="fn">ChatUI.jsx</span>             <span class="cm">← orquestrador principal do chatbot</span>
+  <span class="fn">ChatBubbleUI.jsx</span>       <span class="cm">← renderiza mensagens user / bot</span>
+  <span class="fn">ChatInputUI.jsx</span>        <span class="cm">← input + submissão SSE</span>
+  <span class="fn">ChatHeaderUI.jsx</span>       <span class="cm">← cabeçalho + acesso ao histórico</span>
+  <span class="fn">ChatHistory.jsx</span>        <span class="cm">← histórico agrupado por data</span>
+  <span class="fn">ChatLoadingUI.jsx</span>      <span class="cm">← spinner de resposta</span>
+  <span class="fn">ProviderErrorCard.jsx</span>  <span class="cm">← card de erro com retry e tipo</span>
+
+<span class="attr">layout/</span>  <span class="cm">(4)</span>
+  <span class="fn">Header.jsx</span>             <span class="cm">← navegação desktop + sino notif.</span>
+  <span class="fn">BottomNav.jsx</span>          <span class="cm">← navegação mobile</span>
+  <span class="fn">MainLayout.jsx</span>         <span class="cm">← wrapper das páginas protegidas</span>
+  <span class="fn">PageLoader.jsx</span>         <span class="cm">← loading lazy entre rotas</span>
+
+<span class="attr">ui/</span>
+  <span class="fn">ConfirmModal.jsx</span>       <span class="cm">← modal de confirmação reutilizável</span>
+  <span class="fn">Badge.jsx</span>              <span class="cm">← badge de estado (cor dinâmica)</span>
+  <span class="fn">ToastNotif.jsx</span>         <span class="cm">← notificação toast global</span></code></pre>
+        </div>
+        <!-- COLUNA DIREITA -->
+        <div class="card" style="flex:1;overflow:hidden;padding:0.7rem 0.9rem;">
+          <p style="font-size:0.72rem;font-weight:600;color:var(--primary);margin-bottom:0.4rem;">context/ · pages/</p>
+          <pre style="background:transparent;padding:0;margin:0;font-size:0.62rem;line-height:1.32;overflow:hidden;"><code><span class="attr">context/</span>  <span class="cm">(2)</span>
+  <span class="fn">AuthContext.jsx</span>    <span class="cm">← user, token, login, logout, updateUser</span>
+  <span class="fn">ThemeContext.jsx</span>   <span class="cm">← dark / light mode</span>
+
+<span class="attr">pages/</span>  <span class="cm">(12)</span>
+  <span class="fn">MainPage.jsx</span>       <span class="cm">← cardápio público + modais login</span>
+  <span class="fn">ClientesPage.jsx</span>   <span class="cm">← gestão de clientes (admin)</span>
+  <span class="fn">MenuPage.jsx</span>       <span class="cm">← gestão do menu (admin)</span>
+  <span class="fn">OrdersPage.jsx</span>     <span class="cm">← monitorização de pedidos</span>
+  <span class="fn">StockPage.jsx</span>      <span class="cm">← inventário de ingredientes</span>
+  <span class="fn">DashboardPage.jsx</span>  <span class="cm">← KPIs e analytics (Recharts)</span>
+  <span class="fn">KdsPage.jsx</span>        <span class="cm">← Kitchen Display System</span>
+  <span class="fn">ProfilePage.jsx</span>    <span class="cm">← perfil do cliente (role 2)</span>
+  <span class="fn">LoginPage.jsx</span>      <span class="cm">← página de login dedicada</span>
+  <span class="fn">TablePage.jsx</span>      <span class="cm">← gestão de mesas</span>
+  <span class="fn">FaturacaoPage.jsx</span>  <span class="cm">← faturação e faturas</span>
+  <span class="fn">RelatoriosPage.jsx</span> <span class="cm">← relatórios exportáveis</span></code></pre>
+        </div>
+      </div>
+      <div class="slide-footer">Estrutura de Pastas (1/2)</div>
+    </div>
+
+    <!-- F-04: ESTRUTURA DE PASTAS — PÁG 2 -->
+    <div class="slide" style="padding:1rem 2rem;">
+      <h2 class="center" style="margin-bottom:0.4rem;">Estrutura de Pastas — Frontend (2/2)</h2>
+      <div style="display:flex;gap:0.6rem;margin-top:0.2rem;">
+        <!-- COLUNA ESQUERDA: services + utils + raiz -->
+        <div class="card" style="flex:1;overflow:hidden;padding:0.6rem 0.8rem;">
+          <p style="font-size:0.62rem;font-weight:700;color:var(--primary);margin-bottom:0.15rem;">services/ <span style="font-weight:400;color:#94a3b8;">(16 ficheiros)</span></p>
+          <pre style="background:transparent;padding:0;margin:0 0 0.4rem 0;font-size:0.63rem;line-height:1.33;overflow:hidden;"><code><span class="fn">BaseService.js</span>        <span class="cm">← Classe base: fetch, POST, SSE</span>
+<span class="fn">api.js</span>                <span class="cm">← URL base (dev vs prod)</span>
+<span class="fn">authService.js</span>        <span class="cm">← Login, register, me, logout</span>
+<span class="fn">orderService.js</span>       <span class="cm">← CRUD pedidos + updateStatus</span>
+<span class="fn">orderItemService.js</span>   <span class="cm">← Itens bulk create</span>
+<span class="fn">itemService.js</span>        <span class="cm">← CRUD itens do menu</span>
+<span class="fn">stockService.js</span>       <span class="cm">← Inventário de stock</span>
+<span class="fn">invoiceService.js</span>     <span class="cm">← Faturas</span>
+<span class="fn">paymentService.js</span>     <span class="cm">← Pagamentos</span>
+<span class="fn">tableService.js</span>       <span class="cm">← Gestão de mesas</span>
+<span class="fn">reservationService.js</span> <span class="cm">← Reservas</span>
+<span class="fn">notificationService.js</span><span class="cm">← Notificações</span>
+<span class="fn">chatService.js</span>        <span class="cm">← SSE streaming chatbot</span>
+<span class="fn">customerService.js</span>    <span class="cm">← Clientes</span>
+<span class="fn">ingredientService.js</span>  <span class="cm">← Ingredientes</span>
+<span class="fn">reportService.js</span>      <span class="cm">← Relatórios</span></code></pre>
+          <p style="font-size:0.62rem;font-weight:700;color:var(--primary);margin-bottom:0.15rem;">utils/</p>
+          <pre style="background:transparent;padding:0;margin:0 0 0.4rem 0;font-size:0.63rem;line-height:1.33;overflow:hidden;"><code><span class="fn">providerErrorCardUtils.js</span> <span class="cm">← ERROR_CONFIG (7 tipos)</span>
+<span class="fn">formatters.js</span>             <span class="cm">← datas, moeda, estado</span>
+<span class="fn">constants.js</span>              <span class="cm">← constantes partilhadas</span></code></pre>
+          <p style="font-size:0.6rem;font-weight:700;color:#64748b;margin-bottom:0.15rem;">raiz do projecto</p>
+          <pre style="background:transparent;padding:0;margin:0;font-size:0.63rem;line-height:1.33;overflow:hidden;"><code><span class="fn">App.jsx</span>            <span class="cm">← Router + lazy loading + Suspense</span>
+<span class="fn">main.jsx</span>           <span class="cm">← entry point React 19</span>
+<span class="fn">index.html</span>         <span class="cm">← template Vite</span>
+<span class="fn">vite.config.js</span>     <span class="cm">← proxy /api → backend + config Vitest</span>
+<span class="fn">tailwind.config.js</span> <span class="cm">← tema e breakpoints</span>
+<span class="fn">.env</span>               <span class="cm">← VITE_BACKEND_URL</span></code></pre>
+        </div>
+        <!-- COLUNA DIREITA: tests -->
+        <div class="card" style="flex:1;overflow:hidden;padding:0.6rem 0.8rem;">
+          <p style="font-size:0.62rem;font-weight:700;color:var(--primary);margin-bottom:0.15rem;">tests/ <span style="font-weight:400;color:#94a3b8;">(16 ficheiros · Vitest + jsdom)</span></p>
+          <pre style="background:transparent;padding:0;margin:0;font-size:0.63rem;line-height:1.33;overflow:hidden;"><code>├── setup.js                  <span class="cm">← restoreAllMocks global</span>
+├── api.test.js               <span class="cm">← GET/POST/PUT/PATCH/DELETE + erros HTTP</span>
+├── authService.test.js       <span class="cm">← login, register, logout, me</span>
+├── BaseService.test.js       <span class="cm">← fetchData, sendMessage, SSE helpers</span>
+├── orderService.test.js      <span class="cm">← CRUD pedidos + updateStatus</span>
+├── customerService.test.js   <span class="cm">← CRUD clientes</span>
+├── tableService.test.js      <span class="cm">← CRUD mesas</span>
+├── itemService.test.js       <span class="cm">← CRUD itens do menu</span>
+├── ingredientService.test.js <span class="cm">← CRUD ingredientes</span>
+├── invoiceService.test.js    <span class="cm">← CRUD faturas + getByOrder</span>
+├── notificationService.test.js <span class="cm">← CRUD + read/unread status</span>
+├── orderItemService.test.js  <span class="cm">← CRUD + createBulk + removeByOrder</span>
+├── paymentService.test.js    <span class="cm">← CRUD + getByInvoice + process/fail</span>
+├── reservationService.test.js <span class="cm">← CRUD + confirm + cancel</span>
+├── stockService.test.js      <span class="cm">← CRUD + getByIngredient + adjust</span>
+└── chatService.test.js       <span class="cm">← SSE streaming + erros HTTP/rede</span></code></pre>
+        </div>
+      </div>
+      <div class="slide-footer">Estrutura de Pastas (2/2)</div>
+    </div>
+
+    <!-- F-05: ROUTING E PROTECÇÃO DE ROTAS -->
+    <div class="slide">
+      <h2 class="center">Routing e Protecção de Rotas</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.5rem;">O React Router está organizado em 3 níveis de acesso — todas as páginas carregadas com <code>lazy()</code> para reduzir o bundle inicial.</p>
+      <div style="display:flex;gap:0.8rem;align-items:flex-start;">
+        <div class="card" style="flex:1;padding:0.75rem 1rem;">
+          <pre style="background:transparent;padding:0;margin:0;font-size:0.72rem;line-height:1.5;overflow:hidden;"><code><span class="cm">/ (público)</span>
+├── /          <span class="fn">MainPage</span>    <span class="cm">← cardápio + modais</span>
+└── /login     <span class="fn">LoginPage</span>   <span class="cm">← login dedicado</span>
+
+<span class="cm">ProtectedRoute (requer JWT válido)</span>
+└── /perfil    <span class="fn">ProfilePage</span> <span class="cm">← qualquer auth</span>
+
+<span class="cm">AdminRoute (requer role_id === 1)</span>
+├── /dashboard  <span class="fn">DashboardPage</span>
+├── /orders     <span class="fn">OrdersPage</span>
+├── /kds        <span class="fn">KdsPage</span>
+├── /stock      <span class="fn">StockPage</span>
+├── /clientes   <span class="fn">ClientesPage</span>
+├── /menu       <span class="fn">MenuPage</span>
+├── /table      <span class="fn">TablePage</span>
+├── /faturacao  <span class="fn">FaturacaoPage</span>
+└── /relatorios <span class="fn">RelatoriosPage</span></code></pre>
+        </div>
+        <div class="card" style="flex:1;padding:0.75rem 1rem;">
+          <p style="font-size:0.72rem;font-weight:600;color:var(--primary);margin-bottom:0.3rem;">AdminRoute — redireciona clientes para /perfil</p>
+          <pre style="background:transparent;padding:0;margin:0;font-size:0.7rem;line-height:1.45;overflow:hidden;"><code><span class="kw">export default function</span> <span class="fn">AdminRoute</span>() {
+  <span class="kw">const</span> { user, loading } = <span class="fn">useAuth</span>();
+  <span class="kw">if</span> (loading)
+    <span class="kw">return</span> &lt;<span class="fn">TrophySpin</span> /&gt;;
+  <span class="kw">if</span> (!user || user.role_id !== <span class="num">1</span>)
+    <span class="kw">return</span> &lt;<span class="fn">Navigate</span> to=<span class="str">"/perfil"</span> /&gt;;
+  <span class="kw">return</span> &lt;<span class="fn">Outlet</span> /&gt;;
+}
+
+<span class="cm">// Lazy loading — App.jsx</span>
+<span class="kw">const</span> ClientesPage = <span class="fn">lazy</span>(() =>
+  <span class="fn">import</span>(<span class="str">"@/pages/ClientesPage"</span>));
+
+&lt;<span class="fn">Suspense</span> fallback={&lt;<span class="fn">PageLoader</span> /&gt;}&gt;
+  &lt;<span class="fn">Routes</span>&gt;...&lt;/<span class="fn">Routes</span>&gt;
+&lt;/<span class="fn">Suspense</span>&gt;</code></pre>
+        </div>
+      </div>
+      <div class="slide-footer">Routing e Protecção de Rotas</div>
+    </div>
+
+    <!-- F-06: AUTHCONTEXT -->
+    <div class="slide">
+      <h2 class="center">AuthContext — Estado Global de Autenticação</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.5rem;">Estado de autenticação partilhado por toda a aplicação via Context API. No arranque valida o token guardado em <code>localStorage</code> contra o backend.</p>
+      <div style="display:flex;gap:0.8rem;align-items:flex-start;">
+        <div class="card" style="flex:1;padding:0.75rem 1rem;">
+          <p style="font-size:0.72rem;font-weight:600;color:var(--primary);margin-bottom:0.3rem;">Fluxo de arranque e login</p>
+          <pre style="background:transparent;padding:0;margin:0;font-size:0.68rem;line-height:1.45;overflow:hidden;"><code><span class="cm">// Arranque — valida token guardado</span>
+<span class="fn">useEffect</span>(() => {
+  <span class="kw">if</span> (!token) { <span class="fn">setLoading</span>(<span class="kw">false</span>); <span class="kw">return</span>; }
+  authService.<span class="fn">me</span>(token)
+    .<span class="fn">then</span>(setUser)
+    .<span class="fn">catch</span>(() => {
+      localStorage.<span class="fn">removeItem</span>(TOKEN_KEY);
+      <span class="fn">setToken</span>(<span class="kw">null</span>);
+    })
+    .<span class="fn">finally</span>(() => <span class="fn">setLoading</span>(<span class="kw">false</span>));
+}, []);
+
+<span class="cm">// Login</span>
+<span class="kw">async function</span> <span class="fn">login</span>(identifier, password) {
+  <span class="kw">const</span> data = <span class="kw">await</span> authService.<span class="fn">login</span>(identifier, password);
+  localStorage.<span class="fn">setItem</span>(TOKEN_KEY, data.token);
+  <span class="fn">setToken</span>(data.token);
+  <span class="fn">setUser</span>(data.user);
+  <span class="kw">return</span> data.user; <span class="cm">// redireciona por role</span>
+}</code></pre>
+        </div>
+        <div class="card" style="flex:1;padding:0.75rem 1rem;">
+          <p style="font-size:0.72rem;font-weight:600;color:var(--primary);margin-bottom:0.3rem;">O que o contexto expõe</p>
+          <pre style="background:transparent;padding:0;margin:0;font-size:0.68rem;line-height:1.45;overflow:hidden;"><code><span class="kw">const</span> {
+  user,       <span class="cm">// objecto completo</span>
+  token,      <span class="cm">// JWT string</span>
+  loading,    <span class="cm">// validação inicial</span>
+  login,      <span class="cm">// POST /auth/login</span>
+  register,   <span class="cm">// POST /auth/register</span>
+  logout,     <span class="cm">// limpa localStorage</span>
+  updateUser, <span class="cm">// merge parcial (sem logout)</span>
+} = <span class="fn">useAuth</span>();
+
+<span class="cm">// Objecto user</span>
+{
+  id, name, username, email,
+  phone, role_id, active,
+  created_at
+}
+<span class="cm">// role_id: 1 = admin  2 = cliente</span></code></pre>
+          <p style="font-size:0.7rem;margin-top:0.5rem;color:#475569;"><strong>updateUser(data)</strong> — merge parcial sem invalidar sessão. Usado pelo <code>EditProfileModal</code> após guardar alterações.</p>
+        </div>
+      </div>
+      <div class="slide-footer">AuthContext</div>
+    </div>
+
+    <!-- F-07: SERVICE LAYER — BASESERVICE -->
+    <div class="slide">
+      <h2 class="center">Service Layer — BaseService</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.5rem;">Todos os 16 services estendem <code>BaseService</code>, que abstrai <code>fetch</code>, POST e SSE. A URL base é calculada uma vez no arranque.</p>
+      <div class="card" style="margin-top:0.25rem;">
+        <pre style="background:transparent;padding:0;margin:0;font-size:0.72rem;line-height:1.45;overflow:hidden;"><code><span class="cm">// Resolução do URL base — BaseService.js</span>
+<span class="kw">export function</span> <span class="fn">getBackendUrl</span>() {
+  <span class="kw">if</span> (import.meta.env.PROD) <span class="kw">return</span> <span class="str">"/api"</span>;       <span class="cm">// produção → path relativo</span>
+  <span class="kw">const</span> raw = import.meta.env.VITE_BACKEND_URL;
+  <span class="kw">if</span> (raw) <span class="kw">return</span> raw.<span class="fn">endsWith</span>(<span class="str">"/api"</span>) ? raw : raw.<span class="fn">replace</span>(/\/?$/, <span class="str">"/api"</span>);
+  <span class="kw">return</span> <span class="str">"/api"</span>;
+}
+
+<span class="cm">// GET</span>
+<span class="kw">async</span> <span class="fn">fetchData</span>(endpoint) {
+  <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(`${<span class="kw">this</span>.BACKEND_URL}${endpoint}`);
+  <span class="kw">if</span> (!res.ok) <span class="kw">throw new</span> <span class="fn">Error</span>(`Erro: ${res.status}`);
+  <span class="kw">return</span> res.<span class="fn">json</span>();
+}
+
+<span class="cm">// SSE streaming — lê o ReadableStream linha a linha</span>
+<span class="kw">async</span> <span class="fn">sendStreamMessage</span>(endpoint, payload, onChunk, onDone) {
+  <span class="kw">const</span> response = <span class="kw">await</span> <span class="fn">fetch</span>(`${<span class="kw">this</span>.BACKEND_URL}${endpoint}`, { method: <span class="str">"POST"</span>, ... });
+  <span class="kw">const</span> reader  = response.body.<span class="fn">getReader</span>();
+  <span class="cm">// processa "event: message\ndata: {...}\n\n"</span>
+  <span class="cm">// → onChunk(text) por fragmento · onDone(payload) no event: done</span>
+}</code></pre>
+      </div>
+      <div class="slide-footer">Service Layer — BaseService</div>
+    </div>
+
+    <!-- F-08: OS 16 SERVICES -->
+    <div class="slide" style="padding:1rem 2rem;">
+      <h2 class="center" style="margin-bottom:0.3rem;font-size:1.5rem;">Os 16 Services</h2>
+      <p style="font-size:0.8rem;margin-bottom:0.4rem;text-align:center;">Cada service estende <code>BaseService</code> com o endpoint base, usando os métodos herdados (<code>fetchData</code>, <code>sendMessage</code>, <code>sendStreamMessage</code>).</p>
+      <div style="display:flex;gap:0.6rem;margin-top:0.2rem;">
+        <!-- COLUNA ESQUERDA -->
+        <div class="card" style="flex:1;padding:0.5rem 0.7rem;">
+          <table style="font-size:0.75rem;">
+            <thead>
+              <tr><th>Service</th><th>Endpoints principais</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>BaseService</code></td><td><code>fetchData</code> · <code>sendMessage</code> · <code>sendStreamMessage</code></td></tr>
+              <tr><td><code>api.js</code></td><td>URL base — dev (<code>VITE_BACKEND_URL</code>) vs prod (<code>/api</code>)</td></tr>
+              <tr><td><code>authService</code></td><td><code>/auth/login</code> · <code>/auth/register</code> · <code>/auth/me</code> · <code>/auth/logout</code></td></tr>
+              <tr><td><code>orderService</code></td><td><code>/orders</code> · <code>/orders/:id</code> · <code>/orders/:id/status</code></td></tr>
+              <tr><td><code>orderItemService</code></td><td><code>/order-items/bulk</code> · <code>getByOrder(id)</code></td></tr>
+              <tr><td><code>itemService</code></td><td><code>/items</code> · <code>/items/:id</code> (create, update, toggle)</td></tr>
+              <tr><td><code>customerService</code></td><td><code>/customers</code> · <code>/customers/:id</code> · <code>markNotificationRead</code></td></tr>
+              <tr><td><code>stockService</code></td><td><code>/stock</code> · <code>/stock/:id</code> · <code>adjustQuantity</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- COLUNA DIREITA -->
+        <div class="card" style="flex:1;padding:0.5rem 0.7rem;">
+          <table style="font-size:0.75rem;">
+            <thead>
+              <tr><th>Service</th><th>Endpoints principais</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>invoiceService</code></td><td><code>/invoices</code> · <code>/invoices/:id</code> · <code>getByOrder</code></td></tr>
+              <tr><td><code>paymentService</code></td><td><code>/payments</code> · <code>process</code> · <code>fail</code> · <code>getByInvoice</code></td></tr>
+              <tr><td><code>tableService</code></td><td><code>/tables</code> · <code>/tables/:id</code> · <code>updateStatus</code></td></tr>
+              <tr><td><code>reservationService</code></td><td><code>/reservations</code> · <code>confirm</code> · <code>cancel</code></td></tr>
+              <tr><td><code>notificationService</code></td><td><code>/notifications</code> · <code>getUnread</code> · <code>markAsRead</code></td></tr>
+              <tr><td><code>ingredientService</code></td><td><code>/ingredients</code> · <code>/ingredients/:id</code></td></tr>
+              <tr><td><code>chatService</code></td><td><code>/chat/message/stream</code> (SSE) · <code>getHistory</code></td></tr>
+              <tr><td><code>reportService</code></td><td><code>/relatorios</code> — exportação de relatórios</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="slide-footer">Os 16 Services</div>
+    </div>
+
+    <!-- F-09: CLIENTES PAGE -->
+    <div class="slide slide-image">
+      <h2 class="center">ClientesPage — Gestão de Clientes</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">Responsável por listar, filtrar e detalhar clientes, com painel lateral diferenciado para admin e cliente</p>
+      <div class="card-blank">
+        <i class="fa-solid fa-image" style="font-size:3rem;color:#cbd5e1;"></i>
+        <p style="color:#94a3b8;font-size:0.9rem;margin:0;">Imagem a adicionar</p>
+      </div>
+      <div class="slide-footer">ClientesPage</div>
+    </div>
+
+    <!-- F-10: MENU PAGE -->
+    <div class="slide slide-image">
+      <h2 class="center">MenuPage — Gestão do Menu</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">Responsável pela gestão do menu activo, com edição inline de preço e toggle activo/inactivo por item</p>
+      <div class="card-blank">
+        <i class="fa-solid fa-image" style="font-size:3rem;color:#cbd5e1;"></i>
+        <p style="color:#94a3b8;font-size:0.9rem;margin:0;">Imagem a adicionar</p>
+      </div>
+      <div class="slide-footer">MenuPage</div>
+    </div>
+
+    <!-- F-11: ORDERS PAGE -->
+    <div class="slide slide-image">
+      <h2 class="center">OrdersPage — Monitorização de Pedidos</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">Responsável por monitorizar e gerir todos os pedidos em tempo real, com tabs de estado e criação de pedidos</p>
+      <div class="card-blank">
+        <i class="fa-solid fa-image" style="font-size:3rem;color:#cbd5e1;"></i>
+        <p style="color:#94a3b8;font-size:0.9rem;margin:0;">Imagem a adicionar</p>
+      </div>
+      <div class="slide-footer">OrdersPage</div>
+    </div>
+
+    <!-- F-12: STOCK PAGE -->
+    <div class="slide slide-image">
+      <h2 class="center">StockPage — Inventário de Ingredientes</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">Responsável pela gestão do inventário, com edição inline de quantidade e badges de estado In Stock / Low Stock / Out of Stock</p>
+      <div class="card-blank">
+        <i class="fa-solid fa-image" style="font-size:3rem;color:#cbd5e1;"></i>
+        <p style="color:#94a3b8;font-size:0.9rem;margin:0;">Imagem a adicionar</p>
+      </div>
+      <div class="slide-footer">StockPage</div>
+    </div>
+
+    <!-- F-13: MAINPAGE — CARDÁPIO DIGITAL -->
+    <div class="slide slide-image">
+      <h2 class="center">MainPage — Cardápio Digital</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">Landing page pública que serve visitantes e clientes autenticados — cardápio, carrinho flutuante e modais de login/registo</p>
+      <div class="card-blank">
+        <i class="fa-solid fa-image" style="font-size:3rem;color:#cbd5e1;"></i>
+        <p style="color:#94a3b8;font-size:0.9rem;margin:0;">Imagem a adicionar</p>
+      </div>
+      <div class="slide-footer">MainPage</div>
+    </div>
+
+    <!-- F-14: PROFILEPAGE -->
+    <div class="slide slide-image">
+      <h2 class="center">ProfilePage — Perfil do Cliente</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">Estatísticas, histórico de pedidos, gráficos de gastos e pagamento consolidado de faturas pendentes</p>
+      <div class="card-blank">
+        <i class="fa-solid fa-image" style="font-size:3rem;color:#cbd5e1;"></i>
+        <p style="color:#94a3b8;font-size:0.9rem;margin:0;">Imagem a adicionar</p>
+      </div>
+      <div class="slide-footer">ProfilePage</div>
+    </div>
+
+    <!-- F-15: CHATBOT — COMPONENTES E SSE -->
+    <div class="slide">
+      <h2 class="center">Chatbot — Componentes e Integração SSE</h2>
+      <p style="font-size:0.85rem;margin-bottom:0.5rem;">Modal flutuante acessível em todas as páginas. Texto gerado palavra a palavra via SSE com suporte a retry automático.</p>
+      <div style="display:flex;gap:0.8rem;align-items:flex-start;">
+        <div class="card" style="flex:1;padding:0.75rem 1rem;">
+          <p style="font-size:0.72rem;font-weight:600;color:var(--primary);margin-bottom:0.4rem;">Componentes</p>
+          <table style="font-size:0.75rem;">
+            <thead><tr><th>Componente</th><th>Responsabilidade</th></tr></thead>
+            <tbody>
+              <tr><td><code>ChatUI.jsx</code></td><td>Orquestrador — estado, SSE, histórico</td></tr>
+              <tr><td><code>ChatBubbleUI.jsx</code></td><td>Renderização mensagens user/bot</td></tr>
+              <tr><td><code>ChatInputUI.jsx</code></td><td>Input de texto + submissão</td></tr>
+              <tr><td><code>ChatHeaderUI.jsx</code></td><td>Cabeçalho + histórico + fechar</td></tr>
+              <tr><td><code>ChatHistory.jsx</code></td><td>Histórico agrupado por data</td></tr>
+              <tr><td><code>ProviderErrorCard.jsx</code></td><td>Card de erro com botão retry</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card" style="flex:1;padding:0.75rem 1rem;">
+          <p style="font-size:0.72rem;font-weight:600;color:var(--primary);margin-bottom:0.3rem;">Fluxo SSE</p>
+          <pre style="background:transparent;padding:0;margin:0;font-size:0.68rem;line-height:1.4;overflow:hidden;"><code><span class="cm">Utilizador escreve → Submit</span>
+        ↓
+chatService.<span class="fn">sendMessageToBotStream</span>(...)
+  POST /chat/message/stream
+
+<span class="cm">Eventos recebidos:</span>
+event: message  → <span class="fn">onChunk</span>(text)
+data: {"text":"Olá!"} <span class="cm">↑ acrescenta fragmento</span>
+
+event: done     → <span class="fn">onDone</span>(data)
+data: {success, functionResults}
+
+event: rate_limit → <span class="fn">onDone</span>({providerError:true})
+                  → <span class="cm">mostra ProviderErrorCard</span></code></pre>
+        </div>
+      </div>
+      <div class="slide-footer">Chatbot — SSE</div>
+    </div>
+
+    <!-- F-16: CHATBOT — INTERFACE (placeholder) -->
+    <div class="slide slide-image">
+      <h2 class="center">Chatbot — Interface e Streaming</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">Modal flutuante em todas as páginas — streaming palavra a palavra, histórico persistente e cards de menu clicáveis</p>
+      <div class="card-blank">
+        <i class="fa-solid fa-image" style="font-size:3rem;color:#cbd5e1;"></i>
+        <p style="color:#94a3b8;font-size:0.9rem;margin:0;">Imagem a adicionar</p>
+      </div>
+      <div class="slide-footer">Chatbot — Interface</div>
+    </div>
+
+    <!-- F-17: CHATBOT — TRATAMENTO DE ERROS -->
+    <div class="slide">
+      <h2 class="center">Chatbot — Tratamento de Erros</h2>
+      <p style="font-size:0.83rem;margin-bottom:0.5rem;text-align:center;">Quando o backend envia um evento SSE de erro, 4 ficheiros tratam de o receber, interpretar e apresentar ao utilizador.</p>
+      <div style="display:flex;gap:0.6rem;align-items:flex-start;margin-top:0.3rem;">
+        <div class="card" style="flex:1.1;padding:0.6rem 0.8rem;">
+          <table style="font-size:0.74rem;">
+            <thead>
+              <tr><th>Ficheiro</th><th>Papel</th><th>Saída</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>chatService.js</code></td><td>Lê SSE, detecta evento de erro</td><td><code>onDone({ providerError:true })</code></td></tr>
+              <tr><td><code>ChatUI</code> makeOnDone</td><td>Actualiza estado da mensagem</td><td><code>msg.providerError = { errorType, message }</code></td></tr>
+              <tr><td><code>ChatUI</code> render</td><td>Decide o que renderizar</td><td><code>&lt;ProviderErrorCard&gt;</code> em vez de texto</td></tr>
+              <tr><td><code>ProviderErrorCard</code></td><td>Mostra o erro visualmente</td><td>Card com ícone, cor, mensagem PT e retry</td></tr>
+            </tbody>
+          </table>
+          <p style="margin-top:0.4rem;font-size:0.72rem;"><strong>handleRetry</strong> — remove a mensagem do bot e reenvia a última do utilizador.</p>
+        </div>
+        <div class="card" style="flex:0.9;padding:0.6rem 0.8rem;">
+          <p style="font-size:0.7rem;font-weight:600;color:var(--primary);margin-bottom:0.3rem;">chatService.js — detecta evento de erro</p>
+          <pre style="background:transparent;padding:0;margin:0;font-size:0.62rem;line-height:1.35;overflow:hidden;"><code><span class="kw">else if</span> (
+  event === <span class="str">"rate_limit"</span>       ||
+  event === <span class="str">"service_unavailable"</span> ||
+  event === <span class="str">"auth_error"</span>        ||
+  event === <span class="str">"network_error"</span>
+) {
+  <span class="kw">if</span> (onDone) <span class="fn">onDone</span>({
+    ...parsed,
+    success:       <span class="kw">false</span>,
+    providerError: <span class="kw">true</span>,
+  });
+}
+
+<span class="cm">// ChatUI.jsx — makeOnDone</span>
+<span class="kw">if</span> (!payload?.success) {
+  <span class="fn">setMessages</span>(p => p.<span class="fn">map</span>(m =>
+    m.id === botMsgId ? {
+      ...m, text: <span class="str">""</span>,
+      providerError: {
+        errorType: payload.errorType,
+        message:   payload.message,
+      }
+    } : m
+  ));
+}</code></pre>
+        </div>
+      </div>
+      <div class="slide-footer">Chatbot — Tratamento de Erros</div>
+    </div>
+
+    <!-- F-18: FLUXO DE ERRO — FRONTEND (imagem) -->
+    <div class="slide slide-image">
+      <h2 class="center">Fluxo de Erro — Frontend</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">Do evento SSE de erro ao card visual — chatService → ChatUI → ProviderErrorCard</p>
+      <div class="card-blank">
+        <i class="fa-solid fa-image" style="font-size:3rem;color:#cbd5e1;"></i>
+        <p style="color:#94a3b8;font-size:0.9rem;margin:0;">Imagem a adicionar</p>
+      </div>
+      <div class="slide-footer">Fluxo de Erro — Frontend</div>
+    </div>
+
+    <!-- F-19: TIPOS DE ERRO — FRONTEND -->
+    <div class="slide">
+      <h2 class="center">ProviderErrorCard — Tipos de Erro</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.5rem;">Camada visual de erros do chatbot. O <code>ERROR_CONFIG</code> em <code>providerErrorCardUtils.js</code> mapeia cada tipo para ícone, cor e título em português.</p>
+      <div class="card" style="margin-top:0.25rem;">
+        <table>
+          <thead>
+            <tr><th>Tipo</th><th>Evento SSE</th><th>Ícone</th><th>Título (PT)</th><th>Retry</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>RATE_LIMIT</code></td><td><code>rate_limit</code></td><td>⏳</td><td>Limite atingido</td><td>Sim</td></tr>
+            <tr><td><code>SERVICE_DOWN</code></td><td><code>service_unavailable</code></td><td>🔧</td><td>Serviço em baixo</td><td>Sim</td></tr>
+            <tr><td><code>AUTH_ERROR</code></td><td><code>auth_error</code></td><td>🔑</td><td>Erro de autenticação</td><td>Não</td></tr>
+            <tr><td><code>NETWORK_ERROR</code></td><td><code>network_error</code></td><td>🌐</td><td>Sem ligação</td><td>Sim</td></tr>
+            <tr><td><code>INVALID_REQUEST</code></td><td><code>invalid_request</code></td><td>✏️</td><td>Pedido inválido</td><td>Não</td></tr>
+            <tr><td><code>TIMEOUT</code></td><td>catch AbortError</td><td>⏱️</td><td>IA indisponível</td><td>Sim</td></tr>
+            <tr><td><code>UNKNOWN</code></td><td>fallback</td><td>🤖</td><td>IA indisponível</td><td>Sim</td></tr>
+          </tbody>
+        </table>
+        <p style="margin-top:0.6rem;font-size:0.8rem;">Erros HTTP antes do stream (4xx/5xx) são também convertidos via <code>httpStatusToErrorType(status)</code> — ex: 429 → <code>RATE_LIMIT</code>.</p>
+      </div>
+      <div class="slide-footer">ProviderErrorCard — Tipos de Erro</div>
+    </div>
+
+    <!-- F-20: UX/UI E RESPONSIVIDADE -->
+    <div class="slide">
+      <h2 class="center">UX/UI e Responsividade</h2>
+      <p style="font-size:0.85rem;margin-bottom:0.4rem;">Abordagem mobile-first com dois layouts distintos por página e padrões de UX consistentes em toda a aplicação.</p>
+      <div style="display:flex;gap:0.8rem;align-items:flex-start;">
+        <div class="card" style="flex:1;padding:0.75rem 1rem;">
+          <p style="font-size:0.72rem;font-weight:600;color:var(--primary);margin-bottom:0.4rem;">Padrões de UX</p>
+          <table style="font-size:0.75rem;">
+            <thead><tr><th>Padrão</th><th>Implementação</th></tr></thead>
+            <tbody>
+              <tr><td>Carregamento</td><td>Spinner enquanto dados carregam</td></tr>
+              <tr><td>Confirmação destrutiva</td><td>Modal antes de eliminar</td></tr>
+              <tr><td>Auto-refresh</td><td>setInterval 30s em páginas operacionais</td></tr>
+              <tr><td>Pesquisa</td><td>Filtragem em tempo real (client-side)</td></tr>
+              <tr><td>Paginação</td><td>Componente partilhado, tamanho configurável</td></tr>
+              <tr><td>Edição inline</td><td>Click-to-edit sem modal (preço, stock)</td></tr>
+              <tr><td>Animações</td><td>Framer Motion em modais e tabs</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card" style="flex:1;padding:0.75rem 1rem;">
+          <p style="font-size:0.72rem;font-weight:600;color:var(--primary);margin-bottom:0.4rem;">Mobile vs Desktop</p>
+          <pre style="background:transparent;padding:0;margin:0;font-size:0.68rem;line-height:1.4;overflow:hidden;"><code><span class="cm">// Mobile: cards (sm:hidden)</span>
+&lt;<span class="fn">div</span> className=<span class="str">"sm:hidden grid grid-cols-5"</span>&gt;
+  {items.<span class="fn">map</span>(item => &lt;<span class="fn">MobileCard</span> /&gt;)}
+&lt;/<span class="fn">div</span>&gt;
+
+<span class="cm">// Desktop: tabela (hidden sm:grid)</span>
+&lt;<span class="fn">div</span> className=<span class="str">"hidden sm:grid"</span>&gt;
+  &lt;<span class="fn">table</span>&gt;...&lt;/<span class="fn">table</span>&gt;
+&lt;/<span class="fn">div</span>&gt;</code></pre>
+          <p style="font-size:0.7rem;margin-top:0.5rem;color:#475569;"><strong>Navegação:</strong> Header com links em desktop · BottomNav com tabs em mobile</p>
+          <p style="font-size:0.7rem;color:#475569;"><strong>Dark/Light mode:</strong> ThemeContext + classes Tailwind <code>dark:</code></p>
+          <p style="font-size:0.7rem;color:#475569;"><strong>Refactor aplicado:</strong> <code>onMouseEnter/Leave</code> → Tailwind <code>hover:</code> · <code>useMemo</code> em valores derivados</p>
+        </div>
+      </div>
+      <div class="slide-footer">UX/UI e Responsividade</div>
+    </div>
+
+    <!-- F-21: RESPONSIVIDADE — IMAGEM -->
+    <div class="slide slide-image">
+      <h2 class="center">Responsividade — Mobile vs Desktop</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">Dois layouts distintos por página — cards em mobile, tabela em desktop, com BottomNav adaptado por role</p>
+      <div class="card-blank">
+        <i class="fa-solid fa-image" style="font-size:3rem;color:#cbd5e1;"></i>
+        <p style="color:#94a3b8;font-size:0.9rem;margin:0;">Imagem a adicionar</p>
+      </div>
+      <div class="slide-footer">Responsividade</div>
+    </div>
+
+
+    <!-- F-23: FLUXO COMPLETO CLIENTE -->
+    <div class="slide slide-image">
+      <h2 class="center">Fluxo Completo — Cliente</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">Do cardápio ao pagamento — MainPage, CartModal, KDS, notificação e PaymentModal</p>
+      <div class="card-blank">
+        <i class="fa-solid fa-image" style="font-size:3rem;color:#cbd5e1;"></i>
+        <p style="color:#94a3b8;font-size:0.9rem;margin:0;">Imagem a adicionar</p>
+      </div>
+      <div class="slide-footer">Fluxo Completo Cliente</div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!--              SECÇÃO — TESTES               -->
+    <!-- ═══════════════════════════════════════════ -->
+
+    <!-- DIVISOR: TESTES -->
+    <div class="slide slide-section">
+      <div style="text-align:center;">
+        <p style="text-transform:uppercase;letter-spacing:6px;color:#475569;margin-bottom:16px;font-size:0.9rem;">SmartBistro AI</p>
+        <h1 style="font-size:4rem;color:var(--dark);margin-bottom:8px;">Testes</h1>
+        <p style="color:#60a5fa;font-family:'Fira Code',monospace;font-size:1rem;margin-bottom:0;">
+          Vitest · Supertest · jsdom
+        </p>
+        <div style="margin-top:48px;font-size:3.5rem;color:#1e40af;gap:40px;display:flex;justify-content:center;">
+          <i class="fa-solid fa-flask"></i>
+          <i class="fa-solid fa-check-double"></i>
+          <i class="fa-solid fa-bug-slash"></i>
+        </div>
+      </div>
+      <div class="slide-footer" style="color:#475569;">Secção — Testes</div>
+    </div>
+
+    <!-- T-01: ESTRATÉGIA DE TESTES -->
+    <div class="slide">
+      <h2 class="center">Estratégia de Testes</h2>
+      <div style="display:flex;gap:0.8rem;align-items:flex-start;">
+        <div class="card" style="flex:1;padding:0.75rem 1rem;">
+          <p style="font-size:0.72rem;font-weight:600;color:var(--primary);margin-bottom:0.4rem;"><i class="fa-solid fa-server" style="margin-right:0.3rem;"></i>Backend — Testes de Integração</p>
+          <table style="font-size:0.75rem;">
+            <thead><tr><th>Aspecto</th><th>Detalhe</th></tr></thead>
+            <tbody>
+              <tr><td>Framework</td><td><strong>Vitest</strong> — suporte nativo a ES Modules</td></tr>
+              <tr><td>HTTP</td><td><strong>Supertest</strong> — requisições sem servidor a escutar</td></tr>
+              <tr><td>Mocks</td><td><code>vi.mock(db.js)</code> + <code>vi.mock(services/index.js)</code></td></tr>
+              <tr><td>Isolamento</td><td>BD e JWT 100% mockados — sem dependências externas</td></tr>
+              <tr><td>Ficheiros</td><td>19 ficheiros · <strong>261 testes</strong></td></tr>
+              <tr><td>Cobertura</td><td>Todos os controllers + middlewares checkExists</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card" style="flex:1;padding:0.75rem 1rem;">
+          <p style="font-size:0.72rem;font-weight:600;color:var(--primary);margin-bottom:0.4rem;"><i class="fa-brands fa-react" style="margin-right:0.3rem;"></i>Frontend — Testes Unitários</p>
+          <table style="font-size:0.75rem;">
+            <thead><tr><th>Aspecto</th><th>Detalhe</th></tr></thead>
+            <tbody>
+              <tr><td>Framework</td><td><strong>Vitest</strong> + ambiente <strong>jsdom</strong></td></tr>
+              <tr><td>Mocks</td><td><code>vi.mock(api.js)</code> · <code>vi.spyOn(fetch)</code></td></tr>
+              <tr><td>Padrão</td><td>Cada service testado com mock da camada de transporte</td></tr>
+              <tr><td>Ficheiros</td><td>16 ficheiros de test</td></tr>
+              <tr><td>Cobertura</td><td>Todos os 16 services do frontend</td></tr>
+              <tr><td>Setup</td><td><code>setup.js</code> — <code>vi.restoreAllMocks()</code> após cada teste</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="slide-footer">Estratégia de Testes</div>
+    </div>
+
+    <!-- T-02: RESULTADO DOS TESTES — BACKEND -->
+    <div class="slide slide-image">
+      <h2 class="center">Resultado dos Testes — Backend</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.5rem;text-align:center;color:#64748b;">19 ficheiros · 261 testes · Vitest + Supertest · todos os controllers e middlewares</p>
+      <div style="flex:1;min-height:0;display:flex;justify-content:center;align-items:center;">
+        <img src="assets/tests-backend.svg" alt="Resultado dos testes backend" style="max-width:100%;max-height:100%;border-radius:10px;" />
+      </div>
+      <div class="slide-footer">Testes — Backend</div>
+    </div>
+
+    <!-- T-03: RESULTADO DOS TESTES — FRONTEND -->
+    <div class="slide slide-image">
+      <h2 class="center">Resultado dos Testes — Frontend</h2>
+      <p style="font-size:0.88rem;margin-bottom:0.5rem;text-align:center;color:#64748b;">16 ficheiros · Vitest + jsdom · todos os services do frontend</p>
+      <div style="flex:1;min-height:0;display:flex;justify-content:center;align-items:center;">
+        <img src="assets/tests-frontend.svg" alt="Resultado dos testes frontend" style="max-width:100%;max-height:100%;border-radius:10px;" />
+      </div>
+      <div class="slide-footer">Testes — Frontend</div>
+    </div>
+
+    <!-- QUESTÕES -->
+    <div class="slide slide-section">
+      <div style="text-align:center;">
+        <div style="font-size:4rem;color:#1e40af;margin-bottom:2rem;">
+          <i class="fa-solid fa-circle-question"></i>
+        </div>
+        <h1 style="font-size:4rem;color:white;margin-bottom:1rem;">Questões?</h1>
+        <p style="color:#94a3b8;font-family:'Fira Code',monospace;font-size:0.95rem;margin-bottom:0;">SmartBistro AI · Danilson Sanches · upskill217</p>
+        <div style="margin-top:2.5rem;display:flex;justify-content:center;gap:2.5rem;font-size:0.85rem;color:#475569;">
+          <span><i class="fa-solid fa-server" style="margin-right:0.4rem;color:#3b82f6;"></i>Express · MySQL · Groq SDK</span>
+          <span><i class="fa-brands fa-react" style="margin-right:0.4rem;color:#3b82f6;"></i>React 19 · Vite · Tailwind CSS 4</span>
+        </div>
+      </div>
+      <div class="slide-footer" style="color:#475569;">Questões</div>
+    </div>
+
+    <script>
+      let currentSlide = 0;
+      const slides = document.querySelectorAll(".slide");
+      const progressBar = document.getElementById("progressBar");
+      const slideCounter = document.getElementById("slideCounter");
+
+      function toggleView() {
+        document.body.classList.toggle("list-mode");
+        const btn = document.querySelector(".view-toggle");
+        if (document.body.classList.contains("list-mode")) {
+          btn.innerHTML = '<i class="fa-solid fa-play"></i> Alternar Vista (Apresentação)';
+        } else {
+          btn.innerHTML = '<i class="fa-solid fa-list"></i> Alternar Vista (Scroll)';
+        }
+      }
+
+      function updateSlide() {
+        if (document.body.classList.contains("list-mode")) return;
+        slides.forEach((slide, index) => {
+          slide.classList.remove("active");
+          if (index === currentSlide) slide.classList.add("active");
+        });
+        progressBar.style.width = `${((currentSlide + 1) / slides.length) * 100}%`;
+        slideCounter.textContent = `${currentSlide + 1} / ${slides.length}`;
+      }
+
+      function nextSlide() {
+        if (currentSlide < slides.length - 1) { currentSlide++; updateSlide(); }
+      }
+
+      function prevSlide() {
+        if (currentSlide > 0) { currentSlide--; updateSlide(); }
+      }
+
+      document.addEventListener("keydown", (e) => {
+        if (document.body.classList.contains("list-mode")) return;
+        if (e.key === "ArrowRight" || e.key === " ") nextSlide();
+        if (e.key === "ArrowLeft") prevSlide();
+      });
+
+      window.onload = function () {
+        window.focus();
+        updateSlide();
+      };
+
+      document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.slide').forEach(slide => {
+          const h2 = slide.querySelector('h2.center');
+          if (!h2) return;
+          let footer = slide.querySelector('.slide-footer');
+          if (!footer) {
+            footer = document.createElement('div');
+            footer.className = 'slide-footer';
+            slide.appendChild(footer);
+          }
+          footer.textContent = h2.textContent.trim();
+        });
+      });
+    </script>
+  </body>
+</html>
