@@ -37,7 +37,6 @@ export function AuthProvider({ children }) {
 
   async function register(name, username, email, phone, password) {
     const data = await authService.register(name, username, email, phone, password);
-    persist(data.token, data.user);
     return data.user;
   }
 

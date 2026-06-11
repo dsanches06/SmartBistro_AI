@@ -349,6 +349,7 @@ export default function MainPage() {
   const [activeCategory, setActiveCategory] = useState(ALL_KEY);
   const [showLogin, setShowLogin]       = useState(false);
   const [showRegister, setShowRegister] = useState(false);
+  const [showRegisterSuccess, setShowRegisterSuccess] = useState(false);
   const [navOpen, setNavOpen]           = useState(false);
   const [cart, setCart]                 = useState({});
   const [showCart, setShowCart]         = useState(false);
@@ -416,9 +417,9 @@ export default function MainPage() {
   };
 
   const handleRegister = async (name, username, email, phone, password) => {
-    const u = await register(name, username, email, phone, password);
+    await register(name, username, email, phone, password);
     setShowRegister(false);
-    navigate(u.role_id === 1 ? "/dashboard" : "/", { replace: true });
+    setShowRegisterSuccess(true);
   };
 
   const groupedAll = useMemo(() =>
@@ -722,6 +723,31 @@ export default function MainPage() {
         isDark={isDark}
         onRegister={handleRegister}
       />
+
+      {/* Modal sucesso registo */}
+      <Modal
+        open={showRegisterSuccess}
+        onClose={() => setShowRegisterSuccess(false)}
+        title="Conta criada"
+        isDark={isDark}
+        size="xs"
+      >
+        <div className="flex flex-col items-center gap-4 text-center py-2">
+          <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: "rgba(34,197,94,0.12)" }}>
+            <i className="fa-solid fa-circle-check text-3xl" style={{ color: "#22c55e" }} />
+          </div>
+          <p className="text-sm" style={{ color: "var(--text)" }}>
+            A tua conta foi criada com sucesso!<br />Inicia sessão para continuares.
+          </p>
+          <button
+            onClick={() => { setShowRegisterSuccess(false); setShowLogin(true); }}
+            className="w-full py-2 rounded-xl text-sm font-semibold text-white transition-all"
+            style={{ background: "var(--primary)", border: "1.5px solid var(--primary)" }}
+          >
+            Iniciar sessão
+          </button>
+        </div>
+      </Modal>
 
       {/* BottomNav mobile — show/hide */}
       <div className="sm:hidden">

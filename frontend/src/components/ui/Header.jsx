@@ -1,10 +1,13 @@
 import { useRef, useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { ThemeToggle } from "./ThemeToggle";
+import { PaymentModal } from "./PaymentModal.jsx";
 import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext";
 import { getInitials, getPalette, formatDate } from "../customers/CustomerCard";
 import { customerService } from "../../services/customerService";
+import { invoiceService } from "../../services/invoiceService";
+import { paymentService } from "../../services/paymentService";
 
 const navLinks = [
   { to: "/dashboard",  label: "Dashboard",  exact: true },
@@ -90,13 +93,15 @@ function UserMenu({ user, onLogout }) {
 }
 
 const PAY_KEYWORDS = /pagamento|pagar|fatura|faturação|invoice|payment|valor/i;
+const ORDER_ID_RE  = /#(\S+)/;
 
 function NotificationBell({ user }) {
   const [open, setOpen]               = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading]         = useState(false);
+  const [payInfo, setPayInfo]         = useState(null);
+  const [payLoadingId, setPayLoadingId] = useState(null);
   const ref      = useRef(null);
-  const navigate = useNavigate();
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
@@ -129,6 +134,26 @@ function NotificationBell({ user }) {
       await customerService.markNotificationRead(user.id, n.id);
       setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, is_read: true } : x));
     } catch { /* silent */ }
+  };
+
+  const handlePayClick = async (e, n) => {
+    e.stopPropagation();
+    const orderId = n.message?.match(ORDER_ID_RE)?.[1];
+    if (!orderId) return;
+    setPayLoadingId(n.id);
+    try {
+      const inv = await invoiceService.getByOrder(orderId);
+      if (!inv?.id) return;
+      const payments = await paymentService.getByInvoice(inv.id).catch(() => []);
+      const alreadyPaid = Array.isArray(payments) && payments.some(p => p.payment_status === "Completed");
+      if (alreadyPaid) {
+        await handleMarkRead(n);
+        return;
+      }
+      setOpen(false);
+      setPayInfo({ unpaidInvoices: [{ orderId, inv }], notif: n });
+    } catch { /* silent */ }
+    finally { setPayLoadingId(null); }
   };
 
   return (
@@ -218,11 +243,12 @@ function NotificationBell({ user }) {
                       </div>
                       {isPayNotif && (
                         <button
-                          onClick={(e) => { e.stopPropagation(); setOpen(false); navigate("/perfil"); }}
-                          className="flex-shrink-0 px-2 py-1 rounded-lg text-[10px] font-bold text-white whitespace-nowrap"
+                          onClick={(e) => handlePayClick(e, n)}
+                          disabled={payLoadingId === n.id}
+                          className="flex-shrink-0 px-2 py-1 rounded-lg text-[10px] font-bold text-white whitespace-nowrap disabled:opacity-60"
                           style={{ background: "#22c55e" }}
                         >
-                          Pagar
+                          {payLoadingId === n.id ? "..." : "Pagar"}
                         </button>
                       )}
                     </div>
@@ -232,6 +258,19 @@ function NotificationBell({ user }) {
             )}
           </div>
         </div>
+      )}
+
+      {payInfo && (
+        <PaymentModal
+          onClose={() => setPayInfo(null)}
+          unpaidInvoices={payInfo.unpaidInvoices}
+          customerId={user?.id}
+          onPaid={() => {
+            handleMarkRead(payInfo.notif);
+            setPayInfo(null);
+            loadNotifs();
+          }}
+        />
       )}
     </div>
   );
@@ -299,7 +338,7 @@ export function Header() {
         {/* Controls */}
         <div className="flex items-center gap-1 sm:gap-2">
           <ThemeToggle />
-          {user && <NotificationBell user={user} />}
+          {user?.role_id !== 1 && <NotificationBell user={user} />}
           {user && <UserMenu user={user} onLogout={logout} />}
         </div>
       </header>

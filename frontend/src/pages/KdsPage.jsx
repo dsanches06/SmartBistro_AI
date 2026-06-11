@@ -144,7 +144,7 @@ function OrderCard({ order, cardBorder, now, firstSeenAt, estimatedSecsMap }) {
         #{order.id} · {target}
       </p>
       <p style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>
-        Cliente {order.customer_id ?? "—"}
+        {order.customer_name || `Cliente ${order.customer_id ?? "—"}`}
       </p>
       <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: 8 }}>
         {order.kitchenItems.slice(0, 4).map((item, i) => {
@@ -504,7 +504,7 @@ export default function KdsPage() {
               const labelColor = isDark ? "var(--text)" : "#374151";
               const emptyColor = isDark ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.18)";
               return (
-                <div key={col.status} className="w-full md:w-[260px] md:flex-shrink-0" style={{ borderRadius: 12, overflow: "hidden", border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                <div key={col.status} className="w-full md:w-[260px] md:flex-shrink-0" style={{ borderRadius: 12, overflow: "hidden", border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)", boxShadow: "0 1px 3px rgba(0,0,0,0.05)", display: "flex", flexDirection: "column" }}>
                   <div style={{ backgroundColor: colBg, padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)" }}>
                     <div>
                       <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", color: labelColor }}>
@@ -520,7 +520,7 @@ export default function KdsPage() {
                       {colOrders.length}
                     </span>
                   </div>
-                  <div style={{ backgroundColor: colBg, padding: 8, minHeight: 160, display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ backgroundColor: colBg, padding: 8, minHeight: 160, flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
                     {colOrders.map(order => (
                       <OrderCard key={order.id} order={order} cardBorder={col.cardBorder} now={now} firstSeenAt={firstSeenAt.current} estimatedSecsMap={_estimatedSecsMap} />
                     ))}
