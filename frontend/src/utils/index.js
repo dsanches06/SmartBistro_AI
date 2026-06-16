@@ -1,4 +1,4 @@
-// Barrel para utils: exporta utilitários do diretório
+// Barrel das utilidades do frontend para centralizar imports.
 export * from "./tablePageUtils.js";
 export * from "./chatUtils.js";
 export * from "./providerErrorCardUtils.js";

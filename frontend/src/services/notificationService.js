@@ -1,5 +1,6 @@
 import { api } from './api.js';
 
+// Serviços para listar, criar e marcar notificações.
 export const notificationService = {
   getAll:           ()            => api.get('/notifications'),
   getById:          (id)          => api.get(`/notifications/${id}`),

@@ -1,4 +1,4 @@
-// ── Frontend services barrel ──────────────────────────────────────────────────
+// Barrel dos serviços do frontend para simplificar imports.
 export { getBackendUrl, BACKEND_URL }  from "./BaseService.js";
 export { authService }                 from "./authService.js";
 export { chatService }                 from "./chatService.js";

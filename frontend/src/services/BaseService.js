@@ -1,4 +1,4 @@
-// Resolve o URL base do backend consoante o ambiente (produção vs. desenvolvimento)
+// Resolve o URL base do backend consoante o ambiente (produção vs. desenvolvimento).
 export function getBackendUrl() {
   if (import.meta.env.PROD) {
     return "/api";
@@ -15,10 +15,10 @@ export function getBackendUrl() {
   return "/api";
 }
 
-// URL base do backend, calculado uma única vez ao arranque
+// URL base do backend, calculada uma única vez ao arranque.
 export const BACKEND_URL = getBackendUrl();
 
-// Classe base com métodos genéricos de comunicação HTTP e SSE
+// Classe base com métodos genéricos de comunicação HTTP e SSE.
 class BaseService {
   constructor(baseEndpoint) {
     this.BACKEND_URL = BACKEND_URL;

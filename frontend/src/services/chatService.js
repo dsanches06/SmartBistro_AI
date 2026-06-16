@@ -1,7 +1,7 @@
 import BaseService from "../services/BaseService.js";
 import { Order } from "../models/Order.js";
 
-// ── Map HTTP status → error type ─────────────────────────────────────────────
+// Mapeia códigos HTTP para tipos de erro mais legíveis.
 function httpStatusToErrorType(status) {
   if (status === 400) return "VALIDATION_ERROR";
   if (status === 401 || status === 403) return "AUTH_ERROR";
@@ -11,6 +11,7 @@ function httpStatusToErrorType(status) {
   return "SERVER_ERROR";
 }
 
+// Serviço que encapsula a comunicação com o chatbot e o streaming SSE.
 class ChatService extends BaseService {
   constructor() {
     super("/chat");

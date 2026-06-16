@@ -2,6 +2,7 @@ import { Navigate, Outlet } from 'react-router';
 import { useAuth } from '@/context/AuthContext';
 import TrophySpin from '@/components/ui/TrophySpin';
 
+// Garante que apenas utilizadores autenticados acedem a páginas privadas.
 export default function ProtectedRoute() {
   const { user, loading } = useAuth();
 

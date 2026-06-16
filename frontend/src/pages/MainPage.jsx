@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { ThemeToggle } from "@/components/ui";
 
 /* ── Icons ── */
+// Ícone usado para abrir o modal de autenticação.
 function IconLogin() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
@@ -19,6 +20,7 @@ function IconLogin() {
   );
 }
 
+// Ícone usado para alternar para o registo.
 function IconRegister() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
@@ -30,6 +32,7 @@ function IconRegister() {
   );
 }
 
+// Ícone de fecho usado nos modais.
 function IconClose() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
@@ -40,6 +43,7 @@ function IconClose() {
 }
 
 /* ── Modal base ── */
+// Componente base para os modais da interface principal.
 function Modal({ open, onClose, title, children, isDark, size = "lg" }) {
   const overlayRef = useRef(null);
 
@@ -83,6 +87,7 @@ function Modal({ open, onClose, title, children, isDark, size = "lg" }) {
 }
 
 /* ── Campo de formulário ── */
+// Campo reutilizável para os formulários de login e registo.
 function Field({ label, type = "text", value, onChange, placeholder, autoFocus }) {
   const [show, setShow] = useState(type === "password");
   const isPassword = type === "password";
@@ -139,6 +144,7 @@ function Field({ label, type = "text", value, onChange, placeholder, autoFocus }
 }
 
 /* ── Mensagem de erro ── */
+// Mostra uma mensagem de erro simples quando necessário.
 function ErrorMsg({ msg }) {
   if (!msg) return null;
   return (
@@ -149,7 +155,8 @@ function ErrorMsg({ msg }) {
 }
 
 /* ── Modal Login ── */
-function LoginModal({ open, onClose, onSwitchToRegister, isDark, onLogin }) {
+// Modal de entrada que envia as credenciais para o contexto de autenticação.
+function LoginModal({ open, onClose, onSwitchToRegister, isDark, onLogin, sessionBlocked, sessionMessage }) {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword]     = useState("");
   const [loading, setLoading]       = useState(false);
@@ -176,13 +183,14 @@ function LoginModal({ open, onClose, onSwitchToRegister, isDark, onLogin }) {
   return (
     <Modal open={open} onClose={handleClose} title="Entrar na conta" isDark={isDark} size="xs">
       <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+        {sessionBlocked && sessionMessage ? <ErrorMsg msg={sessionMessage} /> : null}
         <Field label="E-mail ou username" value={identifier} onChange={setIdentifier} placeholder="email ou username" autoFocus />
         <Field label="Palavra-passe" type="password" value={password} onChange={setPassword} placeholder="••••••••" />
         <ErrorMsg msg={error} />
 
         <button
           type="submit"
-          disabled={!canSubmit || loading}
+          disabled={!canSubmit || loading || sessionBlocked}
           className="w-full py-2 rounded-xl text-sm font-semibold transition-all"
           style={{
             background: canSubmit ? "var(--primary)" : "transparent",
@@ -211,6 +219,7 @@ function LoginModal({ open, onClose, onSwitchToRegister, isDark, onLogin }) {
 }
 
 /* ── Modal Registo ── */
+// Modal de criação de conta para novos utilizadores.
 function RegisterModal({ open, onClose, onSwitchToLogin, isDark, onRegister }) {
   const [name, setName]         = useState("");
   const [username, setUsername] = useState("");
@@ -302,6 +311,7 @@ function RegisterModal({ open, onClose, onSwitchToLogin, isDark, onRegister }) {
 }
 
 /* ── NavTab (tab show/hide do BottomNav) ── */
+// Botão de controlo para abrir ou fechar a navegação móvel.
 function NavTab({ onClick, open = false, isDark }) {
   const bg     = isDark ? "rgba(28,28,30,0.97)"  : "rgba(208,214,220,0.97)";
   const border = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.12)";
@@ -338,10 +348,11 @@ function NavTab({ onClick, open = false, isDark }) {
 /* ══════════════════════════════════════════
    MainPage
 ══════════════════════════════════════════ */
+// Página principal que junta menu, carrinho, autenticação e navegação.
 export default function MainPage() {
   const { theme } = useTheme();
   const isDark = theme === "dark";
-  const { user, login, register, logout } = useAuth();
+  const { user, login, register, logout, sessionBlocked, sessionMessage } = useAuth();
   const navigate = useNavigate();
 
   const [items, setItems]               = useState([]);
@@ -356,14 +367,20 @@ export default function MainPage() {
   const [orderLoading, setOrderLoading] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
 
+  // Indica se o utilizador atual tem acesso ao fluxo de cliente.
   const isClient  = user && user.role_id !== 1;
+  // Lista atual dos itens presentes no carrinho.
   const cartItems = useMemo(() => Object.values(cart).filter(c => c.qty > 0), [cart]);
+  // Valor total do pedido em curso.
   const cartTotal = useMemo(() => cartItems.reduce((s, c) => s + Number(c.item.price) * c.qty, 0), [cartItems]);
+  // Número total de unidades no carrinho.
   const cartCount = useMemo(() => cartItems.reduce((s, c) => s + c.qty, 0), [cartItems]);
 
+  // Adiciona uma unidade de um item ao carrinho.
   const addToCart = (item) =>
     setCart(prev => ({ ...prev, [item.id]: { item, qty: (prev[item.id]?.qty || 0) + 1 } }));
 
+  // Remove uma unidade de um item do carrinho.
   const removeFromCart = (itemId) =>
     setCart(prev => {
       const qty = (prev[itemId]?.qty || 0) - 1;
@@ -371,6 +388,7 @@ export default function MainPage() {
       return { ...prev, [itemId]: { ...prev[itemId], qty } };
     });
 
+  // Envia o pedido atual para a API e limpa o carrinho após o sucesso.
   const handleSubmitOrder = async () => {
     if (!cartItems.length) return;
     setOrderLoading(true);
@@ -410,18 +428,21 @@ export default function MainPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Faz login e redireciona o utilizador para o destino correto.
   const handleLogin = async (identifier, password) => {
     const u = await login(identifier, password);
     setShowLogin(false);
     navigate(u.role_id === 1 ? "/dashboard" : "/", { replace: true });
   };
 
+  // Regista um novo utilizador e mostra a confirmação do processo.
   const handleRegister = async (name, username, email, phone, password) => {
     await register(name, username, email, phone, password);
     setShowRegister(false);
     setShowRegisterSuccess(true);
   };
 
+  // Organiza os itens por categoria para o display agregado do menu.
   const groupedAll = useMemo(() =>
     MENU_CATEGORIES.map(cat => ({
       ...cat,
@@ -430,11 +451,13 @@ export default function MainPage() {
     [items]
   );
 
+  // Filtra os itens da categoria atualmente selecionada.
   const filteredItems = useMemo(() =>
     items.filter(i => i.category === activeCategory),
     [items, activeCategory]
   );
 
+  // Estilo comum para os botões de cabeçalho da interface.
   const headerBtnStyle = {
     color: "var(--text-secondary)",
     border: "1.5px solid var(--border)",
@@ -829,6 +852,7 @@ export default function MainPage() {
 }
 
 /* ── ItemGrid ── */
+// Grelha que apresenta os itens do menu em formato de cartões.
 function ItemGrid({ items, isDark, isClient, cart, onAdd, onRemove }) {
   if (!items.length) {
     return (
@@ -855,6 +879,7 @@ function ItemGrid({ items, isDark, isClient, cart, onAdd, onRemove }) {
 }
 
 /* ── ItemCard ── */
+// Cartão individual com nome, preço, categoria e ações de carrinho.
 function ItemCard({ item, isDark, qty, isClient, onAdd, onRemove }) {
   const meta = MENU_CATEGORY_META[item.category] ?? {};
   return (

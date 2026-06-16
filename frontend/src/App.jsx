@@ -9,6 +9,7 @@ import { ChatUI } from "@/components/chat";
 import { NAV_HANDLE_H, NAV_OPEN_H } from "@/components/ui";
 import TrophySpin from "./components/ui/TrophySpin";
 
+// Carrega as páginas principais sob demanda para reduzir o bundle inicial.
 const MainPage           = lazy(() => import("@/pages/MainPage"));
 const DashboardPage      = lazy(() => import("@/pages/DashboardPage"));
 const TablePage          = lazy(() => import("@/pages/TablePage"));
@@ -22,6 +23,7 @@ const MenuPage           = lazy(() => import("@/pages/MenuPage"));
 const ProfilePage        = lazy(() => import("@/pages/ProfilePage"));
 const LoginPage          = lazy(() => import("@/pages/LoginPage"));
 
+// Indicador visual mostrado enquanto uma página ainda está a carregar.
 function PageLoader() {
   return (
     <div className="flex items-center justify-center flex-1 min-h-[60vh]">
@@ -30,6 +32,7 @@ function PageLoader() {
   );
 }
 
+// Componente principal que monta o router, os providers e o chat flutuante.
 function AppContent() {
   const [showChat, setShowChat] = useState(false);
   const [bottomNavOpen, setBottomNavOpen] = useState(false);
@@ -103,6 +106,7 @@ function AppContent() {
   );
 }
 
+// Ponto de entrada da aplicação React.
 export default function App() {
   return (
     <BrowserRouter>

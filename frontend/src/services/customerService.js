@@ -1,5 +1,6 @@
 import { api } from './api.js';
 
+// Serviços de gestão de clientes e notificações.
 export const customerService = {
   getAll:               ()                      => api.get('/customers'),
   getById:              (id)                    => api.get(`/customers/${id}`),

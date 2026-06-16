@@ -1,5 +1,6 @@
 import { api } from './api.js';
 
+// Serviços para consultar e ajustar o stock do restaurante.
 export const stockService = {
   getAll:           ()                        => api.get('/stock'),
   getById:          (id)                      => api.get(`/stock/${id}`),

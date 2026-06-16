@@ -1,9 +1,9 @@
 import { createContext, useContext, useState, useEffect } from "react";
 
-// Contexto global de tema (dark/light)
+// Contexto global que controla o tema claro/escuro da aplicação.
 const ThemeContext = createContext();
 
-// Fornecedor de tema — envolve toda a aplicação
+// Fornecedor de tema que envolve toda a aplicação.
 export function ThemeProvider({ children }) {
   // Tema activo; "dark" por omissão
   const [theme, setTheme] = useState("dark");

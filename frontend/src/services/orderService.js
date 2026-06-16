@@ -1,5 +1,6 @@
 import { api } from './api.js';
 
+// Serviços de pedidos expostos ao restante frontend.
 export const orderService = {
   getAll:           ()              => api.get('/orders'),
   getPending:       ()              => api.get('/orders/pending'),

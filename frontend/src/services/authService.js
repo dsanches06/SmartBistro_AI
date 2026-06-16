@@ -1,5 +1,6 @@
 import { BACKEND_URL } from './BaseService.js';
 
+// Função auxiliar para chamar os endpoints de autenticação.
 async function request(path, options = {}) {
   const res = await fetch(`${BACKEND_URL}${path}`, {
     headers: { 'Content-Type': 'application/json', ...options.headers },

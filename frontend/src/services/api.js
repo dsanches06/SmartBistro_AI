@@ -1,5 +1,7 @@
+// Base comum para todas as chamadas HTTP do frontend.
 const BASE = '/api'
 
+// Executa um pedido fetch com JSON e devolve a resposta já parseada.
 async function request(path, options = {}) {
   const res = await fetch(`${BASE}${path}`, {
     headers: { 'Content-Type': 'application/json', ...options.headers },
