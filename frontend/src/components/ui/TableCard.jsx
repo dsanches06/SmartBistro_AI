@@ -12,7 +12,9 @@ export function TableCard({ mesa, isSelected, onSelect, occupancy }) {
   const config          = STATUS_CONFIG[mesa.status] ?? STATUS_CONFIG.Available;
   const formato         = getFormatFromCapacity(mesa.capacity ?? 4);
   const isOccupied      = mesa.status === "Occupied";
+  const isReserved      = mesa.status === "Reserved";
   const emojis          = occupancy?.emojis ?? [];
+  const firstName       = occupancy?.customerName?.split(' ')[0] ?? null;
   const label           = fmtLabel(mesa.table_number);
 
   // Cadeiras: pintadas apenas quando Occupied, quantidade = capacity
@@ -77,6 +79,11 @@ export function TableCard({ mesa, isSelected, onSelect, occupancy }) {
       <p className="mt-0.5 text-center text-[10px] font-semibold" style={{ color: "var(--text-secondary)" }}>
         {label}
       </p>
+      {(isOccupied || isReserved) && firstName && (
+        <p className="text-center font-semibold leading-none" style={{ fontSize: 8, color: "var(--text)", maxWidth: 72, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {firstName}
+        </p>
+      )}
     </button>
   );
 }

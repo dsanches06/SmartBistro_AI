@@ -114,27 +114,44 @@ export default function TablePage() {
 
   const fetchOccupancy = useCallback(async () => {
     try {
-      const orders = await orderService.getAll();
+      const [orders, reservations] = await Promise.all([
+        orderService.getAll(),
+        reservationService.getAll(),
+      ]);
       const map = {};
+
       for (const order of (Array.isArray(orders) ? orders : [])) {
         if (!order.table_id) continue;
         if (order.order_status === 'Cancelled') continue;
-        // Itens só visíveis quando o pedido foi entregue na mesa
-        if (order.order_status !== 'Delivered') continue;
-        const items = (() => {
-          try {
-            return Array.isArray(order.kitchen_sequence_json)
-              ? order.kitchen_sequence_json
-              : JSON.parse(order.kitchen_sequence_json || '[]');
-          } catch { return []; }
-        })();
-        const newEmojis = [...new Set(items.map(n => getItemEmoji(n)))];
-        if (!map[order.table_id]) {
-          map[order.table_id] = { emojis: newEmojis };
-        } else {
+
+        if (!map[order.table_id]) map[order.table_id] = { emojis: [], customerName: null };
+
+        if (!map[order.table_id].customerName && order.customer_name) {
+          map[order.table_id].customerName = order.customer_name;
+        }
+
+        if (order.order_status === 'Delivered') {
+          const items = (() => {
+            try {
+              return Array.isArray(order.kitchen_sequence_json)
+                ? order.kitchen_sequence_json
+                : JSON.parse(order.kitchen_sequence_json || '[]');
+            } catch { return []; }
+          })();
+          const newEmojis = [...new Set(items.map(n => getItemEmoji(n)))];
           map[order.table_id].emojis = [...new Set([...map[order.table_id].emojis, ...newEmojis])];
         }
       }
+
+      for (const res of (Array.isArray(reservations) ? reservations : [])) {
+        if (!res.table_id) continue;
+        if (res.status === 'Cancelled') continue;
+        if (!map[res.table_id]) map[res.table_id] = { emojis: [], customerName: null };
+        if (!map[res.table_id].customerName && res.customer_name) {
+          map[res.table_id].customerName = res.customer_name;
+        }
+      }
+
       setTableOccupancy(map);
     } catch { /* silently ignore */ }
   }, []);
