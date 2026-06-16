@@ -50,7 +50,12 @@ cp backend/.env.example backend/.env
 
 Editar `backend/.env` com os valores reais (ver secção abaixo).
 
-O frontend não necessita de ficheiro `.env` em desenvolvimento — o proxy do Vite reencaminha `/api` para `http://localhost:3000` automaticamente.
+```bash
+# Frontend (opcional — só necessário para personalizar nomes de cookies)
+cp frontend/.env.example frontend/.env
+```
+
+O frontend comunica com o backend via proxy Vite (`/api` → `http://localhost:3000`). O ficheiro `.env` só é necessário se quiser alterar os nomes dos cookies de autenticação.
 
 ---
 
@@ -75,11 +80,7 @@ JWT_SECRET=change_this_to_a_long_random_secret ou usar smartbistro_jwt_secret_20
 # ===== GROQ AI =====
 GROQ_API_KEY=your_groq_api_key
 
-# Modelo principal (local: llama-3.3-70b-versatile | produção: openai/gpt-oss-20b)
 GROQ_MODEL=llama-3.3-70b-versatile
-
-# Apenas necessário com modelos openai/* (low | medium | high)
-# GROQ_REASONING_EFFORT=low
 ```
 
 | Variável | Obrigatória | Descrição |
@@ -87,8 +88,18 @@ GROQ_MODEL=llama-3.3-70b-versatile
 | `DB_*` | Sim | Credenciais MySQL |
 | `JWT_SECRET` | Sim | Segredo para assinar tokens JWT (mínimo 27 caracteres) |
 | `GROQ_API_KEY` | Sim | Chave da API Groq — obtida em console.groq.com |
-| `GROQ_MODEL` | Não | Modelo principal; o sistema tem fallback automático para 8 modelos |
-| `GROQ_REASONING_EFFORT` | Não | Apenas para modelos `openai/*` no Groq |
+| `GROQ_MODEL` | Não | Modelo principal; o sistema tem fallback automático para 4 modelos |
+
+### `frontend/.env` (opcional)
+
+```env
+VITE_AUTH_TOKEN_KEY=sb_token
+VITE_AUTH_LOCK_KEY=sb_auth_lock
+VITE_SESSION_ID_KEY=sb_session_id
+VITE_AUTH_CHANNEL_NAME=sb_auth_channel
+```
+
+Estes valores definem os nomes dos cookies e do BroadcastChannel de autenticação. Os valores por omissão do `.env.example` funcionam sem alterações.
 
 ---
 
@@ -165,7 +176,7 @@ Os valores financeiros nunca são calculados pelo modelo de IA — são sempre c
 
 ### Fallback automático de modelos
 
-O sistema tenta automaticamente até 8 modelos Groq em cascata se o modelo principal falhar (429, 503, timeout). O utilizador nunca vê um erro de disponibilidade enquanto houver modelos alternativos.
+O sistema tenta automaticamente até 4 modelos Groq em cascata se o modelo principal falhar (429, 503, timeout). O utilizador nunca vê um erro de disponibilidade enquanto houver modelos alternativos.
 
 ---
 

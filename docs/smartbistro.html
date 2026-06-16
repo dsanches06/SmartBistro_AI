@@ -522,7 +522,7 @@
           <pre style="font-size:0.68rem;line-height:1.38;margin:0 0 0.4rem 0;"><code>├── orderOrchestrator.js  <span class="cm">← Maître → Chef → Manager</span>
 └── chatBotProcessor.js   <span class="cm">← sessões + streaming</span></code></pre>
           <p style="font-size:0.62rem;font-weight:700;color:var(--primary);margin-bottom:0.15rem;">config/</p>
-          <pre style="font-size:0.68rem;line-height:1.38;margin:0 0 0.4rem 0;"><code>├── groq.js          <span class="cm">← cliente + fallback 8 modelos</span>
+          <pre style="font-size:0.68rem;line-height:1.38;margin:0 0 0.4rem 0;"><code>├── groq.js          <span class="cm">← cliente + fallback 4 modelos</span>
 ├── systemPrompt.js  <span class="cm">← prompts dos 4 agentes</span>
 └── types.js         <span class="cm">← tipos partilhados</span></code></pre>
           <p style="font-size:0.62rem;font-weight:700;color:var(--primary);margin-bottom:0.15rem;">helpers/</p>
@@ -729,9 +729,8 @@
             <p style="color:#16a34a;font-weight:600;margin-bottom:0.5rem;"><i class="fa-solid fa-bolt"></i> Groq — Vantagens</p>
             <ul style="font-size:0.9rem;">
               <li>Inferência ultrarrápida (GroqCloud)</li>
-              <li>Fila de fallback com 8 modelos</li>
+              <li>Fila de fallback com 4 modelos</li>
               <li>Fila de fallback transparente — sem impacto no utilizador</li>
-              <li><em style="font-size:0.82rem;color:#64748b;">Nota: <code>reasoning_effort</code> avaliado mas desactivado — modelos <code>openai/*</code> na Groq apresentaram latência superior ao llama-3.3-70b</em></li>
             </ul>
           </div>
         </div>
@@ -745,14 +744,10 @@
       <p>Se o modelo falhar, tenta automaticamente o seguinte — transparente para o utilizador.</p>
       <div class="card" style="margin-top:0.75rem;">
         <pre><code><span class="kw">const</span> GROQ_MODEL_QUEUE = [
-  <span class="str">"llama-3.3-70b-versatile"</span>,     <span class="cm">// modelo principal</span>
-  <span class="str">"openai/gpt-oss-120b"</span>,          <span class="cm">// OpenAI reasoning — máxima capacidade</span>
-  <span class="str">"openai/gpt-oss-20b"</span>,           <span class="cm">// OpenAI reasoning — rápido</span>
-  <span class="str">"meta-llama/llama-4-scout-17b-16e-instruct"</span>,
-  <span class="str">"qwen/qwen3-32b"</span>,               <span class="cm">// Qwen3 com &lt;think&gt;</span>
-  <span class="str">"groq/compound"</span>,
-  <span class="str">"llama-3.1-8b-instant"</span>,
-  <span class="str">"groq/compound-mini"</span>,           <span class="cm">// último recurso</span>
+  <span class="str">"llama-3.3-70b-versatile"</span>,                    <span class="cm">// modelo principal</span>
+  <span class="str">"meta-llama/llama-4-scout-17b-16e-instruct"</span>,  <span class="cm">// Llama 4 Scout — rápido</span>
+  <span class="str">"qwen/qwen3-32b"</span>,                             <span class="cm">// Qwen3 com &lt;think&gt;</span>
+  <span class="str">"llama-3.1-8b-instant"</span>,                       <span class="cm">// fallback leve</span>
 ];
 
 <span class="cm">// 429 / 502 / 503 / timeout → tenta próximo modelo recursivamente</span>
