@@ -15,26 +15,22 @@ class CreateOrderFunction extends BaseFunction {
         },
         table_id: {
           type: Type.INTEGER,
-          description: 'ID da mesa associada ao pedido',
+          description: 'ID da mesa associada ao pedido (null para Takeaway)',
         },
         service_type: {
           type: Type.STRING,
-          description: "Tipo de serviço: 'Dine In', 'Take Away' ou 'Delivery'",
+          description: "Tipo de serviço: 'Table' (comer no local) ou 'Takeaway' (para levar)",
         },
         allergy_restrictions: {
           type: Type.STRING,
-          description: 'Restrições alimentares ou alergias do cliente (opcional)',
-        },
-        kitchen_sequence_json: {
-          type: Type.STRING,
-          description: 'Sequência de preparação em JSON gerada pelo Chefe',
+          description: 'Alergias ou restrições alimentares. Usa string vazia "" se não houver — NUNCA passes null.',
         },
         order_status: {
           type: Type.STRING,
           description: "Estado inicial do pedido (default: 'Pending')",
         },
       },
-      required: ['table_id', 'service_type'],
+      required: ['service_type'],
     });
   }
 

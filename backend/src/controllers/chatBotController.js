@@ -4,7 +4,7 @@ import { processChatStream } from '../genai/orchestrations/index.js';
 
 // ── Envia mensagem ao bot com resposta em stream SSE ─────────────────────────
 export async function sendMessageToBotStream(req, res) {
-  const { message, conversationId, customer_id = 1 } = req.body;
+  const { message, conversationId, customer_id = null, customer_name = null } = req.body;
 
   if (!message?.trim())
     return res.status(400).json({ error: 'message is required' });
@@ -29,34 +29,38 @@ export async function sendMessageToBotStream(req, res) {
 
     let fullText = '';
 
-    await processChatStream(message, String(convId), {
-      onChunk: (text) => {
-        fullText += text;
-        res.write(`event: message\ndata: ${JSON.stringify({ text })}\n\n`);
+    await processChatStream(
+      message,
+      String(convId),
+      {
+        onChunk: (text) => {
+          fullText += text;
+          res.write(`event: message\ndata: ${JSON.stringify({ text })}\n\n`);
+        },
+        onDone: async (_, functionResults = []) => {
+          clearInterval(ping);
+          console.log(`[Bot] done — fns:[${functionResults.map(f => f.functionName).join(', ')}]`);
+          await createChatHistory({ conversation_id: convId, role_id: ROLE_ASSISTANT, content: fullText });
+          res.write(
+            `event: done\ndata: ${JSON.stringify({
+              success:         true,
+              conversationId:  convId,
+              message:         fullText,
+              functionResults: functionResults.map((fr) => ({
+                functionName: fr.functionName,
+                result:       fr.result,
+              })),
+            })}\n\n`,
+          );
+          res.end();
+        },
+        onError: (err) => {
+          clearInterval(ping);
+          writeSseError(res, err);
+        },
       },
-      onDone: async (_, functionResults = []) => {
-        clearInterval(ping);
-        console.log(`[Bot] done — fns:[${functionResults.map(f => f.functionName).join(', ')}]`);
-        await createChatHistory({ conversation_id: convId, role_id: ROLE_ASSISTANT, content: fullText });
-        res.write(
-          `event: done\ndata: ${JSON.stringify({
-            success:         true,
-            conversationId:  convId,
-            message:         fullText,
-            functionResults: functionResults.map((fr) => ({
-              functionName: fr.functionName,
-              result:       fr.result,
-            })),
-          })}\n\n`,
-        );
-        res.end();
-      },
-      // Erros do Groq — já classificados e com mensagem amigável
-      onError: (err) => {
-        clearInterval(ping);
-        writeSseError(res, err);
-      },
-    });
+      customer_name,
+    );
   } catch (err) {
     // Erros antes ou fora do stream (BD, validação, etc.)
     clearInterval(ping);

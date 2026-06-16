@@ -5,7 +5,6 @@ import {
   updateCustomer,
   deleteCustomer,
   toggleCustomerActive,
-  nameExists,
   phoneExists,
 } from "../services/index.js";
 
@@ -32,8 +31,6 @@ export const create = async (req, res) => {
 
     if (!name) return res.status(400).json({ error: "name é obrigatório" });
 
-    if (await nameExists(name))
-      return res.status(409).json({ error: "Já existe um cliente com esse nome" });
     if (phone && await phoneExists(phone))
       return res.status(409).json({ error: "Já existe um cliente com esse telefone" });
 
@@ -50,8 +47,6 @@ export const update = async (req, res) => {
     const name  = req.body.name  !== undefined ? String(req.body.name).trim()  : undefined;
     const phone = req.body.phone !== undefined ? (req.body.phone ? String(req.body.phone).trim() : null) : undefined;
 
-    if (name !== undefined && await nameExists(name, id))
-      return res.status(409).json({ error: "Já existe um cliente com esse nome" });
     if (phone && await phoneExists(phone, id))
       return res.status(409).json({ error: "Já existe um cliente com esse telefone" });
 

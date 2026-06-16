@@ -26,8 +26,9 @@ class ChatService extends BaseService {
     conversationId = null,
     user_id = 1,
     onLoading = null,
+    customer_name = null,
   ) {
-    const payload = { message, conversationHistory, conversationId, user_id };
+    const payload = { message, conversationHistory, conversationId, user_id, customer_name };
 
     try {
       const response = await fetch(`${this.BACKEND_URL}/chat/message/stream`, {

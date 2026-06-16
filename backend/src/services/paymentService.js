@@ -55,7 +55,7 @@ export const createPayment = async (data) => {
     [
       data.invoice_id,
       data.customer_id ?? null,
-      data.amount,
+      data.amount ?? 0,
       data.payment_method ?? "MB Way",
       data.payment_status ?? "Pending",
       data.processed_at ?? null,

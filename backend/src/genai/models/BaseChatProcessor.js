@@ -93,10 +93,28 @@ export class BaseChatProcessor {
 
   // ── Streaming de um único round (emite chunks via onChunk) ────────────────────
   async _streamRound(messages, onChunk, timeoutMs = 45000) {
-    let stream = null;
+    const thinkFilter = createThinkTagFilter(onChunk);
 
+    const makeTimeout = () =>
+      new Promise((_, reject) =>
+        setTimeout(
+          () => reject(Object.assign(
+            new Error('O assistente demorou demasiado tempo a responder. Tente novamente. ⏱️'),
+            { groqType: 'TIMEOUT' },
+          )),
+          timeoutMs,
+        ),
+      );
+
+    // O streamTask e o toolCallsAcc ficam DENTRO do loop para que um retry
+    // com o próximo modelo comece com estado limpo. Isto permite recuperar de
+    // erros de validação de schema durante a iteração do stream (ex: llama-4-scout
+    // que passa string onde o schema espera integer).
     for (let i = 0; i < GROQ_MODEL_QUEUE.length; i++) {
-      const model = GROQ_MODEL_QUEUE[i];
+      const model        = GROQ_MODEL_QUEUE[i];
+      let   fullContent  = '';
+      const toolCallsAcc = {};
+
       try {
         const streamOpts = {
           model,
@@ -104,14 +122,63 @@ export class BaseChatProcessor {
           temperature: 0.3,
           tools:       normalizeGroqTools(this.toolConfig),
           stream:      true,
-          // reasoning_effort apenas para modelos openai/* que o suportam
           ...(GROQ_REASONING_EFFORT && supportsReasoningEffort(model)
             ? { reasoning_effort: GROQ_REASONING_EFFORT }
             : {}),
         };
-        stream = await groq.chat.completions.create(streamOpts);
+
+        const stream = await groq.chat.completions.create(streamOpts);
         if (i > 0) console.log(`[ChatProcessor] fallback stream para modelo ${model}`);
-        break;
+
+        const streamTask = async () => {
+          for await (const chunk of stream) {
+            const delta = chunk.choices?.[0]?.delta || {};
+
+            if (delta.content) {
+              fullContent += delta.content;
+              thinkFilter.feed(delta.content);
+            }
+
+            if (Array.isArray(delta.tool_calls)) {
+              for (const tc of delta.tool_calls) {
+                const idx = tc.index ?? 0;
+                if (!toolCallsAcc[idx]) {
+                  toolCallsAcc[idx] = { id: '', type: 'function', function: { name: '', arguments: '' } };
+                }
+                if (tc.id)                  toolCallsAcc[idx].id = tc.id;
+                if (tc.function?.name)      toolCallsAcc[idx].function.name      += tc.function.name;
+                if (tc.function?.arguments) toolCallsAcc[idx].function.arguments += tc.function.arguments;
+              }
+            }
+          }
+        };
+
+        await Promise.race([streamTask(), makeTimeout()]);
+
+        // Stream concluído com sucesso — constrói o resultado e retorna
+        thinkFilter.finalize();
+
+        const toolCalls = Object.values(toolCallsAcc)
+          .filter((tc) => tc.function?.name)
+          .map((tc) => ({
+            ...tc,
+            id: tc.id || `call_${tc.function.name}_${Date.now()}`,
+          }));
+
+        const assistantMsg = {
+          role:    'assistant',
+          content: fullContent || null,
+          ...(toolCalls.length && { tool_calls: toolCalls }),
+        };
+
+        const functionCalls = toolCalls.map((tc) => ({
+          name: tc.function.name,
+          args: parseGroqFunctionArgs(tc.function.arguments),
+          raw:  tc,
+        }));
+
+        return { functionCalls, roundText: fullContent, assistantMsg };
+
       } catch (err) {
         if (isRetryableGroqError(err) && i < GROQ_MODEL_QUEUE.length - 1) {
           console.warn(`[ChatProcessor] ${model} indisponível no stream. A tentar próximo...`);
@@ -129,77 +196,24 @@ export class BaseChatProcessor {
       }
     }
 
-    const thinkFilter  = createThinkTagFilter(onChunk);
-    let   fullContent  = '';
-    const toolCallsAcc = {};
+    // Todos os modelos falharam
+    const pe = new PipelineError('Nenhum modelo disponível de momento. Tente novamente.', {
+      code: 'GROQ_ALL_MODELS_FAILED', stage: 'provider', details: null,
+    });
+    pe.groqType = 'UNKNOWN';
+    throw pe;
+  }
 
-    const streamTask = async () => {
-      for await (const chunk of stream) {
-        const delta = chunk.choices?.[0]?.delta || {};
-
-        if (delta.content) {
-          fullContent += delta.content;
-          thinkFilter.feed(delta.content);
-        }
-
-        if (Array.isArray(delta.tool_calls)) {
-          for (const tc of delta.tool_calls) {
-            const idx = tc.index ?? 0;
-            if (!toolCallsAcc[idx]) {
-              toolCallsAcc[idx] = { id: '', type: 'function', function: { name: '', arguments: '' } };
-            }
-            if (tc.id)               toolCallsAcc[idx].id = tc.id;
-            if (tc.function?.name)   toolCallsAcc[idx].function.name      += tc.function.name;
-            if (tc.function?.arguments) toolCallsAcc[idx].function.arguments += tc.function.arguments;
-          }
-        }
-      }
-    };
-
-    const makeTimeout = () =>
-      new Promise((_, reject) =>
-        setTimeout(
-          () => reject(Object.assign(
-            new Error('O assistente demorou demasiado tempo a responder. Tente novamente. ⏱️'),
-            { groqType: 'TIMEOUT' },
-          )),
-          timeoutMs,
-        ),
-      );
-
-    await Promise.race([streamTask(), makeTimeout()]);
-    thinkFilter.finalize();
-
-    // Garante que cada tool call tem um id não-vazio.
-    // Groq valida que tool_call_id no resultado corresponde ao id do tool_call —
-    // se o id ficar '' durante o streaming, a próxima chamada retorna 400.
-    const toolCalls = Object.values(toolCallsAcc)
-      .filter((tc) => tc.function?.name)
-      .map((tc) => ({
-        ...tc,
-        id: tc.id || `call_${tc.function.name}_${Date.now()}`,
-      }));
-
-    const assistantMsg = {
-      role:    'assistant',
-      content: fullContent || null,
-      ...(toolCalls.length && { tool_calls: toolCalls }),
-    };
-
-    const functionCalls = toolCalls.map((tc) => ({
-      name: tc.function.name,
-      args: parseGroqFunctionArgs(tc.function.arguments),
-      raw:  tc,  // tc.id é agora garantidamente não-vazio
-    }));
-
-    return { functionCalls, roundText: fullContent, assistantMsg };
+  // Pode ser sobreposto por subclasses para injectar contexto (ex: nome do cliente)
+  getSystemPrompt() {
+    return CHATBOT_SYSTEM_PROMPT();
   }
 
   // ── Loop agêntico sem streaming ───────────────────────────────────────────────
   async processChatMessage(userMessage, conversationHistory = []) {
     try {
       const messages = [
-        { role: 'system', content: CHATBOT_SYSTEM_PROMPT() },
+        { role: 'system', content: this.getSystemPrompt() },
         ...this.buildHistory(conversationHistory),
         { role: 'user', content: userMessage },
       ];
@@ -250,7 +264,7 @@ export class BaseChatProcessor {
   // ── Loop agêntico com streaming verdadeiro ────────────────────────────────────
   async processChatMessageStream(userMessage, conversationHistory = [], onChunk) {
     const messages = [
-      { role: 'system', content: CHATBOT_SYSTEM_PROMPT() },
+      { role: 'system', content: this.getSystemPrompt() },
       ...this.buildHistory(conversationHistory),
       { role: 'user', content: userMessage },
     ];

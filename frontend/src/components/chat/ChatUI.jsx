@@ -3,6 +3,7 @@
  */
 
 import { useState, useRef, useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
 import { chatService } from "@/services/chatService";
 import {
   ChatBubbleUI,
@@ -19,6 +20,8 @@ import {
 
 // ── ChatUI ────────────────────────────────────────────────────────────────────
 export function ChatUI({ isOpen, onClose }) {
+  const { user } = useAuth();
+  const customerName = user?.name ?? null;
   const [messages, setMessages]                     = useState([createWelcomeMessage()]);
   const [input, setInput]                           = useState("");
   const [loading, setLoading]                       = useState(false);
@@ -189,6 +192,9 @@ export function ChatUI({ isOpen, onClose }) {
       makeOnChunk(botMsgId),
       makeOnDone(botMsgId),
       conversationId,
+      1,
+      null,
+      customerName,
     );
   };
 
@@ -203,9 +209,10 @@ export function ChatUI({ isOpen, onClose }) {
     await doSend(userMessage);
   };
 
-  const handleMenuOrder = (itemName) => {
+  const handleMenuOrder = (itemNames) => {
     if (loading) return;
-    doSend(`Quero pedir ${itemName}`);
+    // itemNames pode ser "Item A" ou "Item A, Item B, Item C" (multi-select)
+    doSend(`Quero pedir ${itemNames}`);
   };
 
   const handleRetry = async () => {

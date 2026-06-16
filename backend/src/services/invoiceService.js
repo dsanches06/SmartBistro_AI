@@ -43,7 +43,7 @@ export const createInvoice = async (data) => {
       data.subtotal_amount,
       data.tax_amount,
       data.total_amount,
-      data.profit_margin,
+      data.profit_margin ?? 0,
     ],
   );
   return mapInvoiceDTOResponse({

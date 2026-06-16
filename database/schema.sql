@@ -15,7 +15,7 @@ CREATE TABLE roles (
 -- Clientes
 CREATE TABLE customers (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(200) NOT NULL UNIQUE,
+    name VARCHAR(200) NOT NULL,
     email VARCHAR(150) NULL UNIQUE,
     phone VARCHAR(20) NULL UNIQUE,
     active BOOLEAN DEFAULT FALSE,
@@ -37,12 +37,12 @@ CREATE TABLE auth_accounts (
 -- Sessões de Chat
 CREATE TABLE conversations (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    customer_id INT NOT NULL,
+    customer_id INT NULL,
     title VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (customer_id)
         REFERENCES customers (id)
-        ON DELETE CASCADE
+        ON DELETE SET NULL
 );
 
 -- Histórico de Mensagens

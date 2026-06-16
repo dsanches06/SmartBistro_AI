@@ -77,7 +77,7 @@ export const createOrder = async (data) => {
       data.table_id ?? null,
       data.service_type,
       data.allergy_restrictions ?? null,
-      JSON.stringify(data.kitchen_sequence_json),
+      JSON.stringify(data.kitchen_sequence_json ?? []),
       orderStatus,
     ],
   );

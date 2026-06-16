@@ -6,6 +6,7 @@ export function isRetryableGroqError(error) {
   const status = Number(error?.status ?? error?.code ?? 0);
   return (
     error?.groqType === 'TIMEOUT' ||
+    status === 413 ||  // context too large para este modelo — tentar o próximo
     status === 429 ||
     status === 502 ||
     status === 503 ||
@@ -17,7 +18,11 @@ export function isRetryableGroqError(error) {
     msg.includes("rate limit") ||
     msg.includes("overloaded") ||
     msg.includes("unavailable") ||
-    msg.includes("too many requests")
+    msg.includes("too many requests") ||
+    // Alguns modelos de fallback passam tipos errados ou não suportam tool calling
+    msg.includes("tool call validation failed") ||
+    msg.includes("tool calling` is not supported") ||
+    msg.includes("tool_calls is not supported")
   );
 }
 
@@ -74,8 +79,12 @@ export function extractGroqFunctionCalls(message) {
     .filter((tool) => tool && typeof tool === "object")
     .map((tool) => {
       const fn = tool.function || tool;
+      // Alguns modelos Groq/OpenAI appendem "<|channel|>commentary" ao nome da tool.
+      // Removemos tudo a partir de "<|" para obter o nome limpo.
+      const rawName = fn.name ?? "";
+      const name = rawName.replace(/<\|.*$/, "").trim() || null;
       return {
-        name: fn.name,
+        name,
         args: parseGroqFunctionArgs(fn.arguments ?? fn.args),
         raw: tool,
       };

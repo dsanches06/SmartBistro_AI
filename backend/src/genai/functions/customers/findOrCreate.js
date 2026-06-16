@@ -1,22 +1,16 @@
-﻿import { Type } from '../../config/types.js';
-import { BaseFunction } from '../../models/BaseFunctions.js';
+﻿import { BaseFunction } from '../../models/BaseFunctions.js';
 
 class FindOrCreateCustomerFunction extends BaseFunction {
   constructor() {
     super({
       functionName: 'find_or_create_customer',
       description:
-        'Procura um cliente pelo nome completo ou telefone. ' +
-        'Se não existir, cria-o automaticamente e devolve o customer_id. ' +
+        'Procura um cliente pelo nome. Se não existir, cria-o e devolve o customer_id. ' +
+        'Parâmetro name é uma STRING simples: find_or_create_customer({ name: "Danilson" }). ' +
         'Usa SEMPRE este em vez de get_customer quando tens o nome do cliente.',
       properties: {
         name: {
-          type: Type.STRING,
-          description: 'Nome completo do cliente (obrigatório)',
-        },
-        phone: {
-          type: Type.STRING,
-          description: 'Telefone do cliente (opcional)',
+          description: 'Nome completo do cliente. Deve ser uma string simples como "Danilson" ou "Maria Silva".',
         },
       },
       required: ['name'],
@@ -25,8 +19,7 @@ class FindOrCreateCustomerFunction extends BaseFunction {
 
   mapValues(args = {}) {
     return {
-      name:  this.parseString(args.name),
-      phone: args.phone ? this.parseString(args.phone) : null,
+      name: this.parseString(args.name),
     };
   }
 }

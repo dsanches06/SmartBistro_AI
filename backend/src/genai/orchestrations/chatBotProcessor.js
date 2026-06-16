@@ -1,4 +1,5 @@
 import { BaseChatProcessor } from "../models/index.js";
+import { CHATBOT_SYSTEM_PROMPT } from "../config/index.js";
 import { classifyGroqError, calculateInvoiceTotals, calculateProfitMargin } from "../../utils/index.js";
 import { PipelineError } from "../../utils/pipelineError.js";
 
@@ -100,8 +101,14 @@ const ALL_DECLARATIONS = [
 
 // ── Handlers: recebem os args do Groq e executam operações na BD ──────────────
 export const FUNCTION_HANDLERS = {
-  find_or_create_customer: async (args) =>
-    findOrCreateCustomer(args.name, args.phone ?? null),
+  find_or_create_customer: async (args) => {
+    // Alguns modelos passam name como objecto em vez de string — coagir defensivamente
+    let name = args.name;
+    if (typeof name === 'object' && name !== null) {
+      name = name.name ?? name.full_name ?? name.value ?? Object.values(name).filter(Boolean).join(' ');
+    }
+    return findOrCreateCustomer(String(name ?? '').trim(), args.phone ?? null);
+  },
 
   get_customer: async (args) => {
     if (args.customer_id) return getCustomerById(args.customer_id);
@@ -221,12 +228,17 @@ export const FUNCTION_HANDLERS = {
 
 // ── SmartBistroChatProcessor ───────────────────────────────────────────────────
 class SmartBistroChatProcessor extends BaseChatProcessor {
-  constructor() {
+  constructor(customerName = null) {
     super({
       toolConfig: ALL_DECLARATIONS,
       functionHandlers: FUNCTION_HANDLERS,
     });
+    this.customerName = customerName;
     this.history = [];
+  }
+
+  getSystemPrompt() {
+    return CHATBOT_SYSTEM_PROMPT(this.customerName);
   }
 
   async chat(message, onChunk) {
@@ -245,10 +257,10 @@ class SmartBistroChatProcessor extends BaseChatProcessor {
 const sessions = new Map();
 
 // ROLE_USER=2, ROLE_ASSISTANT=3 (igual ao chatHistoryService)
-async function getOrCreateSession(conversationId) {
+async function getOrCreateSession(conversationId, customerName = null) {
   if (sessions.has(conversationId)) return sessions.get(conversationId);
 
-  const processor = new SmartBistroChatProcessor();
+  const processor = new SmartBistroChatProcessor(customerName);
 
   // Carrega histórico da BD para restaurar contexto após reinício do servidor
   try {
@@ -273,8 +285,9 @@ export async function processChatStream(
   message,
   conversationId,
   { onChunk, onDone, onError },
+  customerName = null,
 ) {
-  const processor = await getOrCreateSession(String(conversationId));
+  const processor = await getOrCreateSession(String(conversationId), customerName);
   try {
     const result = await processor.chat(message, onChunk);
     if (onDone) onDone(result.message || "", result.functionResults ?? []);

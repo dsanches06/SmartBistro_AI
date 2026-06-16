@@ -26,17 +26,15 @@ export const GROQ_MODEL =
   process.env.GROQ_MODEL_NAME ||
   "llama-3.3-70b-versatile";
 
-// Modelos confirmados disponíveis nesta conta (groq.models.list())
-// Ordem: melhor capacidade → maior disponibilidade
+// Fila de fallback ordenada por prioridade para function calling:
+// NOTA: groq/compound e groq/compound-mini removidos — não suportam tool calling
 const _BASE_QUEUE = [
-  "openai/gpt-oss-120b", // OpenAI reasoning — máxima capacidade
-  "openai/gpt-oss-20b", // OpenAI reasoning — rápido (padrão Vercel)
-  "llama-3.3-70b-versatile", // Llama 3.3 — rápido e capaz (padrão local)
-  "meta-llama/llama-4-scout-17b-16e-instruct", // Llama 4 — mais recente
-  "qwen/qwen3-32b", // Qwen3 — raciocínio via <think>
-  "groq/compound", // Nativo Groq — ultra-rápido
-  "llama-3.1-8b-instant", // fallback leve
-  "groq/compound-mini", // último recurso
+  "llama-3.3-70b-versatile",                     // 1. melhor para function calling (padrão)
+  "meta-llama/llama-4-scout-17b-16e-instruct",   // 2. Llama 4 Scout — rápido, boa capacidade
+  "qwen/qwen3-32b",                               // 3. Qwen3 — raciocínio via <think>, estável
+  "llama-3.1-8b-instant",                         // 4. fallback leve, menos preciso
+  "openai/gpt-oss-20b",                           // 5. OpenAI reasoning rápido (last resort)
+  "openai/gpt-oss-120b",                          // 6. OpenAI reasoning máximo (last resort)
 ];
 
 // Coloca GROQ_MODEL como primeiro e remove duplicatas

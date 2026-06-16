@@ -15,9 +15,9 @@ export const getConversationById = async (id) => {
   return r[0] ? mapConversationDTOResponse(r[0]) : null;
 };
 
-// Cria uma nova conversa; usa customer_id 1 como fallback quando não fornecido
+// Cria uma nova conversa; customer_id pode ser null (utilizador não autenticado/ainda desconhecido)
 export const createConversation = async (data) => {
-  const customerId = Number(data.customer_id) || 1;
+  const customerId = data.customer_id ? Number(data.customer_id) : null;
   const [result] = await db.query(
     "INSERT INTO conversations (customer_id, title) VALUES (?, ?)",
     [customerId, data.title],

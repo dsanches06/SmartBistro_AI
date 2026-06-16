@@ -37,43 +37,47 @@ export async function register(req, res) {
 
     const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
 
-    // Tentar encontrar cliente existente:
-    // 1º por phone ou email (se fornecidos)
-    // 2º por nome (fallback — name é UNIQUE na tabela)
+    // Ligar a cliente existente apenas por phone ou email (identificadores únicos).
+    // Nome NÃO é usado para ligar — pode haver vários clientes com o mesmo nome.
     const conditions = [];
     const params     = [];
     if (phoneTrim) { conditions.push('phone = ?'); params.push(phoneTrim); }
     if (emailTrim) { conditions.push('email = ?'); params.push(emailTrim); }
-    conditions.push('name = ?'); params.push(nameTrim);
-
-    const [existing] = await db.query(
-      `SELECT id, name, email, phone, role_id FROM customers WHERE ${conditions.join(' OR ')} LIMIT 1`,
-      params,
-    );
 
     let customerId;
     let linked = false;
 
-    if (existing.length > 0) {
-      const found = existing[0];
-      console.log(`[Auth] register: cliente encontrado id=${found.id} name="${found.name}"`);
-
-      const [hasAuth] = await db.query(
-        'SELECT id FROM auth_accounts WHERE customer_id = ?', [found.id]
+    if (conditions.length > 0) {
+      const [existing] = await db.query(
+        `SELECT id, name, email, phone, role_id FROM customers WHERE ${conditions.join(' OR ')} LIMIT 1`,
+        params,
       );
-      if (hasAuth.length > 0)
-        return res.status(409).json({ message: 'Já existe uma conta para este utilizador. Usa o login.' });
 
-      customerId = found.id;
-      linked = true;
+      if (existing.length > 0) {
+        const found = existing[0];
+        console.log(`[Auth] register: cliente encontrado id=${found.id} name="${found.name}"`);
 
-      if (emailTrim || phoneTrim) {
+        const [hasAuth] = await db.query(
+          'SELECT id FROM auth_accounts WHERE customer_id = ?', [found.id]
+        );
+        if (hasAuth.length > 0)
+          return res.status(409).json({ message: 'Já existe uma conta para este utilizador. Usa o login.' });
+
+        customerId = found.id;
+        linked = true;
+
         await db.query(
-          `UPDATE customers SET email = COALESCE(email, ?), phone = COALESCE(phone, ?) WHERE id = ?`,
-          [emailTrim, phoneTrim, customerId]
+          `UPDATE customers SET
+             name  = COALESCE(?, name),
+             email = COALESCE(email, ?),
+             phone = COALESCE(phone, ?)
+           WHERE id = ?`,
+          [nameTrim, emailTrim, phoneTrim, customerId]
         );
       }
-    } else {
+    }
+
+    if (!customerId) {
       console.log(`[Auth] register: novo cliente "${nameTrim}"`);
       const [result] = await db.query(
         `INSERT INTO customers (name, email, phone, role_id) VALUES (?, ?, ?, 2)`,
