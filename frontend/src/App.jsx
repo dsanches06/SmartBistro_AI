@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import MainLayout from "@/pages/MainLayout";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
+import { TableRefreshProvider } from "@/context/TableRefreshContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import AdminRoute from "@/components/auth/AdminRoute";
 import { ChatUI } from "@/components/chat";
@@ -51,7 +52,7 @@ function AppContent() {
   }, []);
 
   return (
-    <>
+    <TableRefreshProvider>
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<MainPage />} />
@@ -102,7 +103,7 @@ function AppContent() {
 
       {/* ChatUI persists across page navigation */}
       <ChatUI isOpen={showChat} onClose={() => setShowChat(false)} />
-    </>
+    </TableRefreshProvider>
   );
 }
 

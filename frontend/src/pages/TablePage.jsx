@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "@/context/ThemeContext";
+import { useTableRefresh } from "@/context/TableRefreshContext";
 import { reservationService, tableService, orderService } from "@/services";
 import { STATUS_CONFIG } from "@/utils/tablePageUtils";
 import { getItemEmoji, formatMenuPrice } from "@/utils";
@@ -85,16 +86,19 @@ export default function TablePage() {
   const [detailsError, setDetailsError] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [showCreateMesa, setShowCreateMesa] = useState(false);
+  const { tableRefreshCount, ordersRefreshCount } = useTableRefresh();
+  const selectedTableIdRef = useRef(selectedTableId);
+  useEffect(() => { selectedTableIdRef.current = selectedTableId; }, [selectedTableId]);
 
-  const fetchMesas = useCallback(async () => {
+  const fetchMesas = useCallback(async ({ silent = false } = {}) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (!silent) { setLoading(true); setError(null); }
       setMesas(await tableService.getAll());
+      if (!silent) setError(null);
     } catch (err) {
-      setError(err.message || "Não foi possível carregar as mesas.");
+      if (!silent) setError(err.message || "Não foi possível carregar as mesas.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
@@ -159,28 +163,19 @@ export default function TablePage() {
   useEffect(() => { fetchMesas(); fetchOccupancy(); }, [fetchMesas, fetchOccupancy]);
   useEffect(() => { fetchTableDetails(selectedTableId); }, [selectedTableId, fetchTableDetails]);
 
-  // Actualiza mesas e detalhes quando o chatbot faz mutações (cancel/create reservation, update_table_status)
+  // Reage a mutações do chatbot (assign table, create order, etc.) via Context
   useEffect(() => {
-    const onRefresh = () => {
-      fetchMesas();
-      if (selectedTableId) fetchTableDetails(selectedTableId);
-    };
-    window.addEventListener('table:refresh', onRefresh);
-    return () => window.removeEventListener('table:refresh', onRefresh);
-  }, [fetchMesas, fetchTableDetails, selectedTableId]);
+    if (!tableRefreshCount) return;
+    fetchMesas({ silent: true });
+    fetchOccupancy();
+    if (selectedTableIdRef.current) fetchTableDetails(selectedTableIdRef.current);
+  }, [tableRefreshCount, fetchMesas, fetchOccupancy, fetchTableDetails]);
 
   // Re-fetch occupancy quando o KDS muda status de um pedido
   useEffect(() => {
-    const onStatusChanged = () => fetchOccupancy();
-    window.addEventListener('orders:statusChanged', onStatusChanged);
-    return () => window.removeEventListener('orders:statusChanged', onStatusChanged);
-  }, [fetchOccupancy]);
-
-  // Auto-refresh de occupancy a cada 15 s (fallback quando TablePage está aberta sem KDS)
-  useEffect(() => {
-    const id = setInterval(fetchOccupancy, 15_000);
-    return () => clearInterval(id);
-  }, [fetchOccupancy]);
+    if (!ordersRefreshCount) return;
+    fetchOccupancy();
+  }, [ordersRefreshCount, fetchOccupancy]);
 
   const handleConfirmReservation = async () => {
     if (!activeReservation) return;

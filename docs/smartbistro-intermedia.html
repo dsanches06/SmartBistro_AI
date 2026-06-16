@@ -448,7 +448,37 @@
       <div class="slide-footer">Fluxo B — Pipeline</div>
     </div>
 
-    <!-- 14: CONFIG GROQ — FALLBACK -->
+    <!-- 14: DE GEMINI PARA GROQ -->
+    <div class="slide">
+      <h2 class="center">Escolha do Modelo — De Gemini para Groq</h2>
+      <div class="card">
+        <p><strong>Ponto de partida:</strong> o projecto começou com o modelo <span class="tag-pill purple">Gemini (Google AI)</span> para todas as chamadas de LLM.</p>
+        <p><strong>O problema:</strong> o pipeline cria <strong>3 chamadas ao LLM por pedido</strong> (Maître + Chef + Manager) mais as chamadas contínuas do chatbot. Com o volume de testes e desenvolvimento, os limites de rate do Gemini gratuito tornaram-se um obstáculo recorrente.</p>
+        <div style="display:flex;gap:1rem;margin-top:0.75rem;flex-wrap:wrap;">
+          <div style="flex:1;min-width:200px;background:#fef2f2;border-radius:8px;padding:1rem;border:1px solid #fecaca;">
+            <p style="color:#dc2626;font-weight:600;margin-bottom:0.5rem;"><i class="fa-solid fa-triangle-exclamation"></i> Gemini — Limitações</p>
+            <ul style="font-size:0.9rem;">
+              <li>Rate limit apertado no tier gratuito</li>
+              <li>Latência elevada em respostas longas</li>
+              <li>Sem suporte nativo a <code>reasoning_effort</code></li>
+              <li>SDK menos estável para streaming SSE</li>
+            </ul>
+          </div>
+          <div style="flex:1;min-width:200px;background:#f0fdf4;border-radius:8px;padding:1rem;border:1px solid #bbf7d0;">
+            <p style="color:#16a34a;font-weight:600;margin-bottom:0.5rem;"><i class="fa-solid fa-bolt"></i> Groq — Vantagens</p>
+            <ul style="font-size:0.9rem;">
+              <li>Inferência ultrarrápida (GroqCloud)</li>
+              <li>Fila de fallback com 8 modelos</li>
+              <li>Suporte a <code>reasoning_effort</code> (modelos OpenAI)</li>
+              <li>Tags <code>&lt;think&gt;</code> nos modelos Qwen/Llama</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">Gemini → Groq</div>
+    </div>
+
+    <!-- 15: CONFIG GROQ — FALLBACK -->
     <div class="slide">
       <h2 class="center">Config Groq — Fila de Fallback</h2>
       <p>Se o modelo falhar (429 / timeout / schema inválido), tenta automaticamente o seguinte — transparente para o utilizador.</p>
@@ -941,7 +971,32 @@ event: rate_limit → <span class="fn">onDone</span>({providerError:true})
       <div class="slide-footer">Testes — Frontend</div>
     </div>
 
-    <!-- 25: QUESTÕES -->
+    <!-- 25: FUTURAS FUNCIONALIDADES -->
+    <div class="slide">
+      <h2 class="center">Futuras Funcionalidades</h2>
+      <p style="font-size:0.85rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">Todas implementáveis sem APIs externas — apenas BD, lógica de backend e tecnologias já no projecto</p>
+      <div style="display:flex;gap:0.8rem;align-items:flex-start;">
+        <div class="card" style="flex:1;padding:0.75rem 1rem;">
+          <p style="font-size:0.72rem;font-weight:600;color:var(--primary);margin-bottom:0.5rem;"><i class="fa-solid fa-robot" style="margin-right:0.3rem;"></i>IA &amp; Experiência do Cliente</p>
+          <ul style="font-size:0.78rem;line-height:1.8;margin:0;">
+            <li><span class="tag-pill" style="font-size:0.6rem;">V2</span> <strong>Voz</strong> — pedidos por fala via Web Speech API nativa do browser</li>
+            <li><span class="tag-pill purple" style="font-size:0.6rem;">V2</span> <strong>Recomendações</strong> — SQL sobre histórico de pedidos ("quem pediu X também pediu Y")</li>
+            <li><span class="tag-pill orange" style="font-size:0.6rem;">V3</span> <strong>Multimodal</strong> — foto do prato para identificar alérgenos (Groq Vision, já integrado)</li>
+          </ul>
+        </div>
+        <div class="card" style="flex:1;padding:0.75rem 1rem;">
+          <p style="font-size:0.72rem;font-weight:600;color:var(--primary);margin-bottom:0.5rem;"><i class="fa-solid fa-chart-line" style="margin-right:0.3rem;"></i>Operações &amp; Plataforma</p>
+          <ul style="font-size:0.78rem;line-height:1.8;margin:0;">
+            <li><span class="tag-pill" style="font-size:0.6rem;">V2</span> <strong>Previsão de receita</strong> — gráfico de tendência no Dashboard (Recharts + dados históricos)</li>
+            <li><span class="tag-pill green" style="font-size:0.6rem;">V2</span> <strong>Programa de pontos</strong> — nova tabela na BD, acumulação automática por pedido</li>
+            <li><span class="tag-pill gray" style="font-size:0.6rem;">V3</span> <strong>Multi-restaurante</strong> — painel central de franquias</li>
+          </ul>
+        </div>
+      </div>
+      <div class="slide-footer">Futuras Funcionalidades</div>
+    </div>
+
+    <!-- 26: QUESTÕES -->
     <div class="slide slide-section">
       <div style="text-align:center;">
         <div style="font-size:4rem;color:#1e40af;margin-bottom:2rem;">

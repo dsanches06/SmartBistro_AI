@@ -4,6 +4,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useTableRefresh } from "@/context/TableRefreshContext";
 import { chatService } from "@/services/chatService";
 import {
   ChatBubbleUI,
@@ -21,6 +22,7 @@ import {
 // ── ChatUI ────────────────────────────────────────────────────────────────────
 export function ChatUI({ isOpen, onClose }) {
   const { user } = useAuth();
+  const { triggerTableRefresh } = useTableRefresh();
   const customerName = user?.name ?? null;
   const [messages, setMessages]                     = useState([createWelcomeMessage()]);
   const [input, setInput]                           = useState("");
@@ -106,7 +108,7 @@ export function ChatUI({ isOpen, onClose }) {
     );
   };
 
-  const TABLE_MUTATION_FNS = ['cancel_reservation', 'create_reservation', 'update_table_status'];
+  const TABLE_MUTATION_FNS = ['cancel_reservation', 'create_reservation', 'update_table_status', 'create_order', 'create_order_item'];
 
   const makeOnDone = (botMsgId) => (payload) => {
     setLoading(false);
@@ -123,9 +125,7 @@ export function ChatUI({ isOpen, onClose }) {
 
     // Notifica TablePage para re-fetch quando o bot muda mesas/reservas
     const hasMutation = results.some((r) => TABLE_MUTATION_FNS.includes(r.functionName));
-    if (hasMutation) {
-      window.dispatchEvent(new CustomEvent('table:refresh'));
-    }
+    if (hasMutation) triggerTableRefresh();
 
     // Marca mensagem como "done" quando cancelamento ou criação de reserva é bem-sucedido
     const isDone =

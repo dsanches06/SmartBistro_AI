@@ -45,7 +45,7 @@ export function TableCard({ mesa, isSelected, onSelect, occupancy }) {
           {isOccupied ? (
             <div className="flex flex-wrap items-center justify-center leading-none" style={{ fontSize: 11 }}>
               {emojis.length > 0
-                ? emojis.slice(0, 4).map((e, i) => <span key={i}>{e}</span>)
+                ? emojis.slice(0, 4).map((e, i) => <span key={`${i}-${e}`}>{e}</span>)
                 : <span>🍽️</span>
               }
             </div>

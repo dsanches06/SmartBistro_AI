@@ -15,6 +15,7 @@ import {
   formatTime,
 } from "@/utils";
 import { useTheme } from "@/context/ThemeContext";
+import { useTableRefresh } from "@/context/TableRefreshContext";
 
 
 /* ── Ecrã de actividade ── */
@@ -151,7 +152,7 @@ function OrderCard({ order, cardBorder, now, firstSeenAt, estimatedSecsMap }) {
           const label = typeof item === "string" ? item : (item?.name ?? "—");
           const qty   = typeof item === "object" && item?.quantity ? item.quantity : 1;
           return (
-            <span key={i} style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+            <span key={`${i}-${label}`} style={{ fontSize: 12, color: "var(--text-secondary)" }}>
               {qty}x {label}
             </span>
           );
@@ -187,6 +188,7 @@ const _estimatedSecsMap  = new Map();  // orderId → estimated_seconds do Chef
 export default function KdsPage() {
   const { theme } = useTheme();
   const isDark    = theme === "dark";
+  const { triggerOrdersRefresh } = useTableRefresh();
 
   const [orders,      setOrders]      = useState([]);
   const [loading,     setLoading]     = useState(true);
@@ -336,7 +338,7 @@ export default function KdsPage() {
             message: `Pedido #${order.id} · Mesa ${order.table_id ?? 'Takeaway'} entrou em preparação (${secs}s)`,
           }, ...prev].slice(0, 100));
 
-          window.dispatchEvent(new CustomEvent('orders:statusChanged'));
+          triggerOrdersRefresh();
           console.log(`[KDS] Chef → Pedido #${order.id} Em Preparação (${secs}s)`);
         })
         .catch(err => {
@@ -421,8 +423,7 @@ export default function KdsPage() {
         if (evtType) setActivityLog(prev => [makeKdsEvent(evtType, order), ...prev].slice(0, 100));
       });
 
-      // Notifica outras páginas (TablePage) que pedidos mudaram de status
-      window.dispatchEvent(new CustomEvent('orders:statusChanged'));
+      triggerOrdersRefresh();
 
       toAdvance.forEach(order => {
         orderService.updateStatus(order.id, order.nextStatus)
