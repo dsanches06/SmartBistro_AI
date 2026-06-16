@@ -26,11 +26,6 @@ export function isRetryableGroqError(error) {
   );
 }
 
-// Devolve true se o modelo suporta reasoning_effort (modelos OpenAI na Groq)
-export function supportsReasoningEffort(model = "") {
-  return model.startsWith("openai/");
-}
-
 // ── Normalização de tools para formato OpenAI ────────────────────────────────
 export function normalizeGroqTools(tools) {
   if (!Array.isArray(tools) || tools.length === 0) return undefined;

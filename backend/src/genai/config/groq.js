@@ -4,7 +4,6 @@ import Groq from "groq-sdk";
 import dotenv from "dotenv";
 import {
   isRetryableGroqError,
-  supportsReasoningEffort,
   normalizeGroqTools,
   normalizeGroqResponse,
 } from "../../utils/groqUtil.js";
@@ -45,9 +44,6 @@ export const GROQ_MODEL_QUEUE = [
 
 export const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// Nível de raciocínio para o chatbot em modelos openai/* (low | medium | high | null)
-export const GROQ_REASONING_EFFORT = process.env.GROQ_REASONING_EFFORT || null;
-
 // ── Chamada com fallback pela fila de modelos ────────────────────────────────
 export async function chatWithFallback(
   messages,
@@ -64,19 +60,13 @@ export async function chatWithFallback(
   }
 
   const model = queue[idx];
-  const { reasoning_effort, ...restOptions } = options;
-  const extraOpts =
-    reasoning_effort && supportsReasoningEffort(model)
-      ? { reasoning_effort }
-      : {};
 
   try {
     console.log(`[Groq] A tentar modelo ${idx + 1}/${queue.length}: ${model}`);
     const response = await groq.chat.completions.create({
       model,
       messages,
-      ...restOptions,
-      ...extraOpts,
+      ...options,
     });
     response.modelUsed = model;
     if (idx > 0) console.log(`[Groq] ✓ Fallback bem-sucedido: ${model}`);

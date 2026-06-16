@@ -627,12 +627,12 @@
       <div class="card" style="margin-top:0.5rem;">
         <table>
           <thead>
-            <tr><th>Agente</th><th>Temperatura</th><th>Reasoning</th><th>Papel</th><th>Funções próprias</th></tr>
+            <tr><th>Agente</th><th>Temperatura</th><th>Papel</th><th>Funções próprias</th></tr>
           </thead>
           <tbody>
-            <tr><td><strong>MaitreAgent</strong></td><td>0.4 (médio)</td><td>medium</td><td>Interpreta linguagem natural → JSON estruturado</td><td>Validação, normalização, service_type</td></tr>
-            <tr><td><strong>ChefAgent</strong></td><td>0.2 (baixo)</td><td>low</td><td>Verifica stock, cria sequência de cozinha</td><td>Verificação de stock, kitchen_sequence</td></tr>
-            <tr><td><strong>ManagerAgent</strong></td><td>0.3 (baixo)</td><td>low</td><td>Confirma fatura com dados pré-calculados</td><td>Validação financeira, confirmação final</td></tr>
+            <tr><td><strong>MaitreAgent</strong></td><td>0.4 (médio)</td><td>Interpreta linguagem natural → JSON estruturado</td><td>Validação, normalização, service_type</td></tr>
+            <tr><td><strong>ChefAgent</strong></td><td>0.2 (baixo)</td><td>Verifica stock, cria sequência de cozinha</td><td>Verificação de stock, kitchen_sequence</td></tr>
+            <tr><td><strong>ManagerAgent</strong></td><td>0.3 (baixo)</td><td>Confirma fatura com dados pré-calculados</td><td>Validação financeira, confirmação final</td></tr>
           </tbody>
         </table>
         <p style="margin-top:0.6rem;font-size:0.85rem;"><strong>Multi-turn:</strong> histórico partilhado — Maître ajusta o pedido após feedback de stock do Chef, e recebe também o feedback do Chef quando o pedido está pronto para entrega.</p>
@@ -722,7 +722,6 @@
             <ul style="font-size:0.9rem;">
               <li>Rate limit apertado no tier gratuito</li>
               <li>Latência elevada em respostas longas</li>
-              <li>Sem suporte nativo a <code>reasoning_effort</code></li>
               <li>SDK menos estável para streaming SSE</li>
             </ul>
           </div>
@@ -731,8 +730,8 @@
             <ul style="font-size:0.9rem;">
               <li>Inferência ultrarrápida (GroqCloud)</li>
               <li>Fila de fallback com 8 modelos</li>
-              <li>Suporte a <code>reasoning_effort</code> (modelos OpenAI)</li>
-              <li>Tags <code>&lt;think&gt;</code> nos modelos Qwen/Llama</li>
+              <li>Fila de fallback transparente — sem impacto no utilizador</li>
+              <li><em style="font-size:0.82rem;color:#64748b;">Nota: <code>reasoning_effort</code> avaliado mas desactivado — modelos <code>openai/*</code> na Groq apresentaram latência superior ao llama-3.3-70b</em></li>
             </ul>
           </div>
         </div>
@@ -774,7 +773,8 @@
     <!-- B-23: THINKING COM GROQ -->
     <div class="slide slide-image">
       <h2 class="center">Thinking com Groq — Reasoning por Agente</h2>
-      <p style="font-size:0.88rem;margin-bottom:0.6rem;text-align:center;color:#64748b;">O modelo raciocina internamente antes de responder, com nível de thinking adaptado pelo perfil de cada agente</p>
+      <p style="font-size:0.88rem;margin-bottom:0.4rem;text-align:center;color:#64748b;">Infraestrutura implementada em <code>thinkingBotUtil.js</code> — mapeia temperatura → <code>reasoning_effort</code> por agente</p>
+      <p style="font-size:0.8rem;text-align:center;background:#fef9c3;border:1px solid #fde047;border-radius:6px;padding:4px 12px;display:inline-block;margin:0 auto 0.5rem;">⚠️ Avaliado durante o desenvolvimento mas <strong>não activado em produção</strong> — modelos <code>openai/*</code> na Groq apresentaram latência superior ao llama-3.3-70b principal</p>
       <div class="img-centered" style="flex:1;">
         <img src="assets/16-thinkingBotUtil — Reasoning com Groq.png" alt="thinkingBotUtil — Reasoning com Groq" class="img-full" loading="lazy" />
       </div>

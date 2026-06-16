@@ -7,7 +7,6 @@ import {
   GROQ_MODEL_QUEUE,
   chatWithFallback,
   CHATBOT_SYSTEM_PROMPT,
-  GROQ_REASONING_EFFORT,
 } from '../config/index.js';
 import {
   normalizeGroqTools,
@@ -15,7 +14,6 @@ import {
   parseGroqFunctionArgs,
   createThinkTagFilter,
   isRetryableGroqError,
-  supportsReasoningEffort,
   toResponsePayload,
 } from '../../utils/groqUtil.js';
 import { classifyGroqError } from '../../utils/classifyError.js';
@@ -74,8 +72,6 @@ export class BaseChatProcessor {
       const response = await chatWithFallback(messages, {
         temperature:      0.3,
         tools:            normalizeGroqTools(this.toolConfig),
-        // reasoning_effort só é aplicado por chatWithFallback em modelos openai/*
-        ...(GROQ_REASONING_EFFORT && { reasoning_effort: GROQ_REASONING_EFFORT }),
       });
       return normalizeGroqResponse(response);
     } catch (error) {
@@ -122,9 +118,6 @@ export class BaseChatProcessor {
           temperature: 0.3,
           tools:       normalizeGroqTools(this.toolConfig),
           stream:      true,
-          ...(GROQ_REASONING_EFFORT && supportsReasoningEffort(model)
-            ? { reasoning_effort: GROQ_REASONING_EFFORT }
-            : {}),
         };
 
         const stream = await groq.chat.completions.create(streamOpts);

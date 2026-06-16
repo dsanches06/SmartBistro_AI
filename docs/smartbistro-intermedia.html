@@ -385,12 +385,12 @@
       <div class="card" style="margin-top:0.5rem;">
         <table>
           <thead>
-            <tr><th>Agente</th><th>Temperatura</th><th>Reasoning</th><th>Papel</th></tr>
+            <tr><th>Agente</th><th>Temperatura</th><th>Papel</th></tr>
           </thead>
           <tbody>
-            <tr><td><strong>MaitreAgent</strong></td><td>0.4 (médio)</td><td>medium</td><td>Interpreta linguagem natural → JSON estruturado para a BD</td></tr>
-            <tr><td><strong>ChefAgent</strong></td><td>0.2 (baixo)</td><td>low</td><td>Verifica stock, cria sequência de preparação da cozinha</td></tr>
-            <tr><td><strong>ManagerAgent</strong></td><td>0.3 (baixo)</td><td>low</td><td>Confirma fatura com dados pré-calculados em JS puro</td></tr>
+            <tr><td><strong>MaitreAgent</strong></td><td>0.4 (médio)</td><td>Interpreta linguagem natural → JSON estruturado para a BD</td></tr>
+            <tr><td><strong>ChefAgent</strong></td><td>0.2 (baixo)</td><td>Verifica stock, cria sequência de preparação da cozinha</td></tr>
+            <tr><td><strong>ManagerAgent</strong></td><td>0.3 (baixo)</td><td>Confirma fatura com dados pré-calculados em JS puro</td></tr>
           </tbody>
         </table>
         <p style="margin-top:0.6rem;font-size:0.85rem;"><strong>Multi-turn:</strong> histórico partilhado — Maître ajusta o pedido após feedback de stock do Chef.</p>
@@ -460,7 +460,6 @@
             <ul style="font-size:0.9rem;">
               <li>Rate limit apertado no tier gratuito</li>
               <li>Latência elevada em respostas longas</li>
-              <li>Sem suporte nativo a <code>reasoning_effort</code></li>
               <li>SDK menos estável para streaming SSE</li>
             </ul>
           </div>
@@ -469,8 +468,8 @@
             <ul style="font-size:0.9rem;">
               <li>Inferência ultrarrápida (GroqCloud)</li>
               <li>Fila de fallback com 8 modelos</li>
-              <li>Suporte a <code>reasoning_effort</code> (modelos OpenAI)</li>
-              <li>Tags <code>&lt;think&gt;</code> nos modelos Qwen/Llama</li>
+              <li>Fila de fallback transparente — sem impacto no utilizador</li>
+              <li><em style="font-size:0.82rem;color:#64748b;">Nota: <code>reasoning_effort</code> avaliado mas desactivado — modelos <code>openai/*</code> na Groq apresentaram latência superior ao llama-3.3-70b</em></li>
             </ul>
           </div>
         </div>

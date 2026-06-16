@@ -5,13 +5,6 @@ export const ROLE_ASSISTANT = 3;
 // ── Limite de passos agênticos por sessão de chatbot ─────────────────────────
 export const MAX_AGENTIC_STEPS = 5;
 
-// Modelos que suportam reasoning_effort (OpenAI na Groq)
-// Os restantes usam <think> tags (qwen3) ou não têm raciocínio explícito
-export const THINKING_CAPABLE_MODELS = new Set([
-  "openai/gpt-oss-120b",
-  "openai/gpt-oss-20b",
-]);
-
 // ── SSE helpers ───────────────────────────────────────────────────────────────
 
 export const SSE_ERROR_EVENT = {
