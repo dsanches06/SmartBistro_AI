@@ -5,6 +5,7 @@
   "main": "app.js",
   "scripts": {
     "start": "nodemon --env-file=.env src/app.js",
+    "init-neon": "node ./backend/scripts/init-neon.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
