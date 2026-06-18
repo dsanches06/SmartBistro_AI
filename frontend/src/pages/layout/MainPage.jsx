@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router";
 import { itemService } from "@/services";
 import { orderService }     from "@/services/orderService";
 import { orderItemService } from "@/services/orderItemService";
@@ -32,16 +32,6 @@ function IconRegister() {
   );
 }
 
-// Ícone de fecho usado nos modais.
-function IconClose() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-      <line x1="18" y1="6" x2="6" y2="18" />
-      <line x1="6" y1="6" x2="18" y2="18" />
-    </svg>
-  );
-}
-
 /* ── NavTab (tab show/hide do BottomNav) ── */
 // Botão de controlo para abrir ou fechar a navegação móvel.
 function NavTab({ onClick, open = false, isDark }) {
@@ -54,6 +44,7 @@ function NavTab({ onClick, open = false, isDark }) {
       className="flex items-center gap-2 select-none whitespace-nowrap"
       style={{
         background: bg,
+        color: "var(--text)",
         borderTop: `1px solid ${border}`,
         borderLeft: `1px solid ${border}`,
         borderRight: `1px solid ${border}`,
@@ -70,7 +61,7 @@ function NavTab({ onClick, open = false, isDark }) {
       >
         <i className={`fa-solid fa-chevron-${open ? "down" : "up"} text-[10px]`} style={{ color: "var(--primary)" }} />
       </span>
-      <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--text-secondary)" }}>
+      <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--text)" }}>
         {open ? "Ocultar Menu" : "Mostrar Menu"}
       </span>
     </button>
@@ -86,6 +77,7 @@ export default function MainPage() {
   const isDark = theme === "dark";
   const { user, login, register, logout, sessionBlocked, sessionMessage } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   const [items, setItems]               = useState([]);
   const [loading, setLoading]           = useState(true);
@@ -101,6 +93,12 @@ export default function MainPage() {
 
   // Indica se o utilizador atual tem acesso ao fluxo de cliente.
   const isClient  = user && user.role_id !== 1;
+  const clientNavLinks = [
+    { to: '/', label: 'Cardápio', icon: 'fa-utensils' },
+    { to: '/perfil', label: 'Perfil', icon: 'fa-user' },
+    { to: '/perfil/dashboard', label: 'Dashboard', icon: 'fa-chart-line' },
+    { to: '/perfil/pedidos', label: 'Pedidos', icon: 'fa-receipt' },
+  ];
   // Lista atual dos itens presentes no carrinho.
   const cartItems = useMemo(() => Object.values(cart).filter(c => c.qty > 0), [cart]);
   // Valor total do pedido em curso.
@@ -160,11 +158,10 @@ export default function MainPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Faz login e redireciona o utilizador para o destino correto.
+  // Faz login sem forçar redirecionamento: permanece na página principal.
   const handleLogin = async (identifier, password) => {
-    const u = await login(identifier, password);
+    await login(identifier, password);
     setShowLogin(false);
-    navigate(u.role_id === 1 ? "/dashboard" : "/perfil/dashboard", { replace: true });
   };
 
   // Regista um novo utilizador e mostra a confirmação do processo.
@@ -215,8 +212,8 @@ export default function MainPage() {
           >
             SmartBistro<span style={{ color: "var(--primary)" }}>IA</span>
           </span>
-          <span className="text-[10px] sm:text-[11px] hidden sm:block" style={{ color: "var(--text-muted)" }}>
-            Cardápio Digital
+          <span className="text-[9px] sm:text-[10px] md:text-[11px] block" style={{ color: "var(--text-muted)" }}>
+            Sistema Inteligente para Restaurantes
           </span>
         </Link>
 
@@ -470,6 +467,8 @@ export default function MainPage() {
         onSwitchToRegister={() => setShowRegister(true)}
         isDark={isDark}
         onLogin={handleLogin}
+        sessionBlocked={sessionBlocked}
+        sessionMessage={sessionMessage}
       />
       <RegisterModal
         open={showRegister}
@@ -512,14 +511,14 @@ export default function MainPage() {
 
         {navOpen && (
           <nav
-            className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-8"
+            className="fixed bottom-0 left-0 right-0 z-50 flex flex-col items-center px-3"
             style={{
-              height: "5rem",
               background: isDark ? "rgba(28,28,30,0.97)" : "rgba(208,214,220,0.97)",
               backdropFilter: "blur(12px)",
               WebkitBackdropFilter: "blur(12px)",
               borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.12)"}`,
               boxShadow: "0 -4px 20px rgba(0,0,0,0.2)",
+              padding: "0.75rem 0.625rem calc(var(--safe-bottom) + 0.75rem)",
             }}
           >
             <div
@@ -530,23 +529,26 @@ export default function MainPage() {
             </div>
 
             {user ? (
-              <>
-                <Link
-                  to="/perfil"
-                  onClick={() => setNavOpen(false)}
-                  className="flex flex-col items-center gap-1"
-                >
-                  <i className="fa-solid fa-user text-xl" style={{ color: "var(--primary)" }} />
-                  <span className="text-[11px] font-semibold" style={{ color: "var(--text)" }}>Meu Perfil</span>
-                </Link>
-                <button
-                  onClick={() => { setNavOpen(false); logout(); navigate("/"); }}
-                  className="flex flex-col items-center gap-1"
-                >
-                  <i className="fa-solid fa-right-from-bracket text-xl" style={{ color: "#ef4444" }} />
-                  <span className="text-[11px] font-semibold" style={{ color: "#ef4444" }}>Sair</span>
-                </button>
-              </>
+              <div className="grid grid-cols-2 gap-2 w-full pt-4">
+                {clientNavLinks.map(({ to, label, icon }) => {
+                  const active = to === "/" ? pathname === "/" || pathname === "/menu" : pathname.startsWith(to);
+                  return (
+                    <Link
+                      key={to}
+                      to={to}
+                      onClick={() => setNavOpen(false)}
+                      className={[
+                        'group flex flex-col items-center justify-center gap-1 rounded-2xl py-3 min-h-[5rem] text-[10px] font-semibold uppercase text-center select-none transition-colors duration-200',
+                        active ? 'text-[var(--primary)]' : 'text-[var(--text-muted)] hover:text-[var(--primary)]',
+                      ].join(' ')}
+                      aria-current={active ? 'page' : undefined}
+                    >
+                      <i className={`fa-solid ${icon} text-lg transition-transform duration-200 group-hover:scale-110`} aria-hidden="true" />
+                      <span className="leading-none">{label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
             ) : (
               <>
                 <button

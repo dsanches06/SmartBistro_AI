@@ -336,7 +336,7 @@ export function Header() {
       >
         {/* Brand */}
         <Link
-          to="/dashboard"
+          to="/"
           className="flex flex-col leading-tight select-none flex-shrink-0"
           aria-label="Início — SmartBistro IA"
         >
@@ -347,7 +347,7 @@ export function Header() {
             SmartBistro<span style={{ color: "var(--primary)" }}>IA</span>
           </span>
           <span
-            className="text-[10px] sm:text-[11px] hidden sm:block"
+            className="text-[9px] sm:text-[10px] md:text-[11px] block"
             style={{ color: "var(--text-muted)" }}
           >
             Sistema Inteligente para Restaurantes

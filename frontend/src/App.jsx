@@ -2,12 +2,12 @@ import { useState, useEffect, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router";
 import MainLayout from "@/pages/layout/MainLayout";
 import { ThemeProvider } from "@/context/ThemeContext";
-import { AuthProvider } from "@/context/AuthContext";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { TableRefreshProvider } from "@/context/TableRefreshContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import AdminRoute from "@/components/auth/AdminRoute";
 import { ChatUI } from "@/components/chat";
-import { NAV_HANDLE_H, NAV_OPEN_H, TrophySpin } from "@/components/ui";
+import { NAV_OPEN_H, TrophySpin } from "@/components/ui";
 
 // Carrega as páginas principais sob demanda para reduzir o bundle inicial.
 const MainPage               = lazy(() => import("@/pages/layout/MainPage"));
@@ -34,6 +34,17 @@ function PageLoader() {
 }
 
 // Componente principal que monta o router, os providers e o chat flutuante.
+function MenuRoute({ bottomNavOpen, onBottomNavChange, isMobile }) {
+  const { user } = useAuth();
+  return user?.role_id === 1 ? (
+    <MainLayout onBottomNavChange={onBottomNavChange} bottomNavOpen={bottomNavOpen} isMobile={isMobile}>
+      <MenuPage />
+    </MainLayout>
+  ) : (
+    <MainPage />
+  );
+}
+
 function AppContent() {
   const [showChat, setShowChat] = useState(false);
   const [bottomNavOpen, setBottomNavOpen] = useState(false);
@@ -56,6 +67,13 @@ function AppContent() {
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<MainPage />} />
+          <Route path="/menu" element={
+            <MenuRoute
+              bottomNavOpen={bottomNavOpen}
+              onBottomNavChange={setBottomNavOpen}
+              isMobile={isMobile}
+            />
+          } />
           {/* Rotas autenticadas — MainLayout para todos */}
           <Route element={<ProtectedRoute />}>
             <Route element={<MainLayout onBottomNavChange={setBottomNavOpen} bottomNavOpen={bottomNavOpen} isMobile={isMobile} />}>
@@ -74,7 +92,6 @@ function AppContent() {
                 <Route path="/faturacao"     element={<FaturacaoPage />} />
                 <Route path="/relatorios"    element={<RelatoriosPage />} />
                 <Route path="/clientes"      element={<ClientesPage />} />
-                <Route path="/menu"          element={<MenuPage />} />
               </Route>
             </Route>
           </Route>
