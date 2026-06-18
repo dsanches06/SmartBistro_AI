@@ -1,28 +1,28 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router";
-import MainLayout from "@/pages/MainLayout";
+import MainLayout from "@/pages/layout/MainLayout";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { TableRefreshProvider } from "@/context/TableRefreshContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import AdminRoute from "@/components/auth/AdminRoute";
 import { ChatUI } from "@/components/chat";
-import { NAV_HANDLE_H, NAV_OPEN_H } from "@/components/ui";
-import TrophySpin from "./components/ui/TrophySpin";
+import { NAV_HANDLE_H, NAV_OPEN_H, TrophySpin } from "@/components/ui";
 
 // Carrega as páginas principais sob demanda para reduzir o bundle inicial.
-const MainPage           = lazy(() => import("@/pages/MainPage"));
-const DashboardPage      = lazy(() => import("@/pages/DashboardPage"));
-const TablePage          = lazy(() => import("@/pages/TablePage"));
-const OrdersPage         = lazy(() => import("@/pages/OrdersPage"));
-const KdsPage            = lazy(() => import("@/pages/KdsPage"));
-const StockPage          = lazy(() => import("@/pages/StockPage"));
-const FaturacaoPage      = lazy(() => import("@/pages/FaturacaoPage"));
-const RelatoriosPage     = lazy(() => import("@/pages/RelatoriosPage"));
-const ClientesPage       = lazy(() => import("@/pages/ClientesPage"));
-const MenuPage           = lazy(() => import("@/pages/MenuPage"));
-const ProfilePage        = lazy(() => import("@/pages/ProfilePage"));
-const LoginPage          = lazy(() => import("@/pages/LoginPage"));
+const MainPage               = lazy(() => import("@/pages/layout/MainPage"));
+const DashboardPage          = lazy(() => import("@/pages/admin/DashboardPage"));
+const TablePage              = lazy(() => import("@/pages/admin/TablePage"));
+const OrdersPage             = lazy(() => import("@/pages/admin/OrdersPage"));
+const KdsPage                = lazy(() => import("@/pages/admin/KdsPage"));
+const StockPage              = lazy(() => import("@/pages/admin/StockPage"));
+const FaturacaoPage          = lazy(() => import("@/pages/admin/FaturacaoPage"));
+const RelatoriosPage         = lazy(() => import("@/pages/admin/RelatoriosPage"));
+const ClientesPage           = lazy(() => import("@/pages/admin/ClientesPage"));
+const MenuPage               = lazy(() => import("@/pages/admin/MenuPage"));
+const CustomerProfilePage    = lazy(() => import("@/pages/customer/ProfilePage"));
+const CustomerDashboardPage  = lazy(() => import("@/pages/customer/DashboardPage"));
+const CustomerOrdersPage     = lazy(() => import("@/pages/customer/OrdersPage"));
 
 // Indicador visual mostrado enquanto uma página ainda está a carregar.
 function PageLoader() {
@@ -56,12 +56,13 @@ function AppContent() {
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<MainPage />} />
-          <Route path="/login" element={<LoginPage />} />
           {/* Rotas autenticadas — MainLayout para todos */}
           <Route element={<ProtectedRoute />}>
             <Route element={<MainLayout onBottomNavChange={setBottomNavOpen} bottomNavOpen={bottomNavOpen} isMobile={isMobile} />}>
-              {/* Acessível a todos os utilizadores autenticados */}
-              <Route path="/perfil" element={<ProfilePage />} />
+              {/* Clientes / utilizadores normais */}
+              <Route path="/perfil" element={<CustomerProfilePage />} />
+              <Route path="/perfil/dashboard" element={<CustomerDashboardPage />} />
+              <Route path="/perfil/pedidos" element={<CustomerOrdersPage />} />
 
               {/* Apenas admin/manager (role_id=1) */}
               <Route element={<AdminRoute />}>
@@ -73,7 +74,7 @@ function AppContent() {
                 <Route path="/faturacao"     element={<FaturacaoPage />} />
                 <Route path="/relatorios"    element={<RelatoriosPage />} />
                 <Route path="/clientes"      element={<ClientesPage />} />
-                  <Route path="/menu"          element={<MenuPage />} />
+                <Route path="/menu"          element={<MenuPage />} />
               </Route>
             </Route>
           </Route>

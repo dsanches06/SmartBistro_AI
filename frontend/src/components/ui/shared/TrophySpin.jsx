@@ -1,6 +1,6 @@
 import { TrophySpin } from "react-loading-indicators";
 import { useTheme } from "@/context/ThemeContext";
-import "../../styles/TrophySpin.css";
+import "@/styles/TrophySpin.css";
 
 // Indicador de carregamento animado (troféu) adaptado ao tema activo
 const TrophySpinComponent = ({ message = "Aguarde por favor" }) => {

@@ -7,7 +7,7 @@ import { orderService }     from "@/services/orderService.js";
 import { invoiceService }   from "@/services/invoiceService.js";
 import { orderItemService } from "@/services/orderItemService.js";
 import { itemService }      from "@/services/itemService.js";
-import TrophySpin from "@/components/ui/TrophySpin";
+import { TrophySpin } from "@/components/ui";
 import CustomerCard, { getPalette, getInitials, formatDate } from "@/components/customers/CustomerCard.jsx";
 import { useAuth } from "@/context/AuthContext";
 import { CAT_COLORS, CAT_FALLBACK } from "@/utils/menuUtils";

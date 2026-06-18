@@ -7,7 +7,7 @@ import {
 } from "chart.js";
 import { Line, Doughnut } from "react-chartjs-2";
 import { PageSection, Pagination, KpiCard } from "@/components";
-import { orderService, tableService, stockService, ingredientService, invoiceService } from "@/services";
+import { orderService, paymentService, tableService, stockService, ingredientService, invoiceService } from "@/services";
 import {
   ORDER_STATUS_META, formatTime, formatOrderValue, getOrderTarget, getOrderClientName,
   isToday, isYesterday, pctChange, fmtEur,
@@ -51,14 +51,22 @@ export default function DashboardPage() {
   const { data: orders      = [] } = useQuery({ queryKey: ["orders"],      queryFn: orderService.getAll });
   const { data: tables      = [] } = useQuery({ queryKey: ["tables"],      queryFn: tableService.getAll });
   const { data: invoices    = [] } = useQuery({ queryKey: ["invoices"],    queryFn: invoiceService.getAll });
+  const { data: payments    = [] } = useQuery({ queryKey: ["payments"],    queryFn: paymentService.getAll });
   const { data: stockList   = [] } = useQuery({ queryKey: ["stock"],       queryFn: stockService.getAll });
   const { data: ingredients = [] } = useQuery({ queryKey: ["ingredients"], queryFn: ingredientService.getAll });
 
   // ── KPI data ────────────────────────────────────────────────────────────────
   const todayOrders     = useMemo(() => orders.filter(o => isToday(o.created_at)),     [orders]);
   const yesterdayOrders = useMemo(() => orders.filter(o => isYesterday(o.created_at)), [orders]);
-  const todayInvoices   = useMemo(() => invoices.filter(i => isToday(i.created_at)),   [invoices]);
-  const yesterdayInv    = useMemo(() => invoices.filter(i => isYesterday(i.created_at)), [invoices]);
+  const completedInvoiceIds = useMemo(() => new Set(
+    payments.filter(p => p.payment_status === "Completed").map(p => p.invoice_id)
+  ), [payments]);
+  const paidInvoices = useMemo(
+    () => invoices.filter(inv => completedInvoiceIds.has(inv.id)),
+    [invoices, completedInvoiceIds]
+  );
+  const todayInvoices   = useMemo(() => paidInvoices.filter(i => isToday(i.created_at)),   [paidInvoices]);
+  const yesterdayInv    = useMemo(() => paidInvoices.filter(i => isYesterday(i.created_at)), [paidInvoices]);
 
   const kpis = useMemo(() => {
     const ordersNow  = todayOrders.length;

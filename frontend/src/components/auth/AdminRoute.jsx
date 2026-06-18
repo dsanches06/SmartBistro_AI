@@ -1,6 +1,6 @@
 import { Navigate, Outlet } from 'react-router';
 import { useAuth } from '@/context/AuthContext';
-import TrophySpin from '@/components/ui/TrophySpin';
+import { TrophySpin } from '@/components/ui';
 
 // Restringe o acesso às áreas administrativas ao utilizador admin.
 export default function AdminRoute() {

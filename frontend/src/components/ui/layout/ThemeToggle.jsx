@@ -1,4 +1,4 @@
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '@/context/ThemeContext';
 
 // Botão que alterna entre tema dark (sol) e light (lua)
 export function ThemeToggle() {
