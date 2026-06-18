@@ -1,9 +1,13 @@
 {
-  "name": "m8_projeto_final",
+  "name": "smartbistro-ai",
   "version": "1.0.0",
-  "description": "Sistema Multi-Agente Cooperativo e Inteligente com Node.js, React e Groq para Gestão Operacional e Fluxo de Pedidos em Restaurantes via API REST.",
+  "description": "SmartBistro AI fullstack app with Express backend, React frontend, and Neon/Postgres deployment support.",
   "main": "index.js",
   "scripts": {
+    "install-all": "npm install && npm --prefix backend install && npm --prefix frontend install",
+    "build": "npm run install-all && npm --prefix frontend run build",
+    "dev": "npm --prefix backend run start",
+    "vercel-build": "npm install && npm --prefix backend install && npm --prefix frontend install && npm --prefix frontend run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -13,7 +17,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/dsanches06/M8_Projeto_Final/issues"
   },
