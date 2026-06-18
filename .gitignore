@@ -8,6 +8,9 @@ frontend/.env
 
 frontend/dist
 
-M7_Projeto_GEN_IA
-layout
 .vercel
+
+# Ignore local verification and temporary files
+.vercel.env
+tmp_check_neon.js
+backend/check_*.mjs

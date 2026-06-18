@@ -15,6 +15,38 @@ function normalizeEnvValue(value) {
   return normalized.replace(/^\uFEFF/, '').trim();
 }
 
+function convertMysqlPlaceholdersToPg(sql) {
+  let index = 0;
+  return sql.replace(/\?/g, () => `$${++index}`);
+}
+
+async function pgQuery(sql, params = []) {
+  const normalizedSql = convertMysqlPlaceholdersToPg(sql);
+  const client = await pgPool.connect();
+  try {
+    const result = await client.query(normalizedSql, params);
+    if (result.command === 'SELECT') {
+      return [result.rows, result.fields];
+    }
+
+    const wrappedResult = {
+      ...result,
+      insertId: result.rows?.[0]?.id ?? null,
+      affectedRows: result.rowCount,
+      rowCount: result.rowCount,
+    };
+
+    if (result.command === 'INSERT' && wrappedResult.insertId == null) {
+      const lastVal = await client.query('SELECT LASTVAL() AS id');
+      wrappedResult.insertId = lastVal.rows[0]?.id ?? null;
+    }
+
+    return [wrappedResult, result.fields];
+  } finally {
+    client.release();
+  }
+}
+
 const DATABASE_URL = normalizeEnvValue(process.env.DATABASE_URL);
 
 // PostgreSQL — Vercel/Neon (produção e remoto)
@@ -36,4 +68,4 @@ export const mysqlDb = mysql
   .promise();
 
 // Exportação padrão: usa PostgreSQL se DATABASE_URL estiver definido (Vercel/Neon)
-export const db = process.env.DATABASE_URL ? pgPool : mysqlDb;
+export const db = DATABASE_URL ? { query: pgQuery } : mysqlDb;
