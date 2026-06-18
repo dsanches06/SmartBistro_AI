@@ -11,10 +11,16 @@ function readCookie(name) {
 }
 
 // Guarda um cookie com expiração opcional.
-function writeCookie(name, value, days = 7) {
+function writeCookie(name, value, days = 7, maxAgeSeconds = null) {
   if (typeof document === 'undefined') return;
-  const expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toUTCString();
-  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; expires=${expires}; SameSite=Lax`;
+  const cookieParts = [`${name}=${encodeURIComponent(value)}`, 'path=/', 'SameSite=Lax'];
+  if (maxAgeSeconds != null) {
+    cookieParts.push(`max-age=${Math.max(0, Math.floor(maxAgeSeconds))}`);
+  } else {
+    const expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toUTCString();
+    cookieParts.push(`expires=${expires}`);
+  }
+  document.cookie = cookieParts.join('; ');
 }
 
 // Remove um cookie do navegador.
@@ -38,8 +44,10 @@ export function deleteCookie(name) {
   eraseCookie(name);
 }
 
+const DEFAULT_LOCK_DURATION_MS = Number(import.meta.env.VITE_AUTH_LOCK_DURATION_MS) || 5 * 60 * 1000;
+
 // Gera e controla uma sessão única por navegador para bloquear múltiplos logins concorrentes.
-export function createSingleSessionGuard({ storage = typeof window !== 'undefined' ? window.sessionStorage : null, channel = null, sessionId = null } = {}) {
+export function createSingleSessionGuard({ storage = typeof window !== 'undefined' ? window.sessionStorage : null, channel = null, sessionId = null, lockDurationMs = DEFAULT_LOCK_DURATION_MS } = {}) {
   const currentSessionId = sessionId || storage?.getItem(SESSION_ID_KEY) || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   storage?.setItem(SESSION_ID_KEY, currentSessionId);
 
@@ -57,19 +65,30 @@ export function createSingleSessionGuard({ storage = typeof window !== 'undefine
     return () => channelInstance.removeEventListener('message', handler);
   };
 
+  const parseLockCookie = (value) => {
+    if (!value) return null;
+    const [id, timestamp] = value.split('|');
+    const createdAt = Number(timestamp);
+    if (!id || Number.isNaN(createdAt)) return null;
+    return { id, createdAt };
+  };
+
   const acquire = () => {
-    const activeSessionId = readCookie(LOCK_KEY);
-    if (activeSessionId && activeSessionId !== currentSessionId) {
-      return { ok: false, reason: 'SESSION_BUSY' };
+    const activeLock = parseLockCookie(readCookie(LOCK_KEY));
+    const now = Date.now();
+    if (activeLock && activeLock.id !== currentSessionId) {
+      if (now - activeLock.createdAt < lockDurationMs) {
+        return { ok: false, reason: 'SESSION_BUSY' };
+      }
     }
 
-    writeCookie(LOCK_KEY, currentSessionId, 1);
+    writeCookie(LOCK_KEY, `${currentSessionId}|${now}`, undefined, Math.max(1, Math.floor(lockDurationMs / 1000)));
     return { ok: true, sessionId: currentSessionId };
   };
 
   const release = () => {
-    const activeSessionId = readCookie(LOCK_KEY);
-    if (activeSessionId === currentSessionId) {
+    const activeLock = parseLockCookie(readCookie(LOCK_KEY));
+    if (activeLock?.id === currentSessionId) {
       eraseCookie(LOCK_KEY);
     }
   };

@@ -72,7 +72,6 @@ describe('POST /auth/register', () => {
   it('cria novo cliente e devolve 201 com token', async () => {
     db.query
       .mockResolvedValueOnce([[]])                       // username não existe
-      .mockResolvedValueOnce([[]])                       // cliente não existe
       .mockResolvedValueOnce([{ insertId: 42 }])         // INSERT customers
       .mockResolvedValueOnce([{}])                       // INSERT auth_accounts
       .mockResolvedValueOnce([{}])                       // UPDATE active
@@ -90,21 +89,22 @@ describe('POST /auth/register', () => {
     expect(res.body.user).toHaveProperty('id', 42)
   })
 
-  it('vincula cliente existente encontrado por nome e devolve 200', async () => {
+  it('vincula cliente existente encontrado por telefone e devolve 200', async () => {
     db.query
       .mockResolvedValueOnce([[]])                         // username não existe
-      .mockResolvedValueOnce([[{ id: 10, name: 'João', email: null, phone: null, role_id: 2 }]])  // cliente encontrado
+      .mockResolvedValueOnce([[{ id: 10, name: 'João', email: null, phone: '912345678', role_id: 2 }]])  // cliente encontrado
       .mockResolvedValueOnce([[]])                         // sem auth_account para este cliente
+      .mockResolvedValueOnce([{}])                         // UPDATE customers com COALESCE
       .mockResolvedValueOnce([{}])                         // INSERT auth_accounts
       .mockResolvedValueOnce([{}])                         // UPDATE active
       .mockResolvedValueOnce([[{
-        id: 10, name: 'João', email: null, phone: null,
+        id: 10, name: 'João', email: null, phone: '912345678',
         role_id: 2, created_at: new Date(), username: 'joao',
       }]])
 
     const res = await request(app)
       .post('/auth/register')
-      .send({ name: 'João', username: 'joao', password: '123456' })
+      .send({ name: 'João', username: 'joao', phone: '912345678', password: '123456' })
     expect(res.status).toBe(200)
     expect(res.body).toHaveProperty('linked', true)
   })

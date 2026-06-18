@@ -75,7 +75,6 @@ export function AuthProvider({ children }) {
   // Guarda o token e o utilizador no estado e nos cookies.
   function persist(tokenValue, userValue) {
     setCookie(TOKEN_KEY, tokenValue, 7);
-    setCookie(AUTH_LOCK_KEY, sessionGuard.getSessionId(), 1);
     setToken(tokenValue);
     setUser(userValue);
   }

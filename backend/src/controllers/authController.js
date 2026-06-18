@@ -12,6 +12,22 @@ function signToken(user) {
   );
 }
 
+function getQueryRows(result) {
+  if (Array.isArray(result) && result.length > 0 && Array.isArray(result[0])) {
+    return result[0];
+  }
+  return Array.isArray(result) ? result : [];
+}
+
+function getInsertId(result) {
+  if (result == null) return null;
+  if (Array.isArray(result)) return getInsertId(result[0]);
+  if (typeof result === 'object') {
+    return result.insertId ?? result.id ?? result.lastInsertId ?? null;
+  }
+  return null;
+}
+
 // POST /auth/register
 export async function register(req, res) {
   const { name, username, email, phone, password } = req.body;
@@ -79,12 +95,15 @@ export async function register(req, res) {
 
     if (!customerId) {
       console.log(`[Auth] register: novo cliente "${nameTrim}"`);
-      const [result] = await db.query(
+      const [insertResult] = await db.query(
         `INSERT INTO customers (name, email, phone, role_id) VALUES (?, ?, ?, 2)`,
         [nameTrim, emailTrim, phoneTrim]
       );
-      customerId = result.insertId;
+      customerId = getInsertId(insertResult);
     }
+
+    if (!customerId)
+      return res.status(500).json({ message: 'Erro interno ao criar cliente.' });
 
     console.log(`[Auth] register: a criar auth_account para customerId=${customerId}`);
     await db.query(
@@ -92,7 +111,7 @@ export async function register(req, res) {
       [customerId, userTrim, password_hash]
     );
 
-    await db.query('UPDATE customers SET active = 1 WHERE id = ?', [customerId]);
+    await db.query('UPDATE customers SET active = TRUE WHERE id = ?', [customerId]);
 
     const [rows] = await db.query(
       `SELECT c.id, c.name, c.email, c.phone, c.role_id, c.created_at, a.username
@@ -113,7 +132,7 @@ export async function register(req, res) {
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY')
       return res.status(409).json({ message: 'Username, email ou telefone já está em uso.' });
-    console.error('[Auth] register:', err.message);
+    console.error('[Auth] register:', err);
     return res.status(500).json({ message: 'Erro interno.' });
   }
 }
@@ -209,7 +228,7 @@ export async function requestDelete(req, res) {
 // GET /auth/me  (requer verifyToken)
 export async function me(req, res) {
   try {
-    const [rows] = await db.query(
+    const queryResult = await db.query(
       `SELECT c.id, c.name, c.email, c.phone, c.role_id, c.created_at,
               a.username
        FROM customers c
@@ -217,6 +236,7 @@ export async function me(req, res) {
        WHERE c.id = ?`,
       [req.user.id],
     );
+    const rows = getQueryRows(queryResult);
 
     if (!rows.length)
       return res.status(404).json({ message: 'Utilizador não encontrado.' });

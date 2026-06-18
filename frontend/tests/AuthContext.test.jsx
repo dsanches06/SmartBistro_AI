@@ -23,4 +23,26 @@ describe('createSingleSessionGuard', () => {
     expect(first.acquire()).toMatchObject({ ok: true });
     expect(second.acquire()).toEqual({ ok: false, reason: 'SESSION_BUSY' });
   });
+
+  it('allows a new session after the lock expires', async () => {
+    const first = createSingleSessionGuard({
+      storage: window.sessionStorage,
+      channel: null,
+      sessionId: 'tab-1',
+      lockDurationMs: 50,
+    });
+
+    const second = createSingleSessionGuard({
+      storage: window.sessionStorage,
+      channel: null,
+      sessionId: 'tab-2',
+      lockDurationMs: 50,
+    });
+
+    expect(first.acquire()).toMatchObject({ ok: true });
+    expect(second.acquire()).toEqual({ ok: false, reason: 'SESSION_BUSY' });
+
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    expect(second.acquire()).toMatchObject({ ok: true });
+  });
 });
