@@ -9,13 +9,32 @@ const __dirname = path.dirname(__filename);
 const schemaPath = path.resolve(__dirname, "../../database/neon_vercel/schema_neon.sql");
 const seedPath = path.resolve(__dirname, "../../database/neon_vercel/seed_default_neon.sql");
 
-if (!process.env.DATABASE_URL) {
-  console.error("DATABASE_URL is not defined. Cannot initialize Neon database.");
+function normalizeEnvValue(value) {
+  if (!value) return value;
+  let normalized = value.trim();
+  if (normalized.startsWith('"') && normalized.endsWith('"')) {
+    normalized = normalized.slice(1, -1);
+  }
+  return normalized.replace(/^\uFEFF/, '').trim();
+}
+
+const DATABASE_URL = normalizeEnvValue(process.env.DATABASE_URL);
+
+if (!DATABASE_URL) {
+  console.error("DATABASE_URL is not defined or is invalid. Cannot initialize Neon database.");
   process.exit(1);
 }
 
+try {
+  const parsed = new URL(DATABASE_URL);
+  console.log(`Parsed DATABASE_URL host=${parsed.hostname}, protocol=${parsed.protocol}`);
+} catch (error) {
+  console.error("DATABASE_URL cannot be parsed as a URL:", error.message);
+  console.error(`DATABASE_URL length=${DATABASE_URL.length}`);
+}
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: DATABASE_URL,
   ssl: { rejectUnauthorized: false },
 });
 

@@ -6,9 +6,20 @@ dotenv.config();
 
 const { Pool } = pg;
 
+function normalizeEnvValue(value) {
+  if (!value) return value;
+  let normalized = value.trim();
+  if (normalized.startsWith('"') && normalized.endsWith('"')) {
+    normalized = normalized.slice(1, -1);
+  }
+  return normalized.replace(/^\uFEFF/, '').trim();
+}
+
+const DATABASE_URL = normalizeEnvValue(process.env.DATABASE_URL);
+
 // PostgreSQL — Vercel/Neon (produção e remoto)
 export const pgPool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: DATABASE_URL,
   ssl: { rejectUnauthorized: false },
 });
 
