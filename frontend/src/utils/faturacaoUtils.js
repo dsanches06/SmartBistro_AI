@@ -9,6 +9,13 @@ export const PAYMENT_STATUS_META = {
   none:      { label: "Sem pagamento", bg: "#f9fafb", color: "#9ca3af", text: "#4b5563" },
 };
 
+export const PAYMENT_METHODS = [
+  { value: "MB Way",       label: "MB Way" },
+  { value: "Multibanco",   label: "Multibanco" },
+  { value: "Credit Card",  label: "Cartão de Crédito" },
+  { value: "Cash",         label: "Numerário" },
+];
+
 export function fmtInvoiceNumber(invoice) {
   const year = invoice.issued_at
     ? new Date(invoice.issued_at).getFullYear()

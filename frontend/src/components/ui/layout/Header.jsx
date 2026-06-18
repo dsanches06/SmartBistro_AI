@@ -1,13 +1,13 @@
 import { useRef, useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { ThemeToggle } from "./ThemeToggle";
-import { PaymentModal } from "./PaymentModal.jsx";
-import { useTheme } from "../../context/ThemeContext";
-import { useAuth } from "../../context/AuthContext";
-import { getInitials, getPalette, formatDate } from "../customers/CustomerCard";
-import { customerService } from "../../services/customerService";
-import { invoiceService } from "../../services/invoiceService";
-import { paymentService } from "../../services/paymentService";
+import { ThemeToggle, PaymentModal } from "@/components/ui";
+import { useTheme } from "@/context/ThemeContext";
+import { useAuth } from "@/context/AuthContext";
+import { getInitials, getPalette, formatDate } from "@/components/customers/CustomerCard.jsx";
+import { customerService } from "@/services/customerService";
+import { invoiceService } from "@/services/invoiceService";
+import { paymentService } from "@/services/paymentService";
+import { useClickOutside } from "@/components/ui/shared/useClickOutside.jsx";
 
 const navLinks = [
   { to: "/dashboard",  label: "Dashboard",  exact: true },
@@ -31,11 +31,7 @@ function UserMenu({ user, onLogout }) {
   const navigate = useNavigate();
   const palette = getPalette(user.id);
 
-  useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+  useClickOutside(ref, () => setOpen(false));
 
   return (
     <div ref={ref} className="relative">
@@ -70,14 +66,29 @@ function UserMenu({ user, onLogout }) {
           </div>
 
           <button
-            onClick={() => { setOpen(false); navigate(`/clientes?open=${user.id}`); }}
+            onClick={() => { setOpen(false); navigate("/perfil"); }}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors hover:bg-[var(--surface-2)]"
             style={{ color: "var(--text)" }}
           >
             <i className="fa-solid fa-user w-4 text-center" style={{ color: "var(--primary)" }} />
             Meu Perfil
           </button>
-
+          <button
+            onClick={() => { setOpen(false); navigate("/perfil/dashboard"); }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors hover:bg-[var(--surface-2)]"
+            style={{ color: "var(--text)" }}
+          >
+            <i className="fa-solid fa-chart-line w-4 text-center" style={{ color: "var(--primary)" }} />
+            Dashboard
+          </button>
+          <button
+            onClick={() => { setOpen(false); navigate("/perfil/pedidos"); }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors hover:bg-[var(--surface-2)]"
+            style={{ color: "var(--text)" }}
+          >
+            <i className="fa-solid fa-receipt w-4 text-center" style={{ color: "var(--primary)" }} />
+            Meus Pedidos
+          </button>
           <button
             onClick={() => { setOpen(false); onLogout(); navigate("/"); }}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors hover:bg-[var(--surface-2)]"
@@ -98,26 +109,51 @@ const ORDER_ID_RE  = /#(\S+)/;
 function NotificationBell({ user }) {
   const [open, setOpen]               = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [hiddenNotificationIds, setHiddenNotificationIds] = useState(new Set());
+  const [paidNotificationIds, setPaidNotificationIds] = useState(new Set());
   const [loading, setLoading]         = useState(false);
   const [payInfo, setPayInfo]         = useState(null);
   const [payLoadingId, setPayLoadingId] = useState(null);
   const ref      = useRef(null);
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+  const unreadNotifications = notifications.filter(n => !n.is_read);
+  const isPayNotification = (n) => PAY_KEYWORDS.test(`${n.title} ${n.message}`);
+  const isPaidNotification = (n) => paidNotificationIds.has(n.id);
+  const visibleNotifications = notifications.filter(
+    n => !hiddenNotificationIds.has(n.id) && !isPaidNotification(n) && (!n.is_read || isPayNotification(n)),
+  );
+  const unreadCount = unreadNotifications.length;
 
-  useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+  useClickOutside(ref, () => setOpen(false));
 
-  const loadNotifs = () => {
+  const loadNotifs = async () => {
     if (!user?.id) return;
     setLoading(true);
-    customerService.getNotifications(user.id)
-      .then(list => setNotifications(Array.isArray(list) ? list : []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+
+    try {
+      const list = await customerService.getNotifications(user.id);
+      const items = Array.isArray(list) ? list : [];
+      setNotifications(items);
+
+      const paidIds = new Set();
+      await Promise.all(items.filter(isPayNotification).map(async (n) => {
+        const orderId = n.message?.match(ORDER_ID_RE)?.[1];
+        if (!orderId) return;
+
+        const inv = await invoiceService.getByOrder(orderId).catch(() => null);
+        if (!inv?.id) return;
+
+        const payments = await paymentService.getByInvoice(inv.id).catch(() => []);
+        const alreadyPaid = Array.isArray(payments) && payments.some(p => p.payment_status === "Completed");
+        if (alreadyPaid) paidIds.add(n.id);
+      }));
+
+      setPaidNotificationIds(paidIds);
+    } catch {
+      /* silent */
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -148,6 +184,7 @@ function NotificationBell({ user }) {
       const alreadyPaid = Array.isArray(payments) && payments.some(p => p.payment_status === "Completed");
       if (alreadyPaid) {
         await handleMarkRead(n);
+        setHiddenNotificationIds((prev) => new Set(prev).add(n.id));
         return;
       }
       setOpen(false);
@@ -211,17 +248,17 @@ function NotificationBell({ user }) {
 
           {/* Lista */}
           <div className="overflow-y-auto flex-1">
-            {loading && notifications.length === 0 ? (
+            {loading && unreadNotifications.length === 0 ? (
               <p className="text-center py-6 text-xs" style={{ color: "var(--text-muted)" }}>A carregar...</p>
-            ) : notifications.length === 0 ? (
+            ) : visibleNotifications.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-10">
                 <i className="fa-regular fa-bell-slash text-2xl" style={{ color: "var(--text-muted)" }} />
-                <p className="text-xs" style={{ color: "var(--text-muted)" }}>Sem notificações.</p>
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>Sem notificações pendentes.</p>
               </div>
             ) : (
-              notifications.map(n => {
-                const isRead    = !!n.is_read;
+              visibleNotifications.map(n => {
                 const isPayNotif = PAY_KEYWORDS.test(`${n.title} ${n.message}`);
+                const isRead = !!n.is_read;
                 return (
                   <div
                     key={n.id}
@@ -229,8 +266,8 @@ function NotificationBell({ user }) {
                     className="px-4 py-3 border-b last:border-0 cursor-pointer transition-colors hover:bg-[var(--surface-2)]"
                     style={{
                       borderBottom: "1px solid var(--border)",
-                      borderLeft: isRead ? "3px solid transparent" : "3px solid #E53535",
-                      opacity: isRead ? 0.65 : 1,
+                      borderLeft: "3px solid #E53535",
+                      opacity: 1,
                     }}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -241,7 +278,7 @@ function NotificationBell({ user }) {
                         <p className="text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>{n.message}</p>
                         <p className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>{formatDate(n.sent_at)}</p>
                       </div>
-                      {isPayNotif && (
+                      {isPayNotif && !isPaidNotification(n) && (
                         <button
                           onClick={(e) => handlePayClick(e, n)}
                           disabled={payLoadingId === n.id}
@@ -267,6 +304,7 @@ function NotificationBell({ user }) {
           customerId={user?.id}
           onPaid={() => {
             handleMarkRead(payInfo.notif);
+            setHiddenNotificationIds((prev) => new Set(prev).add(payInfo.notif.id));
             setPayInfo(null);
             loadNotifs();
           }}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
-import { useTheme } from '../../context/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
+import { useAuth } from '@/context/AuthContext';
 
 const menuLinks = [
   { to: '/dashboard',     label: 'Dashboard',    icon: 'fa-solid fa-house',               exact: true },
@@ -97,6 +97,21 @@ export function BottomNav({ onOpenChange }) {
               <i className="fa-solid fa-utensils text-xl" style={{ color: 'var(--text-secondary)' }} />
               <span className="text-[11px] font-semibold" style={{ color: 'var(--text)' }}>Cardápio</span>
             </Link>
+
+            <button onClick={() => { setOpen(false); navigate('/perfil'); }} className="flex flex-col items-center gap-1">
+              <i className="fa-solid fa-user text-xl" style={{ color: 'var(--text-secondary)' }} />
+              <span className="text-[11px] font-semibold" style={{ color: 'var(--text)' }}>Perfil</span>
+            </button>
+
+            <button onClick={() => { setOpen(false); navigate('/perfil/dashboard'); }} className="flex flex-col items-center gap-1">
+              <i className="fa-solid fa-chart-line text-xl" style={{ color: 'var(--text-secondary)' }} />
+              <span className="text-[11px] font-semibold" style={{ color: 'var(--text)' }}>Dashboard</span>
+            </button>
+
+            <button onClick={() => { setOpen(false); navigate('/perfil/pedidos'); }} className="flex flex-col items-center gap-1">
+              <i className="fa-solid fa-receipt text-xl" style={{ color: 'var(--text-secondary)' }} />
+              <span className="text-[11px] font-semibold" style={{ color: 'var(--text)' }}>Pedidos</span>
+            </button>
 
             <button onClick={() => { setOpen(false); logout(); navigate('/'); }} className="flex flex-col items-center gap-1">
               <i className="fa-solid fa-right-from-bracket text-xl" style={{ color: '#ef4444' }} />

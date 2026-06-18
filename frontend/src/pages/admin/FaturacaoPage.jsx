@@ -209,13 +209,18 @@ export default function FaturacaoPage() {
   }, [enrichedInvoices, dateFrom, dateTo]);
 
   // ── KPIs ────────────────────────────────────────────────────────────────────
+  const paidInvoices = useMemo(
+    () => filteredInvoices.filter(inv => inv.paymentStatus === "Completed"),
+    [filteredInvoices]
+  );
+
   const kpis = useMemo(() => {
     const count    = filteredInvoices.length;
-    const total    = filteredInvoices.reduce((s, i) => s + Number(i.total_amount    || 0), 0);
-    const taxTotal = filteredInvoices.reduce((s, i) => s + Number(i.tax_amount || 0), 0);
-    const avgTicket = count > 0 ? total / count : 0;
+    const total    = paidInvoices.reduce((s, i) => s + Number(i.total_amount || 0), 0);
+    const taxTotal = paidInvoices.reduce((s, i) => s + Number(i.tax_amount || 0), 0);
+    const avgTicket = paidInvoices.length > 0 ? total / paidInvoices.length : 0;
     return { count, total, taxTotal, avgTicket };
-  }, [filteredInvoices]);
+  }, [filteredInvoices, paidInvoices]);
 
   // ── pagination ──────────────────────────────────────────────────────────────
   const pagedInvoices = useMemo(() =>

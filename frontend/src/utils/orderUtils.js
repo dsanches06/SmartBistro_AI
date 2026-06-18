@@ -59,6 +59,37 @@ export function getOrderClientName(order) {
   return order.customer_name?.trim() || "—";
 }
 
+/** Etapas de progresso do pedido para o modal de visualização. */
+export function getOrderSteps(order) {
+  const isTakeaway = !order.table_id;
+
+  if (isTakeaway) {
+    return [
+      { key: "Pending", label: "Aguardando pagamento" },
+      { key: "In Preparation", label: "Pedido" },
+      { key: "Ready", label: "Em produção" },
+      { key: "Delivered", label: "Entregue" },
+    ];
+  }
+
+  return [
+    { key: "Pending", label: "Pedido recebido" },
+    { key: "In Preparation", label: "Em produção" },
+    { key: "Ready", label: "Pronto" },
+    { key: "Delivered", label: "Entregue" },
+  ];
+}
+
+export function getOrderStepIndex(order) {
+  const status = order.order_status;
+
+  if (status === "Pending") return 0;
+  if (status === "In Preparation") return 1;
+  if (status === "Ready") return 2;
+  if (status === "Delivered" || status === "Done") return 3;
+  return 0;
+}
+
 /** Filtra e pesquisa uma lista de pedidos */
 export function filterOrders(orders, { tab = "all", search = "" } = {}) {
   let list = tab === "all" ? orders : orders.filter(o => o.order_status === tab);

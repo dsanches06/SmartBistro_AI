@@ -1,13 +1,8 @@
 import { useState } from "react";
+import Modal from "./Modal.jsx";
 import { orderService }   from "@/services/orderService";
 import { paymentService } from "@/services/paymentService";
-
-export const PAYMENT_METHODS = [
-  { value: "MB Way",       label: "MB Way" },
-  { value: "Multibanco",   label: "Multibanco" },
-  { value: "Credit Card",  label: "Cartão de Crédito" },
-  { value: "Cash",         label: "Numerário" },
-];
+import { PAYMENT_METHODS } from "@/utils";
 
 export function PaymentModal({ onClose, unpaidInvoices, onPaid, customerId }) {
   const [method, setMethod]   = useState(PAYMENT_METHODS[0].value);
@@ -53,29 +48,15 @@ export function PaymentModal({ onClose, unpaidInvoices, onPaid, customerId }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="w-full max-w-sm rounded-2xl p-6 shadow-2xl"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="text-base font-bold" style={{ color: "var(--text)" }}>
-            <i className="fa-solid fa-credit-card mr-2" style={{ color: "var(--primary)" }} />
-            Efectuar pagamento
-          </h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg" style={{ color: "var(--text-muted)" }}>
-            <i className="fa-solid fa-xmark" />
-          </button>
+    <Modal open onClose={onClose} title="Efectuar pagamento" size="sm">
+      {success ? (
+        <div className="text-center py-6">
+          <i className="fa-solid fa-circle-check text-4xl mb-3" style={{ color: "#22c55e" }} />
+          <p className="font-semibold text-sm" style={{ color: "var(--text)" }}>Pagamento registado!</p>
+          <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>Os teus pedidos foram marcados como entregues.</p>
         </div>
-
-        {success ? (
-          <div className="text-center py-6">
-            <i className="fa-solid fa-circle-check text-4xl mb-3" style={{ color: "#22c55e" }} />
-            <p className="font-semibold text-sm" style={{ color: "var(--text)" }}>Pagamento registado!</p>
-            <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>Os teus pedidos foram marcados como entregues.</p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-4">
+      ) : (
+        <div className="flex flex-col gap-4">
             {/* Resumo das faturas */}
             <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
               {unpaidInvoices.map(({ inv }, i) => (
@@ -141,7 +122,6 @@ export function PaymentModal({ onClose, unpaidInvoices, onPaid, customerId }) {
             </button>
           </div>
         )}
-      </div>
-    </div>
+      </Modal>
   );
 }
