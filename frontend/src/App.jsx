@@ -8,6 +8,7 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import AdminRoute from "@/components/auth/AdminRoute";
 import { ChatUI } from "@/components/chat";
 import { NAV_OPEN_H, TrophySpin } from "@/components/ui";
+import { orderService } from "@/services/orderService";
 
 // Carrega as páginas principais sob demanda para reduzir o bundle inicial.
 const MainPage               = lazy(() => import("@/pages/layout/MainPage"));
@@ -23,6 +24,28 @@ const MenuPage               = lazy(() => import("@/pages/admin/MenuPage"));
 const CustomerProfilePage    = lazy(() => import("@/pages/customer/ProfilePage"));
 const CustomerDashboardPage  = lazy(() => import("@/pages/customer/DashboardPage"));
 const CustomerOrdersPage     = lazy(() => import("@/pages/customer/OrdersPage"));
+
+// Fallback para Vercel (serverless): o Chef AI usa setTimeout no backend para avançar
+// estados, mas em ambientes serverless os timeouts não persistem entre invocações.
+// Este componente chama /orders/auto-advance como segurança extra para qualquer utilizador.
+// Em servidor local (Node.js), o scheduleChefAdvance no backend trata de tudo.
+function OrderAutoAdvance() {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user) return;
+
+    const advance = () => {
+      orderService.autoAdvance().catch(() => {});
+    };
+
+    advance();
+    const id = setInterval(advance, 30_000);
+    return () => clearInterval(id);
+  }, [user?.id]);
+
+  return null;
+}
 
 // Indicador visual mostrado enquanto uma página ainda está a carregar.
 function PageLoader() {
@@ -64,6 +87,7 @@ function AppContent() {
 
   return (
     <TableRefreshProvider>
+      <OrderAutoAdvance />
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<MainPage />} />

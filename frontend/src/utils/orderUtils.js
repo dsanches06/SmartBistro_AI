@@ -32,7 +32,7 @@ export const ORDER_TABS = [
   { key: "Done",           label: "Concluído",      icon: "fa-solid fa-check-double" },
 ];
 
-export const ORDER_TABLE_HEADERS = ["ID", "Mesa", "Cliente", "Estado", "Itens", "Valor", "Hora", "Ações"];
+export const ORDER_TABLE_HEADERS = ["ID", "Mesa", "Cliente", "Estado", "Itens", "Valor", "Hora"];
 
 /** Número de itens de cozinha de um pedido */
 export function getOrderItemCount(order) {
@@ -65,28 +65,41 @@ export function getOrderSteps(order) {
 
   if (isTakeaway) {
     return [
-      { key: "Pending", label: "Aguardando pagamento" },
-      { key: "In Preparation", label: "Pedido" },
-      { key: "Ready", label: "Em produção" },
-      { key: "Delivered", label: "Entregue" },
+      { key: "Pending",        label: "Confirmado & Pago",  icon: "fa-receipt"      },
+      { key: "In Preparation", label: "Em preparação",      icon: "fa-fire"         },
+      { key: "Ready",          label: "Pronto",              icon: "fa-bell"         },
+      { key: "Delivering",     label: "A preparar entrega",  icon: "fa-motorcycle"   },
+      { key: "Delivered",      label: "Entregue",            icon: "fa-house"        },
     ];
   }
 
+  // Mesa: pagamento só quando o cliente pedir a conta (Done)
   return [
-    { key: "Pending", label: "Pedido recebido" },
-    { key: "In Preparation", label: "Em produção" },
-    { key: "Ready", label: "Pronto" },
-    { key: "Delivered", label: "Entregue" },
+    { key: "Pending",        label: "Pedido recebido", icon: "fa-clipboard-list" },
+    { key: "In Preparation", label: "Em preparação",   icon: "fa-fire"           },
+    { key: "Ready",          label: "Pronto",           icon: "fa-bell"           },
+    { key: "Delivered",      label: "Entregue",         icon: "fa-utensils"       },
+    { key: "Done",           label: "Conta paga",       icon: "fa-credit-card"    },
   ];
 }
 
 export function getOrderStepIndex(order) {
   const status = order.order_status;
+  const isTakeaway = !order.table_id;
 
-  if (status === "Pending") return 0;
+  if (isTakeaway) {
+    if (status === "Pending")        return 0;
+    if (status === "In Preparation") return 1;
+    if (status === "Ready")          return 2;
+    if (status === "Delivered")      return 4;
+    return 0;
+  }
+
+  if (status === "Pending")        return 0;
   if (status === "In Preparation") return 1;
-  if (status === "Ready") return 2;
-  if (status === "Delivered" || status === "Done") return 3;
+  if (status === "Ready")          return 2;
+  if (status === "Delivered")      return 3;
+  if (status === "Done")           return 4;
   return 0;
 }
 

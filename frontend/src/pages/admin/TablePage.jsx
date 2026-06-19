@@ -160,7 +160,11 @@ export default function TablePage() {
     } catch { /* silently ignore */ }
   }, []);
 
-  useEffect(() => { fetchMesas(); fetchOccupancy(); }, [fetchMesas, fetchOccupancy]);
+  useEffect(() => {
+    fetchMesas(); fetchOccupancy();
+    const id = setInterval(() => { fetchMesas(); fetchOccupancy(); }, 30_000);
+    return () => clearInterval(id);
+  }, [fetchMesas, fetchOccupancy]);
   useEffect(() => { fetchTableDetails(selectedTableId); }, [selectedTableId, fetchTableDetails]);
 
   // Reage a mutações do chatbot (assign table, create order, etc.) via Context
@@ -255,7 +259,7 @@ export default function TablePage() {
       )}
 
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--text)]">Mesas</h1>
+        <h2 className="text-2xl sm:text-3xl font-bold text-[var(--text)]">Mesas</h2>
         <button
           onClick={() => setShowCreateMesa(true)}
           className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white flex-shrink-0 whitespace-nowrap"

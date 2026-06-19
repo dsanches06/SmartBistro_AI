@@ -19,7 +19,7 @@ export function pctChange(now, prev) {
 }
 
 export function fmtEur(amount) {
-  return amount.toLocaleString("pt-PT", { style: "currency", currency: "EUR" });
+  return Number(amount || 0).toLocaleString("pt-PT", { style: "currency", currency: "EUR" });
 }
 
 export function timeAgo(dateStr) {

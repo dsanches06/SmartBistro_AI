@@ -171,11 +171,11 @@ export default function FaturacaoPage() {
   const [selectedInv, setSelectedInv] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
 
-  const { data: invoices   = [] } = useQuery({ queryKey: ["invoices"],    queryFn: invoiceService.getAll });
-  const { data: orders     = [] } = useQuery({ queryKey: ["orders"],      queryFn: orderService.getAll });
-  const { data: payments   = [] } = useQuery({ queryKey: ["payments"],    queryFn: paymentService.getAll });
-  const { data: orderItems = [] } = useQuery({ queryKey: ["order-items"], queryFn: orderItemService.getAll });
-  const { data: menuItems  = [] } = useQuery({ queryKey: ["items"],       queryFn: itemService.getAll });
+  const { data: invoices   = [] } = useQuery({ queryKey: ["invoices"],    queryFn: invoiceService.getAll,    refetchInterval: 30_000 });
+  const { data: orders     = [] } = useQuery({ queryKey: ["orders"],      queryFn: orderService.getAll,      refetchInterval: 30_000 });
+  const { data: payments   = [] } = useQuery({ queryKey: ["payments"],    queryFn: paymentService.getAll,    refetchInterval: 30_000 });
+  const { data: orderItems = [] } = useQuery({ queryKey: ["order-items"], queryFn: orderItemService.getAll,  refetchInterval: 30_000 });
+  const { data: menuItems  = [] } = useQuery({ queryKey: ["items"],       queryFn: itemService.getAll,       refetchInterval: 30_000 });
 
   // ── enrich: join invoices ↔ orders ↔ payments ───────────────────────────────
   const enrichedInvoices = useMemo(() => {

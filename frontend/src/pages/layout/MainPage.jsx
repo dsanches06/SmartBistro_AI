@@ -1,12 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { itemService } from "@/services";
 import { orderService }     from "@/services/orderService";
 import { orderItemService } from "@/services/orderItemService";
+import { invoiceService }   from "@/services/invoiceService";
+import { paymentService }   from "@/services/paymentService";
 import { MENU_CATEGORIES, MENU_CATEGORY_META, formatMenuPrice, getItemEmoji, ALL_KEY } from "@/utils";
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { ThemeToggle, Modal, LoginModal, RegisterModal } from "@/components/ui";
+import { getInitials, getPalette } from "@/components/customers/CustomerCard.jsx";
+import { useClickOutside } from "@/components/ui/shared/useClickOutside.jsx";
+import { NotificationBell } from "@/components/ui/layout/Header.jsx";
 
 /* ── Icons ── */
 // Ícone usado para abrir o modal de autenticação.
@@ -68,6 +73,73 @@ function NavTab({ onClick, open = false, isDark }) {
   );
 }
 
+const customerNavLinks = [
+  { to: "/",                 label: "Cardápio",     icon: "fa-utensils",   exact: true },
+  { to: "/perfil/dashboard", label: "Dashboard",    icon: "fa-chart-line" },
+  { to: "/perfil/pedidos",   label: "Meus Pedidos", icon: "fa-receipt" },
+];
+
+function UserMenuCompact({ user, onLogout }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const navigate = useNavigate();
+  const palette = getPalette(user.id);
+
+  useClickOutside(ref, () => setOpen(false));
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-2 rounded-xl px-2 py-1.5 transition-colors"
+        style={{ background: open ? "var(--surface-2)" : "transparent" }}
+        title={user.name}
+      >
+        <span
+          className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+          style={{ background: palette.bg, color: palette.tx }}
+        >
+          {getInitials(user.name)}
+        </span>
+        <span className="hidden sm:block text-xs font-semibold max-w-[100px] truncate" style={{ color: "var(--text)" }}>
+          {user.name.split(" ")[0]}
+        </span>
+        <i className={`fa-solid fa-chevron-${open ? "up" : "down"} text-[9px]`} style={{ color: "var(--text-muted)" }} />
+      </button>
+
+      {open && (
+        <div
+          className="absolute right-0 top-full mt-2 w-44 rounded-xl shadow-xl py-1 z-50"
+          style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+        >
+          <div className="px-3 py-2 border-b" style={{ borderColor: "var(--border)" }}>
+            <p className="text-xs font-semibold truncate" style={{ color: "var(--text)" }}>{user.name}</p>
+            <p className="text-[10px] truncate" style={{ color: "var(--text-muted)" }}>
+              {user.username ? `@${user.username}` : user.email || ""}
+            </p>
+          </div>
+          <button
+            onClick={() => { setOpen(false); navigate("/perfil"); }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors hover:bg-[var(--surface-2)]"
+            style={{ color: "var(--text)" }}
+          >
+            <i className="fa-solid fa-user w-4 text-center" />
+            Meu Perfil
+          </button>
+          <button
+            onClick={() => { setOpen(false); onLogout(); navigate("/"); }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors hover:bg-[var(--surface-2)]"
+            style={{ color: "#ef4444" }}
+          >
+            <i className="fa-solid fa-right-from-bracket w-4 text-center" />
+            Sair
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ══════════════════════════════════════════
    MainPage
 ══════════════════════════════════════════ */
@@ -75,6 +147,7 @@ function NavTab({ onClick, open = false, isDark }) {
 export default function MainPage() {
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const payingRef = useRef(false);
   const { user, login, register, logout, sessionBlocked, sessionMessage } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -87,9 +160,14 @@ export default function MainPage() {
   const [showRegisterSuccess, setShowRegisterSuccess] = useState(false);
   const [navOpen, setNavOpen]           = useState(false);
   const [cart, setCart]                 = useState({});
-  const [showCart, setShowCart]         = useState(false);
-  const [orderLoading, setOrderLoading] = useState(false);
-  const [orderSuccess, setOrderSuccess] = useState(false);
+  const [showCart, setShowCart]               = useState(false);
+  const [showAllergyModal, setShowAllergyModal] = useState(false);
+  const [allergyText, setAllergyText]           = useState("");
+  const [showCheckout, setShowCheckout]         = useState(false);
+  const [checkoutAllergies, setCheckoutAllergies] = useState(null);
+  const [checkoutLoading, setCheckoutLoading]   = useState(false);
+  const [checkoutError, setCheckoutError]       = useState("");
+  const [orderSuccess, setOrderSuccess]         = useState(false);
 
   // Indica se o utilizador atual tem acesso ao fluxo de cliente.
   const isClient  = user && user.role_id !== 1;
@@ -118,37 +196,94 @@ export default function MainPage() {
       return { ...prev, [itemId]: { ...prev[itemId], qty } };
     });
 
-  // Envia o pedido atual para a API e limpa o carrinho após o sucesso.
-  const handleSubmitOrder = async () => {
+  const handleConfirmCart = () => {
     if (!cartItems.length) return;
-    setOrderLoading(true);
+    setShowCart(false);
+    setShowAllergyModal(true);
+  };
+
+  const handleOpenCheckout = (allergies) => {
+    setShowAllergyModal(false);
+    setCheckoutAllergies(allergies);
+    setCheckoutError("");
+    setShowCheckout(true);
+  };
+
+  // Cria pedido + fatura + pagamento — idempotente: suporta retentativas sem duplicados
+  const handleCheckoutPay = async () => {
+    if (!cartItems.length || payingRef.current) return;
+    payingRef.current = true;
+    setCheckoutLoading(true);
+    setCheckoutError("");
     try {
-      // 1. Criar o pedido
       const order = await orderService.create({
         customer_id: user.id,
         service_type: "Takeaway",
+        allergy_restrictions: checkoutAllergies || null,
         kitchen_sequence_json: JSON.stringify(cartItems.map(c => ({
           name: c.item.name,
           quantity: c.qty,
           price: Number(c.item.price),
         }))),
-        order_status: "In Preparation",
+        order_status: "Pending",
       });
 
-      // 2. Guardar os order_items na DB (permite cálculos financeiros e Chef AI)
-      if (order?.id) {
-        await orderItemService.createBulk({
-          order_id: order.id,
-          items:    cartItems.map(c => ({ item_id: c.item.id, quantity: c.qty })),
-        }).catch(() => { /* silent — order já foi criado */ });
+      if (!order?.id) throw new Error("Não foi possível criar o pedido.");
+
+      await orderItemService.createBulk({
+        order_id: order.id,
+        items: cartItems.map(c => ({ item_id: c.item.id, quantity: c.qty })),
+      }).catch(() => {});
+
+      const total    = Number(cartTotal.toFixed(2));
+      const subtotal = Number((total / 1.23).toFixed(2));
+      const tax      = Number((total - subtotal).toFixed(2));
+
+      // Idempotente: se fatura já existe para este pedido, reutiliza-a
+      let inv;
+      try {
+        inv = await invoiceService.create({
+          order_id:        order.id,
+          subtotal_amount: subtotal,
+          tax_amount:      tax,
+          total_amount:    total,
+          profit_margin:   0,
+        });
+      } catch (err) {
+        if (!err?.message?.includes("409")) throw err;
+        inv = await invoiceService.getByOrder(order.id);
       }
 
+      if (!inv?.id) throw new Error("Não foi possível obter a fatura.");
+
+      // Idempotente: se pagamento já existe, considera sucesso
+      try {
+        await paymentService.create({
+          invoice_id:     inv.id,
+          customer_id:    user.id,
+          amount:         total,
+          payment_method: "Cash",
+          payment_status: "Completed",
+        });
+      } catch (err) {
+        if (!err?.message?.includes("409")) throw err;
+        // pagamento já registado — trata como sucesso
+      }
+
+      // Dispara Chef AI em background (não bloqueia o utilizador)
+      orderService.chefStart(order.id).catch(() => {});
+
       setCart({});
-      setShowCart(false);
+      setAllergyText("");
+      setShowCheckout(false);
       setOrderSuccess(true);
-      setTimeout(() => setOrderSuccess(false), 4000);
-    } catch { /* silent */ }
-    finally { setOrderLoading(false); }
+      setTimeout(() => setOrderSuccess(false), 5000);
+    } catch (err) {
+      setCheckoutError("Erro ao processar pagamento. Tente novamente.");
+    } finally {
+      payingRef.current = false;
+      setCheckoutLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -158,10 +293,11 @@ export default function MainPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Faz login sem forçar redirecionamento: permanece na página principal.
+  // Admin/manager vai para o dashboard; cliente fica no cardápio.
   const handleLogin = async (identifier, password) => {
-    await login(identifier, password);
+    const loggedUser = await login(identifier, password);
     setShowLogin(false);
+    if (loggedUser?.role_id === 1) navigate("/dashboard");
   };
 
   // Regista um novo utilizador e mostra a confirmação do processo.
@@ -205,33 +341,49 @@ export default function MainPage() {
           boxShadow: isDark ? "0 1px 0 rgba(255,255,255,0.06)" : "0 1px 0 rgba(0,0,0,0.08)",
         }}
       >
-        <Link to="/" className="flex flex-col leading-tight select-none">
-          <span
-            className="font-spartan text-lg sm:text-xl font-bold tracking-wide uppercase"
+        <Link to="/" className="flex flex-col leading-tight select-none flex-shrink-0">
+          <h1
+            className="font-spartan text-lg sm:text-xl font-bold tracking-wide uppercase m-0 leading-none"
             style={{ color: "var(--text)" }}
           >
             SmartBistro<span style={{ color: "var(--primary)" }}>IA</span>
-          </span>
+          </h1>
           <span className="text-[9px] sm:text-[10px] md:text-[11px] block" style={{ color: "var(--text-muted)" }}>
             Sistema Inteligente para Restaurantes
           </span>
         </Link>
 
+        {/* Desktop nav — cliente autenticado */}
+        {isClient && (
+          <nav className="hidden md:flex items-center gap-1">
+            {customerNavLinks.map(({ to, label, icon, exact }) => {
+              const active = exact ? pathname === to : pathname.startsWith(to);
+              return (
+                <Link
+                  key={to}
+                  to={to}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-semibold transition-colors"
+                  style={{
+                    color: active ? "var(--primary)" : "var(--text-secondary)",
+                    background: active ? "var(--surface-2)" : "transparent",
+                  }}
+                >
+                  <i className={`fa-solid ${icon} text-xs`} />
+                  {label}
+                </Link>
+              );
+            })}
+          </nav>
+        )}
+
         {/* Controls */}
         <div className="flex items-center gap-2">
-          {user ? (
-            <Link
-              to="/perfil"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
-              style={{ background: "var(--primary)", color: "#fff", border: "1.5px solid var(--primary)" }}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-              <span className="hidden sm:inline">{user.name.split(" ")[0]}</span>
-            </Link>
-          ) : (
+          {isClient ? (
+            <>
+              <NotificationBell user={user} />
+              <UserMenuCompact user={user} onLogout={logout} />
+            </>
+          ) : !user ? (
             <>
               <button
                 onClick={() => setShowLogin(true)}
@@ -253,7 +405,7 @@ export default function MainPage() {
                 <span>Registar</span>
               </button>
             </>
-          )}
+          ) : null}
 
           <ThemeToggle />
         </div>
@@ -261,9 +413,9 @@ export default function MainPage() {
 
       {/* Hero */}
       <div className="text-center px-4 py-10 sm:py-14">
-        <h1 className="text-3xl sm:text-4xl font-bold mb-2" style={{ color: "var(--text)" }}>
+        <h2 className="text-3xl sm:text-4xl font-bold mb-2" style={{ color: "var(--text)" }}>
           Cardápio
-        </h1>
+        </h2>
         <p className="text-sm sm:text-base" style={{ color: "var(--text-muted)" }}>
           Descubra os nossos pratos, bebidas e muito mais
         </p>
@@ -315,12 +467,11 @@ export default function MainPage() {
 
       {/* Content */}
       <main className="px-4 sm:px-8 py-6 max-w-5xl mx-auto pb-40 sm:pb-12">
-        {/* Banner sucesso */}
         {orderSuccess && (
           <div className="mb-4 flex items-center gap-2 px-4 py-3 rounded-2xl text-sm font-semibold"
             style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", color: "#22c55e" }}>
             <i className="fa-solid fa-circle-check" />
-            Pedido enviado com sucesso! Aguarda a confirmação.
+            Pedido pago e confirmado! Entra na fila de preparação.
           </div>
         )}
 
@@ -448,12 +599,114 @@ export default function MainPage() {
                 Takeaway — preparado assim que confirmado.
               </p>
               <button
-                onClick={handleSubmitOrder}
-                disabled={orderLoading}
+                onClick={handleConfirmCart}
+                className="w-full py-3.5 rounded-2xl text-sm font-bold text-white transition-opacity"
+                style={{ background: "var(--primary)" }}
+              >
+                Confirmar pedido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de alergias */}
+      {showAllergyModal && (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+        >
+          <div className="w-full max-w-sm rounded-2xl p-6 shadow-2xl" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+            <div className="flex items-center gap-3 mb-4">
+              <i className="fa-solid fa-triangle-exclamation text-xl" style={{ color: "#f59e0b" }} />
+              <h3 className="text-base font-bold" style={{ color: "var(--text)" }}>Alergias alimentares</h3>
+            </div>
+            <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>
+              Tens alguma alergia ou intolerância alimentar que devemos ter em conta na confecção?
+            </p>
+            <textarea
+              value={allergyText}
+              onChange={(e) => setAllergyText(e.target.value)}
+              placeholder="Ex: gluten, lactose, frutos secos... (opcional)"
+              rows={3}
+              className="w-full rounded-xl px-3 py-2 text-sm outline-none resize-none mb-4"
+              style={{ background: "var(--surface-2)", border: "1.5px solid var(--border)", color: "var(--text)" }}
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleOpenCheckout(null)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
+                style={{ background: "var(--surface-2)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}
+              >
+                Sem alergias
+              </button>
+              <button
+                onClick={() => handleOpenCheckout(allergyText.trim() || null)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white"
+                style={{ background: "var(--primary)" }}
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de checkout / pagamento */}
+      {showCheckout && (
+        <div
+          className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4"
+          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+          onClick={(e) => { if (e.target === e.currentTarget && !checkoutLoading) setShowCheckout(false); }}
+        >
+          <div
+            className="w-full sm:max-w-md flex flex-col rounded-t-3xl sm:rounded-2xl"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)", maxHeight: "88dvh" }}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0" style={{ borderColor: "var(--border)" }}>
+              <h2 className="text-base font-bold" style={{ color: "var(--text)" }}>
+                <i className="fa-solid fa-credit-card mr-2" style={{ color: "var(--primary)" }} />
+                Pagamento
+              </h2>
+              <button onClick={() => setShowCheckout(false)} disabled={checkoutLoading} className="p-1.5 rounded-lg" style={{ color: "var(--text-muted)" }}>
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 p-5 space-y-4">
+              {/* Resumo dos itens */}
+              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+                {cartItems.map(({ item, qty }, i) => (
+                  <div key={item.id} className="flex items-center justify-between px-4 py-2.5"
+                    style={{ borderBottom: i < cartItems.length - 1 ? "1px solid var(--border)" : "none", background: "var(--surface-2)" }}>
+                    <span className="text-xs" style={{ color: "var(--text-muted)" }}>{item.name} × {qty}</span>
+                    <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>{formatMenuPrice(Number(item.price) * qty)}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Total */}
+              <div className="flex items-center justify-between px-4 py-3 rounded-xl"
+                style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                <span className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>Total</span>
+                <span className="text-xl font-bold" style={{ color: "var(--primary)" }}>{formatMenuPrice(cartTotal)}</span>
+              </div>
+            </div>
+
+            <div className="px-5 pt-3 border-t flex-shrink-0 space-y-2"
+              style={{ borderColor: "var(--border)", paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))" }}>
+              {checkoutError && (
+                <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444" }}>
+                  {checkoutError}
+                </p>
+              )}
+              <button
+                onClick={handleCheckoutPay}
+                disabled={checkoutLoading}
                 className="w-full py-3.5 rounded-2xl text-sm font-bold text-white disabled:opacity-60 transition-opacity"
                 style={{ background: "var(--primary)" }}
               >
-                {orderLoading ? "A enviar pedido..." : "Confirmar pedido"}
+                {checkoutLoading ? "A processar..." : `Pagar ${formatMenuPrice(cartTotal)}`}
               </button>
             </div>
           </div>

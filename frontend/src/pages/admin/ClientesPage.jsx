@@ -541,7 +541,11 @@ export default function ClientesPage() {
     }
   };
 
-  useEffect(() => { loadCustomers(); }, []);
+  useEffect(() => {
+    loadCustomers();
+    const id = setInterval(loadCustomers, 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   // Abre automaticamente o detail do admin quando ?open=id está presente
   useEffect(() => {

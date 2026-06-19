@@ -442,12 +442,12 @@ export default function RelatoriosPage() {
   const [customTo,    setCustomTo]    = useState(TODAY_STR);
 
   // ── data queries ────────────────────────────────────────────────────────────
-  const { data: invoices   = [] } = useQuery({ queryKey: ["invoices"],    queryFn: invoiceService.getAll });
-  const { data: orders     = [] } = useQuery({ queryKey: ["orders"],      queryFn: orderService.getAll });
-  const { data: orderItems = [] } = useQuery({ queryKey: ["order-items"], queryFn: orderItemService.getAll });
-  const { data: menuItems  = [] } = useQuery({ queryKey: ["items"],       queryFn: itemService.getAll });
-  const { data: tables     = [] } = useQuery({ queryKey: ["tables"],      queryFn: tableService.getAll });
-  const { data: customers  = [] } = useQuery({ queryKey: ["customers"],   queryFn: customerService.getAll });
+  const { data: invoices   = [] } = useQuery({ queryKey: ["invoices"],    queryFn: invoiceService.getAll,    refetchInterval: 30_000 });
+  const { data: orders     = [] } = useQuery({ queryKey: ["orders"],      queryFn: orderService.getAll,      refetchInterval: 30_000 });
+  const { data: orderItems = [] } = useQuery({ queryKey: ["order-items"], queryFn: orderItemService.getAll,  refetchInterval: 30_000 });
+  const { data: menuItems  = [] } = useQuery({ queryKey: ["items"],       queryFn: itemService.getAll,       refetchInterval: 30_000 });
+  const { data: tables     = [] } = useQuery({ queryKey: ["tables"],      queryFn: tableService.getAll,      refetchInterval: 30_000 });
+  const { data: customers  = [] } = useQuery({ queryKey: ["customers"],   queryFn: customerService.getAll,   refetchInterval: 30_000 });
 
   const itemMap = useMemo(() => new Map(menuItems.map(i => [i.id, i])), [menuItems]);
 

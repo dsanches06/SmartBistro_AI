@@ -225,6 +225,42 @@ export async function requestDelete(req, res) {
   }
 }
 
+// POST /auth/change-password  (requer verifyToken)
+export async function changePassword(req, res) {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword?.trim() || !newPassword?.trim())
+    return res.status(400).json({ message: 'currentPassword e newPassword são obrigatórios.' });
+
+  if (newPassword.length < 6)
+    return res.status(400).json({ message: 'A nova password deve ter pelo menos 6 caracteres.' });
+
+  try {
+    const [rows] = await db.query(
+      'SELECT password_hash FROM auth_accounts WHERE customer_id = ?',
+      [req.user.id]
+    );
+
+    if (!rows.length)
+      return res.status(404).json({ message: 'Conta não encontrada.' });
+
+    const isValid = await bcrypt.compare(currentPassword, rows[0].password_hash);
+    if (!isValid)
+      return res.status(401).json({ message: 'Password atual incorreta.' });
+
+    const newHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    await db.query(
+      'UPDATE auth_accounts SET password_hash = ? WHERE customer_id = ?',
+      [newHash, req.user.id]
+    );
+
+    return res.json({ success: true, message: 'Password alterada com sucesso.' });
+  } catch (err) {
+    console.error('[Auth] changePassword:', err.message);
+    return res.status(500).json({ message: 'Erro interno.' });
+  }
+}
+
 // GET /auth/me  (requer verifyToken)
 export async function me(req, res) {
   try {

@@ -76,7 +76,7 @@ export function BottomNav({ onOpenChange }) {
   if (isClient) {
     const clientLinks = [
       { to: '/',       label: 'Cardápio', icon: 'fa-utensils', exact: true },
-      { to: '/perfil', label: 'Perfil',   icon: 'fa-user' },
+      { to: '/perfil', label: 'Perfil',   icon: 'fa-user', exact: true },
       { to: '/perfil/dashboard', label: 'Dashboard', icon: 'fa-chart-line' },
       { to: '/perfil/pedidos',   label: 'Pedidos',   icon: 'fa-receipt' },
     ];

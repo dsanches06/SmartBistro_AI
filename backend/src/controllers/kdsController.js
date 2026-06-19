@@ -6,10 +6,40 @@ import { validateAgentOutput, extractJSON } from '../genai/helpers/index.js';
 import {
   getOrderById,
   updateOrder,
+  updateOrderStatus,
   getItemsByOrderId,
   getItemById,
   getActiveItems,
 } from '../services/index.js';
+
+// Agenda o avanço automático após o Chef ter iniciado a preparação.
+// Para servidores de longa duração (local): setTimeout funciona directamente.
+// Para Vercel (serverless): é complementado pelo /orders/auto-advance via polling.
+function scheduleChefAdvance(orderId, inPreparationSecs) {
+  const clampedSecs = Math.min(Math.max(inPreparationSecs, 10), 120);
+
+  setTimeout(async () => {
+    try {
+      const order = await getOrderById(orderId);
+      if (order?.order_status !== 'In Preparation') return;
+      await updateOrderStatus(orderId, 'Ready');
+      console.log(`[KDS Chef] Pedido #${orderId} → Pronto`);
+
+      setTimeout(async () => {
+        try {
+          const o = await getOrderById(orderId);
+          if (o?.order_status !== 'Ready') return;
+          await updateOrderStatus(orderId, 'Delivered');
+          console.log(`[KDS Chef] Pedido #${orderId} → Entregue`);
+        } catch (e) {
+          console.error(`[KDS Chef] Erro ao avançar #${orderId} para Entregue:`, e.message);
+        }
+      }, 30_000);
+    } catch (e) {
+      console.error(`[KDS Chef] Erro ao avançar #${orderId} para Pronto:`, e.message);
+    }
+  }, clampedSecs * 1000);
+}
 
 /**
  * POST /orders/:id/chef-start
@@ -73,7 +103,8 @@ export async function chefStartOrder(req, res) {
 
       // Avança directamente para "In Preparation" sem correr o Chef AI
       await updateOrder(orderId, { order_status: 'In Preparation' });
-      console.log(`[KDS Chef] Pedido #${orderId} (carrinho) → Em Preparação (sem AI)`);
+      scheduleChefAdvance(orderId, 60);
+      console.log(`[KDS Chef] Pedido #${orderId} (carrinho) → Em Preparação (60s)`);
 
       return res.json({
         success:            true,
@@ -116,6 +147,9 @@ export async function chefStartOrder(req, res) {
       order_status:          'In Preparation',
       kitchen_sequence_json: JSON.stringify(kitchenSeq),
     });
+
+    // Agenda avanço automático: In Preparation → Ready → Delivered (controlado pelo Chef)
+    scheduleChefAdvance(orderId, estimatedSeconds);
 
     console.log(`[KDS Chef] Pedido #${orderId} → Em Preparação | tempo: ${estimatedSeconds}s | stock: ${stockStatus}`);
 

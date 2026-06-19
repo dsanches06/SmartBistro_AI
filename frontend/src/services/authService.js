@@ -40,4 +40,11 @@ export const authService = {
     request('/auth/me', {
       headers: { Authorization: `Bearer ${token}` },
     }),
+
+  changePassword: (token, currentPassword, newPassword) =>
+    request('/auth/change-password', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
 };

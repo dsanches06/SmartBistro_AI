@@ -107,13 +107,21 @@ export const updateOrder = async (id, data) => {
   return r.affectedRows;
 };
 
-// Actualiza apenas o status do pedido
+// Actualiza o status do pedido e regista o momento da mudança
 export const updateOrderStatus = async (id, orderStatus) => {
   const [r] = await db.query(
-    "UPDATE orders SET order_status = ? WHERE id = ?",
+    "UPDATE orders SET order_status = ?, updated_at = NOW() WHERE id = ?",
     [normalizeOrderStatus(orderStatus), id],
   );
   return r.affectedRows;
+};
+
+// Devolve pedidos que precisam de avançar de estado automaticamente
+export const getOrdersForAutoAdvance = async () => {
+  const [r] = await db.query(
+    "SELECT id, order_status, updated_at, created_at FROM orders WHERE order_status IN ('In Preparation', 'Ready')"
+  );
+  return Array.isArray(r) ? r : [];
 };
 
 // Elimina um pedido

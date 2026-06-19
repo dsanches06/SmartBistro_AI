@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageSection, Pagination, ListCard } from "@/components";
-import { orderService, tableService, customerService, itemService, orderItemService } from "@/services";
+import { orderService, tableService, customerService, itemService, orderItemService, invoiceService } from "@/services";
 import {
   formatTime,
   ORDER_PAGE_SIZE,
@@ -235,36 +235,17 @@ function StatusBadge({ status }) {
 }
 
 /* ── Desktop table row ── */
-function OrderRow({ order, onDelete }) {
-  const isDone = order.order_status === "Ready";
-
+function OrderRow({ order, invoiceMap }) {
+  const total = invoiceMap?.[order.id]?.total_amount;
   return (
-    <tr
-      className="border-b border-[var(--border)] transition-colors hover:bg-[var(--surface-2)]"
-    >
-      <td className="py-3 px-4 text-sm font-semibold" style={{ color: "var(--primary)" }}>
-        #{order.id}
-      </td>
+    <tr className="border-b border-[var(--border)] transition-colors hover:bg-[var(--surface-2)]">
+      <td className="py-3 px-4 text-sm font-semibold" style={{ color: "var(--primary)" }}>#{order.id}</td>
       <td className="py-3 px-4 text-sm">{getOrderTarget(order)}</td>
       <td className="py-3 px-4 text-sm">{getOrderClientName(order)}</td>
       <td className="py-3 px-4"><StatusBadge status={order.order_status} /></td>
       <td className="py-3 px-4 text-sm text-center">{getOrderItemCount(order)}</td>
-      <td className="py-3 px-4 text-sm font-semibold">{formatOrderValue(order.total_amount)}</td>
-      <td className="py-3 px-4 text-sm" style={{ color: "var(--text-secondary)" }}>
-        {formatTime(order.created_at)}
-      </td>
-      <td className="py-3 px-4">
-        {isDone ? (
-          <button
-            onClick={() => onDelete(order.id)}
-            title="Remover pedido"
-            className="inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-[#fef2f2]"
-            style={{ color: "#ef4444" }}
-          >
-            <i className="fa-solid fa-trash text-xs" />
-          </button>
-        ) : null}
-      </td>
+      <td className="py-3 px-4 text-sm font-semibold">{total ? formatOrderValue(total) : "—"}</td>
+      <td className="py-3 px-4 text-sm" style={{ color: "var(--text-secondary)" }}>{formatTime(order.created_at)}</td>
     </tr>
   );
 }
@@ -299,6 +280,7 @@ function OrderCard({ order }) {
 /* ── OrdersPage ── */
 export default function OrdersPage() {
   const [orders,      setOrders]      = useState([]);
+  const [invoiceMap,  setInvoiceMap]  = useState({});
   const [loading,     setLoading]     = useState(true);
   const [error,       setError]       = useState(null);
   const [tab,         setTab]         = useState("all");
@@ -311,8 +293,15 @@ export default function OrdersPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await orderService.getAll();
-      setOrders(Array.isArray(res) ? res : []);
+      const [res, invoices] = await Promise.all([
+        orderService.getAll(),
+        invoiceService.getAll().catch(() => []),
+      ]);
+      const rows = Array.isArray(res) ? res : [];
+      setOrders(rows);
+      const map = {};
+      if (Array.isArray(invoices)) invoices.forEach(inv => { if (inv.order_id) map[inv.order_id] = inv; });
+      setInvoiceMap(map);
     } catch (err) {
       console.error(err);
       setError("Não foi possível carregar os pedidos. Tente novamente.");
@@ -327,15 +316,6 @@ export default function OrdersPage() {
     return () => clearInterval(id);
   }, [load]);
   useEffect(() => { setPage(1); }, [tab, search]);
-
-  const handleDelete = useCallback(async (id) => {
-    try {
-      await orderService.remove(id);
-      setOrders(prev => prev.filter(o => o.id !== id));
-    } catch (err) {
-      console.error(err);
-    }
-  }, []);
 
   const counts   = useMemo(() => countOrdersByStatus(orders), [orders]);
   const filtered = useMemo(() => filterOrders(orders, { tab, search }), [orders, tab, search]);
@@ -354,7 +334,7 @@ export default function OrdersPage() {
 
         {/* ── Header ── */}
         <div className="flex items-center justify-between gap-2 mb-5">
-          <h1 className="text-xl sm:text-2xl font-bold" style={{ color: "var(--text)" }}>Pedidos</h1>
+          <h2 className="text-xl sm:text-2xl font-bold" style={{ color: "var(--text)" }}>Pedidos</h2>
         </div>
 
         {/* ── Status Tabs ── */}
@@ -460,7 +440,7 @@ export default function OrdersPage() {
                       </td>
                     </tr>
                   ) : (
-                    pageData.map(o => <OrderRow key={o.id} order={o} onDelete={handleDelete} />)
+                    pageData.map(o => <OrderRow key={o.id} order={o} invoiceMap={invoiceMap} />)
                   )}
                 </tbody>
               </table>

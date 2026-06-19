@@ -261,7 +261,7 @@ export default function StockPage() {
 
           {/* Linha 1 — título + acções */}
           <div className="flex items-center justify-between gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold" style={{ color: "var(--text)" }}>Stock</h1>
+            <h2 className="text-xl sm:text-2xl font-bold" style={{ color: "var(--text)" }}>Stock</h2>
             <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 className="flex items-center gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white whitespace-nowrap"

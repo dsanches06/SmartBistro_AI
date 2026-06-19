@@ -1,12 +1,10 @@
 import { useRef, useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { ThemeToggle, PaymentModal } from "@/components/ui";
+import { ThemeToggle } from "@/components/ui";
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { getInitials, getPalette, formatDate } from "@/components/customers/CustomerCard.jsx";
 import { customerService } from "@/services/customerService";
-import { invoiceService } from "@/services/invoiceService";
-import { paymentService } from "@/services/paymentService";
 import { useClickOutside } from "@/components/ui/shared/useClickOutside.jsx";
 
 const navLinks = [
@@ -19,6 +17,12 @@ const navLinks = [
   { to: "/clientes",   label: "Clientes" },
   { to: "/relatorios", label: "Relatórios" },
   { to: "/menu",       label: "Menu" },
+];
+
+const customerNavLinks = [
+  { to: "/",                 label: "Cardápio",     icon: "fa-utensils",   exact: true },
+  { to: "/perfil/dashboard", label: "Dashboard",    icon: "fa-chart-line" },
+  { to: "/perfil/pedidos",   label: "Meus Pedidos", icon: "fa-receipt" },
 ];
 
 function isActive(pathname, to, exact) {
@@ -65,30 +69,16 @@ function UserMenu({ user, onLogout }) {
             </p>
           </div>
 
-          <button
-            onClick={() => { setOpen(false); navigate("/perfil"); }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors hover:bg-[var(--surface-2)]"
-            style={{ color: "var(--text)" }}
-          >
-            <i className="fa-solid fa-user w-4 text-center" style={{ color: "var(--primary)" }} />
-            Meu Perfil
-          </button>
-          <button
-            onClick={() => { setOpen(false); navigate("/perfil/dashboard"); }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors hover:bg-[var(--surface-2)]"
-            style={{ color: "var(--text)" }}
-          >
-            <i className="fa-solid fa-chart-line w-4 text-center" style={{ color: "var(--primary)" }} />
-            Dashboard
-          </button>
-          <button
-            onClick={() => { setOpen(false); navigate("/perfil/pedidos"); }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors hover:bg-[var(--surface-2)]"
-            style={{ color: "var(--text)" }}
-          >
-            <i className="fa-solid fa-receipt w-4 text-center" style={{ color: "var(--primary)" }} />
-            Meus Pedidos
-          </button>
+          {user.role_id !== 1 && (
+            <button
+              onClick={() => { setOpen(false); navigate("/perfil"); }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors hover:bg-[var(--surface-2)]"
+              style={{ color: "var(--text)" }}
+            >
+              <i className="fa-solid fa-user w-4 text-center" />
+              Meu Perfil
+            </button>
+          )}
           <button
             onClick={() => { setOpen(false); onLogout(); navigate("/"); }}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors hover:bg-[var(--surface-2)]"
@@ -103,57 +93,25 @@ function UserMenu({ user, onLogout }) {
   );
 }
 
-const PAY_KEYWORDS = /pagamento|pagar|fatura|faturação|invoice|payment|valor/i;
-const ORDER_ID_RE  = /#(\S+)/;
-
-function NotificationBell({ user }) {
-  const [open, setOpen]               = useState(false);
+export function NotificationBell({ user }) {
+  const [open, setOpen]           = useState(false);
   const [notifications, setNotifications] = useState([]);
-  const [hiddenNotificationIds, setHiddenNotificationIds] = useState(new Set());
-  const [paidNotificationIds, setPaidNotificationIds] = useState(new Set());
-  const [loading, setLoading]         = useState(false);
-  const [payInfo, setPayInfo]         = useState(null);
-  const [payLoadingId, setPayLoadingId] = useState(null);
-  const ref      = useRef(null);
+  const [loading, setLoading]     = useState(false);
+  const ref = useRef(null);
 
-  const unreadNotifications = notifications.filter(n => !n.is_read);
-  const isPayNotification = (n) => PAY_KEYWORDS.test(`${n.title} ${n.message}`);
-  const isPaidNotification = (n) => paidNotificationIds.has(n.id);
-  const visibleNotifications = notifications.filter(
-    n => !hiddenNotificationIds.has(n.id) && !isPaidNotification(n) && (!n.is_read || isPayNotification(n)),
-  );
-  const unreadCount = unreadNotifications.length;
+  const unread = notifications.filter(n => !n.is_read);
+  const unreadCount = unread.length;
 
   useClickOutside(ref, () => setOpen(false));
 
   const loadNotifs = async () => {
     if (!user?.id) return;
     setLoading(true);
-
     try {
       const list = await customerService.getNotifications(user.id);
-      const items = Array.isArray(list) ? list : [];
-      setNotifications(items);
-
-      const paidIds = new Set();
-      await Promise.all(items.filter(isPayNotification).map(async (n) => {
-        const orderId = n.message?.match(ORDER_ID_RE)?.[1];
-        if (!orderId) return;
-
-        const inv = await invoiceService.getByOrder(orderId).catch(() => null);
-        if (!inv?.id) return;
-
-        const payments = await paymentService.getByInvoice(inv.id).catch(() => []);
-        const alreadyPaid = Array.isArray(payments) && payments.some(p => p.payment_status === "Completed");
-        if (alreadyPaid) paidIds.add(n.id);
-      }));
-
-      setPaidNotificationIds(paidIds);
-    } catch {
-      /* silent */
-    } finally {
-      setLoading(false);
-    }
+      setNotifications(Array.isArray(list) ? list : []);
+    } catch { /* silent */ }
+    finally { setLoading(false); }
   };
 
   useEffect(() => {
@@ -170,27 +128,6 @@ function NotificationBell({ user }) {
       await customerService.markNotificationRead(user.id, n.id);
       setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, is_read: true } : x));
     } catch { /* silent */ }
-  };
-
-  const handlePayClick = async (e, n) => {
-    e.stopPropagation();
-    const orderId = n.message?.match(ORDER_ID_RE)?.[1];
-    if (!orderId) return;
-    setPayLoadingId(n.id);
-    try {
-      const inv = await invoiceService.getByOrder(orderId);
-      if (!inv?.id) return;
-      const payments = await paymentService.getByInvoice(inv.id).catch(() => []);
-      const alreadyPaid = Array.isArray(payments) && payments.some(p => p.payment_status === "Completed");
-      if (alreadyPaid) {
-        await handleMarkRead(n);
-        setHiddenNotificationIds((prev) => new Set(prev).add(n.id));
-        return;
-      }
-      setOpen(false);
-      setPayInfo({ unpaidInvoices: [{ orderId, inv }], notif: n });
-    } catch { /* silent */ }
-    finally { setPayLoadingId(null); }
   };
 
   return (
@@ -223,92 +160,41 @@ function NotificationBell({ user }) {
       {open && (
         <div
           className="fixed sm:absolute left-4 right-4 sm:left-auto sm:right-0 sm:w-80 top-[3.6rem] md:top-[4.1rem] sm:top-full sm:mt-2 z-[200] rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-          style={{
-            maxHeight: "440px",
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-          }}
+          style={{ maxHeight: "440px", background: "var(--surface)", border: "1px solid var(--border)" }}
         >
-          {/* Header do dropdown */}
           <div className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0" style={{ borderColor: "var(--border)" }}>
-            <span className="text-sm font-bold" style={{ color: "var(--text)" }}>
-              Notificações
-            </span>
-            <div className="flex items-center gap-2">
-              {unreadCount > 0 && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold text-white" style={{ background: "#FF3B30" }}>
-                  {unreadCount} {unreadCount === 1 ? "nova" : "novas"}
-                </span>
-              )}
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
-                {notifications.length}
+            <span className="text-sm font-bold" style={{ color: "var(--text)" }}>Notificações</span>
+            {unreadCount > 0 && (
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold text-white" style={{ background: "#FF3B30" }}>
+                {unreadCount} {unreadCount === 1 ? "nova" : "novas"}
               </span>
-            </div>
+            )}
           </div>
 
-          {/* Lista */}
           <div className="overflow-y-auto flex-1">
-            {loading && unreadNotifications.length === 0 ? (
+            {loading && unreadCount === 0 ? (
               <p className="text-center py-6 text-xs" style={{ color: "var(--text-muted)" }}>A carregar...</p>
-            ) : visibleNotifications.length === 0 ? (
+            ) : unread.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-10">
                 <i className="fa-regular fa-bell-slash text-2xl" style={{ color: "var(--text-muted)" }} />
-                <p className="text-xs" style={{ color: "var(--text-muted)" }}>Sem notificações pendentes.</p>
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>Sem notificações por ler.</p>
               </div>
             ) : (
-              visibleNotifications.map(n => {
-                const isPayNotif = PAY_KEYWORDS.test(`${n.title} ${n.message}`);
-                const isRead = !!n.is_read;
-                return (
-                  <div
-                    key={n.id}
-                    onClick={() => handleMarkRead(n)}
-                    className="px-4 py-3 border-b last:border-0 cursor-pointer transition-colors hover:bg-[var(--surface-2)]"
-                    style={{
-                      borderBottom: "1px solid var(--border)",
-                      borderLeft: "3px solid #E53535",
-                      opacity: 1,
-                    }}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs mb-0.5" style={{ color: "var(--text)", fontWeight: isRead ? 500 : 700 }}>
-                          {n.title}
-                        </p>
-                        <p className="text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>{n.message}</p>
-                        <p className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>{formatDate(n.sent_at)}</p>
-                      </div>
-                      {isPayNotif && !isPaidNotification(n) && (
-                        <button
-                          onClick={(e) => handlePayClick(e, n)}
-                          disabled={payLoadingId === n.id}
-                          className="flex-shrink-0 px-2 py-1 rounded-lg text-[10px] font-bold text-white whitespace-nowrap disabled:opacity-60"
-                          style={{ background: "#22c55e" }}
-                        >
-                          {payLoadingId === n.id ? "..." : "Pagar"}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
+              unread.map(n => (
+                <div
+                  key={n.id}
+                  onClick={() => handleMarkRead(n)}
+                  className="px-4 py-3 border-b last:border-0 cursor-pointer transition-colors hover:bg-[var(--surface-2)]"
+                  style={{ borderBottom: "1px solid var(--border)", borderLeft: "3px solid var(--primary)" }}
+                >
+                  <p className="text-xs font-bold mb-0.5" style={{ color: "var(--text)" }}>{n.title}</p>
+                  <p className="text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>{n.message}</p>
+                  <p className="text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>{formatDate(n.sent_at)}</p>
+                </div>
+              ))
             )}
           </div>
         </div>
-      )}
-
-      {payInfo && (
-        <PaymentModal
-          onClose={() => setPayInfo(null)}
-          unpaidInvoices={payInfo.unpaidInvoices}
-          customerId={user?.id}
-          onPaid={() => {
-            handleMarkRead(payInfo.notif);
-            setHiddenNotificationIds((prev) => new Set(prev).add(payInfo.notif.id));
-            setPayInfo(null);
-            loadNotifs();
-          }}
-        />
       )}
     </div>
   );
@@ -340,12 +226,12 @@ export function Header() {
           className="flex flex-col leading-tight select-none flex-shrink-0"
           aria-label="Início — SmartBistro IA"
         >
-          <span
-            className="font-spartan text-lg sm:text-xl font-bold tracking-wide uppercase"
+          <h1
+            className="font-spartan text-lg sm:text-xl font-bold tracking-wide uppercase m-0 leading-none"
             style={{ color: "var(--text)" }}
           >
             SmartBistro<span style={{ color: "var(--primary)" }}>IA</span>
-          </span>
+          </h1>
           <span
             className="text-[9px] sm:text-[10px] md:text-[11px] block"
             style={{ color: "var(--text-muted)" }}
@@ -354,7 +240,7 @@ export function Header() {
           </span>
         </Link>
 
-        {/* Desktop nav — só para admin/manager */}
+        {/* Desktop nav — admin/manager */}
         {user?.role_id === 1 && (
           <nav className="hidden md:flex items-center gap-1" aria-label="Navegação principal">
             {navLinks.map(({ to, label, exact }) => {
@@ -366,6 +252,30 @@ export function Header() {
                   className={`nav-link px-3 py-1.5 rounded-md text-sm font-semibold uppercase tracking-widest${active ? " active" : ""}`}
                   aria-current={active ? "page" : undefined}
                 >
+                  {label}
+                </Link>
+              );
+            })}
+          </nav>
+        )}
+
+        {/* Desktop nav — cliente */}
+        {user && user.role_id !== 1 && (
+          <nav className="hidden md:flex items-center gap-1" aria-label="Navegação cliente">
+            {customerNavLinks.map(({ to, label, icon, exact }) => {
+              const active = isActive(pathname, to, exact);
+              return (
+                <Link
+                  key={to}
+                  to={to}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-semibold transition-colors"
+                  style={{
+                    color: active ? "var(--primary)" : "var(--text-secondary)",
+                    background: active ? "var(--surface-2)" : "transparent",
+                  }}
+                  aria-current={active ? "page" : undefined}
+                >
+                  <i className={`fa-solid ${icon} text-xs`} />
                   {label}
                 </Link>
               );

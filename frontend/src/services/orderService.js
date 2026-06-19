@@ -12,4 +12,5 @@ export const orderService = {
   remove:           (id)            => api.delete(`/orders/${id}`),
   runPipeline:      (data)          => api.post('/orders/pipeline', data),
   chefStart:        (id)            => api.post(`/orders/${id}/chef-start`),
+  autoAdvance:      ()              => api.post('/orders/auto-advance', {}),
 };

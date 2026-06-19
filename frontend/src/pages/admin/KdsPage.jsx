@@ -287,10 +287,8 @@ export default function KdsPage() {
     }
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
-
-  /* Auto-refresh a cada 30 s */
   useEffect(() => {
+    loadData();
     const id = setInterval(loadData, 30_000);
     return () => clearInterval(id);
   }, [loadData]);
@@ -369,79 +367,9 @@ export default function KdsPage() {
     [ordersWithDetails],
   );
 
-  /* ── Auto-avanço e auto-remoção quando o timer esgota ── */
-  useEffect(() => {
-    const toAdvance = [];  // avançar para próximo status
-    const toRemove  = [];  // remover do kanban (Delivered após 30s)
-
-    orders.forEach(o => {
-      // Pending → Chef AI trata (não usar timer)
-      if (o.order_status === 'Pending') return;
-
-      // In Preparation → usa estimated_seconds do Chef (máx 120s), senão default
-      let tTarget;
-      if (o.order_status === 'In Preparation') {
-        const estimatedSecs = _estimatedSecsMap.get(o.id);
-        tTarget = estimatedSecs != null
-          ? Math.min(estimatedSecs, 120)
-          : KDS_STATUS_TARGET_S['In Preparation'];
-      } else {
-        tTarget = KDS_STATUS_TARGET_S[o.order_status];
-      }
-
-      if (!tTarget || autoAdvancingRef.current.has(o.id)) return;
-      const elapsed = Math.floor((now - (firstSeenAt.current.get(o.id) ?? now)) / 1000);
-      if (elapsed < tTarget) return;
-
-      if (o.order_status === "Delivered") {
-        toRemove.push(o);
-      } else if (KDS_NEXT_STATUS[o.order_status]) {
-        // Takeaway em "Ready" aguarda pagamento — não avança automaticamente
-        if (o.order_status === "Ready" && o.service_type === "Takeaway") return;
-        toAdvance.push({ ...o, nextStatus: KDS_NEXT_STATUS[o.order_status] });
-      }
-    });
-
-    if (toAdvance.length === 0 && toRemove.length === 0) return;
-
-    // Marca todos para evitar re-trigger
-    [...toAdvance, ...toRemove].forEach(o => autoAdvancingRef.current.add(o.id));
-
-    const ts = Date.now();
-
-    /* ── Avanços de status ── */
-    if (toAdvance.length > 0) {
-      toAdvance.forEach(o => statusOverridesRef.current.set(o.id, o.nextStatus));
-
-      setOrders(prev => prev.map(o => {
-        const adv = toAdvance.find(a => a.id === o.id);
-        return adv ? { ...o, order_status: adv.nextStatus, updated_at: new Date(ts).toISOString() } : o;
-      }));
-      toAdvance.forEach(o => firstSeenAt.current.set(o.id, ts));
-      toAdvance.forEach(order => {
-        const evtType = KDS_STATUS_TO_EVENT[order.nextStatus];
-        if (evtType) setActivityLog(prev => [makeKdsEvent(evtType, order), ...prev].slice(0, 100));
-      });
-
-      triggerOrdersRefresh();
-
-      toAdvance.forEach(order => {
-        orderService.updateStatus(order.id, order.nextStatus)
-          .catch(err => console.error("auto-advance:", order.id, "→", order.nextStatus, err))
-          .finally(() => autoAdvancingRef.current.delete(order.id));
-      });
-    }
-
-    /* ── Remoções do kanban (Delivered → oculto, não apagado da DB) ── */
-    if (toRemove.length > 0) {
-      toRemove.forEach(o => {
-        hiddenFromKanban.current.add(o.id);
-        statusOverridesRef.current.delete(o.id);
-        autoAdvancingRef.current.delete(o.id);
-      });
-      setOrders(prev => prev.filter(o => !hiddenFromKanban.current.has(o.id)));
-    }
-  }, [now, orders]); // firstSeenAt é ref de módulo, não precisa de dep
+  // Auto-avanço removido do KDS — é gerido pelo backend (/orders/auto-advance)
+  // O KDS é apenas ferramenta de monitorização; os estados avançam automaticamente
+  // via OrderAutoAdvance em App.jsx (corre para qualquer utilizador autenticado).
 
   return (
     <PageSection>
@@ -452,19 +380,11 @@ export default function KdsPage() {
         {/* Card título */}
         <div className="rounded-[32px] bg-surface px-6 py-4 shadow-sm flex items-center justify-between w-full md:flex-1">
           <div>
-            <h1 className="text-xl font-semibold">KDS — Cozinha</h1>
+            <h2 className="text-xl font-semibold">KDS — Cozinha</h2>
             <p className="mt-0.5 text-sm" style={{ color: "var(--text-secondary)" }}>
-              Pedidos em produção · auto-refresh 30 s · <span style={{ color: "var(--primary)" }}>🤖 Bot Chef IA</span>
+              Pedidos em produção · <span style={{ color: "var(--primary)" }}>🤖 Bot Chef IA</span>
             </p>
           </div>
-          <button
-            onClick={loadData}
-            title="Atualizar agora"
-            className="w-9 h-9 inline-flex items-center justify-center rounded-xl border border-[var(--border)] transition-colors"
-            style={{ color: "var(--text-secondary)", background: "var(--surface-2)" }}
-          >
-            <i className={`fa-solid fa-rotate-right text-sm${loading ? " fa-spin" : ""}`} />
-          </button>
         </div>
 
         {/* Card actividade */}

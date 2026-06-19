@@ -1,6 +1,5 @@
 import { useState } from "react";
 import Modal from "./Modal.jsx";
-import { orderService }   from "@/services/orderService";
 import { paymentService } from "@/services/paymentService";
 import { PAYMENT_METHODS } from "@/utils";
 
@@ -17,25 +16,18 @@ export function PaymentModal({ onClose, unpaidInvoices, onPaid, customerId }) {
     setError("");
     setLoading(true);
     try {
-      // Cria um pagamento por fatura + marca cada pedido como Entregue
       await Promise.all(
-        unpaidInvoices.map(({ inv, orderId }) =>
+        unpaidInvoices.map(({ inv }) =>
           paymentService.create({
             invoice_id:     inv.id,
             customer_id:    customerId ?? null,
             amount:         Number(inv.total_amount),
             payment_method: method,
             payment_status: "Completed",
-          })
-          .catch(err => {
-            // 409 = já existe pagamento para esta fatura — ignora e avança pedido
+          }).catch(err => {
+            // 409 = pagamento já existe para esta fatura
             if (!err?.message?.includes('409')) throw err;
           })
-          .then(() =>
-            orderId
-              ? orderService.updateStatus(orderId, "Delivered").catch(() => {})
-              : Promise.resolve()
-          )
         )
       );
       setSuccess(true);
@@ -53,7 +45,7 @@ export function PaymentModal({ onClose, unpaidInvoices, onPaid, customerId }) {
         <div className="text-center py-6">
           <i className="fa-solid fa-circle-check text-4xl mb-3" style={{ color: "#22c55e" }} />
           <p className="font-semibold text-sm" style={{ color: "var(--text)" }}>Pagamento registado!</p>
-          <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>Os teus pedidos foram marcados como entregues.</p>
+          <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>Pagamento confirmado! O teu pedido vai para preparação.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-4">

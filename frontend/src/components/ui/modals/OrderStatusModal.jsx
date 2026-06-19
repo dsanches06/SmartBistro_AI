@@ -20,24 +20,52 @@ export default function OrderStatusModal({ order, onClose }) {
       </div>
 
       <div className="rounded-3xl bg-[var(--surface)] p-6">
-        <div className="relative flex items-center justify-between gap-3">
-          {orderSteps.map((step, index) => {
-            const completed = index < currentStep;
-            const active = index === currentStep;
-            return (
-              <div key={step.key} className="flex-1">
-                <div className="relative flex items-center justify-center">
-                  <div className={`h-10 w-10 rounded-full border flex items-center justify-center ${completed || active ? "bg-[var(--primary)] border-[var(--primary)] text-white" : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-muted)]"}`}>
-                    {(completed || active) ? <span className="text-xs font-bold">✓</span> : <span className="text-sm font-semibold">{index + 1}</span>}
+        <div className="relative">
+          {/* Linha de fundo */}
+          <div className="absolute h-[2px] top-5 left-5 right-5" style={{ background: "var(--border)" }} />
+          {/* Linha de progresso */}
+          <div
+            className="absolute h-[2px] top-5 left-5 transition-all duration-500"
+            style={{
+              background: "var(--primary)",
+              width: orderSteps.length > 1
+                ? `calc(${(Math.min(currentStep, orderSteps.length - 1) / (orderSteps.length - 1)) * 100}% - 0px)`
+                : "0%",
+            }}
+          />
+          <div className="relative flex justify-between">
+            {orderSteps.map((step, index) => {
+              const completed = index < currentStep;
+              const active = index === currentStep;
+              const filled = completed || active;
+              return (
+                <div key={step.key} className="flex flex-col items-center gap-2">
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center z-10 transition-colors duration-300"
+                    style={{
+                      background: filled ? "var(--primary)" : "var(--surface)",
+                      border: `2px solid ${filled ? "var(--primary)" : "var(--border)"}`,
+                    }}
+                  >
+                    {completed ? (
+                      <i className="fa-solid fa-check text-white text-xs" />
+                    ) : (
+                      <i
+                        className={`fa-solid ${step.icon ?? "fa-circle"} text-xs`}
+                        style={{ color: active ? "#fff" : "var(--text-muted)" }}
+                      />
+                    )}
                   </div>
-                  {index < orderSteps.length - 1 && (
-                    <div className={`absolute right-[-50%] top-1/2 h-[2px] w-full ${index < currentStep ? "bg-[var(--primary)]" : "bg-[var(--border)]"}`} style={{ transform: "translateY(-50%)" }} />
-                  )}
+                  <p
+                    className="text-[11px] text-center leading-tight"
+                    style={{ color: active ? "var(--text)" : "var(--text-muted)", fontWeight: active ? 600 : 400 }}
+                  >
+                    {step.label}
+                  </p>
                 </div>
-                <p className={`mt-3 text-[11px] text-center ${active ? "text-[var(--text)] font-semibold" : "text-[var(--text-muted)]"}`}>{step.label}</p>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
     </Modal>

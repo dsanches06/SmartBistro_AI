@@ -48,12 +48,12 @@ export default function DashboardPage() {
   const [ordersPage, setOrdersPage] = useState(1);
   const [alertsPage, setAlertsPage] = useState(1);
 
-  const { data: orders      = [] } = useQuery({ queryKey: ["orders"],      queryFn: orderService.getAll });
-  const { data: tables      = [] } = useQuery({ queryKey: ["tables"],      queryFn: tableService.getAll });
-  const { data: invoices    = [] } = useQuery({ queryKey: ["invoices"],    queryFn: invoiceService.getAll });
-  const { data: payments    = [] } = useQuery({ queryKey: ["payments"],    queryFn: paymentService.getAll });
-  const { data: stockList   = [] } = useQuery({ queryKey: ["stock"],       queryFn: stockService.getAll });
-  const { data: ingredients = [] } = useQuery({ queryKey: ["ingredients"], queryFn: ingredientService.getAll });
+  const { data: orders      = [] } = useQuery({ queryKey: ["orders"],      queryFn: orderService.getAll,      refetchInterval: 30_000 });
+  const { data: tables      = [] } = useQuery({ queryKey: ["tables"],      queryFn: tableService.getAll,      refetchInterval: 30_000 });
+  const { data: invoices    = [] } = useQuery({ queryKey: ["invoices"],    queryFn: invoiceService.getAll,    refetchInterval: 30_000 });
+  const { data: payments    = [] } = useQuery({ queryKey: ["payments"],    queryFn: paymentService.getAll,    refetchInterval: 30_000 });
+  const { data: stockList   = [] } = useQuery({ queryKey: ["stock"],       queryFn: stockService.getAll,      refetchInterval: 30_000 });
+  const { data: ingredients = [] } = useQuery({ queryKey: ["ingredients"], queryFn: ingredientService.getAll, refetchInterval: 30_000 });
 
   // ── KPI data ────────────────────────────────────────────────────────────────
   const todayOrders     = useMemo(() => orders.filter(o => isToday(o.created_at)),     [orders]);
@@ -146,6 +146,13 @@ export default function DashboardPage() {
     plugins: { legend: { display: false } },
     cutout: "65%",
   }), []);
+
+  // ── invoice map por order_id ────────────────────────────────────────────────
+  const invoiceMap = useMemo(() => {
+    const m = {};
+    invoices.forEach(inv => { if (inv.order_id) m[inv.order_id] = inv; });
+    return m;
+  }, [invoices]);
 
   // ── paginated orders ────────────────────────────────────────────────────────
   const sortedOrders = useMemo(() =>
@@ -307,7 +314,7 @@ export default function DashboardPage() {
                         <StatusBadge status={order.order_status} />
                       </td>
                       <td className="py-2.5 pr-3 text-xs font-semibold" style={{ color: "var(--text)" }}>
-                        {formatOrderValue(order.total_amount)}
+                        {invoiceMap[order.id]?.total_amount ? formatOrderValue(invoiceMap[order.id].total_amount) : "—"}
                       </td>
                       <td className="py-2.5 text-xs hidden sm:table-cell" style={{ color: "var(--text-muted)" }}>
                         {formatTime(order.created_at)}

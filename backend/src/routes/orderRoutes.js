@@ -6,6 +6,7 @@ const router = Router();
 
 router.post("/pipeline", orderPipelineController.processOrderPipeline);
 
+router.post("/auto-advance",        orderController.autoAdvance);
 router.get("/",                    orderController.getAll);
 router.get("/pending",             orderController.getPending);
 router.get("/customer/:customerId",orderController.getByCustomerId);
