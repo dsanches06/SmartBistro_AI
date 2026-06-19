@@ -2,14 +2,14 @@ import { db } from "../db.js";
 
 const BASE_SELECT = `
   SELECT r.*,
-         c.name  AS customer_name,
-         c.phone AS customer_phone,
+         u.name  AS user_name,
+         u.phone AS user_phone,
          t.table_number,
          t.capacity,
          t.status AS table_status
   FROM reservations r
-  LEFT JOIN customers c ON c.id = r.customer_id
-  LEFT JOIN tables    t ON t.id = r.table_id
+  LEFT JOIN users u ON u.id = r.user_id
+  LEFT JOIN tables t ON t.id = r.table_id
 `;
 
 export const getAllReservations = async (status) => {
@@ -31,7 +31,7 @@ export const getReservationById = async (id) => {
 
 export const getReservationsByCustomerId = async (customerId) => {
   const [rows] = await db.query(
-    BASE_SELECT + " WHERE r.customer_id = ? ORDER BY r.reservation_date DESC",
+    BASE_SELECT + " WHERE r.user_id = ? ORDER BY r.reservation_date DESC",
     [customerId],
   );
   return rows;
@@ -40,7 +40,7 @@ export const getReservationsByCustomerId = async (customerId) => {
 export const getActiveReservationByCustomerId = async (customerId) => {
   const [rows] = await db.query(
     BASE_SELECT +
-      " WHERE r.customer_id = ? AND r.status IN ('Pending','Confirmed')" +
+      " WHERE r.user_id = ? AND r.status IN ('Pending','Confirmed')" +
       " ORDER BY r.reservation_date ASC LIMIT 1",
     [customerId],
   );
@@ -58,10 +58,10 @@ export const getReservationsByTableId = async (tableId) => {
 export const createReservation = async (data) => {
   const [result] = await db.query(
     `INSERT INTO reservations
-       (customer_id, table_id, reservation_date, party_size, status, phone, notes)
+       (user_id, table_id, reservation_date, party_size, status, phone, notes)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
-      data.customer_id ?? null,
+      data.user_id ?? null,
       data.table_id ?? null,
       data.reservation_date,
       data.party_size ?? 1,

@@ -16,7 +16,7 @@ export const getNotificationById = async (id) => {
 // Devolve as notificações de um cliente, ordenadas das mais recentes
 export const getNotificationsByUser = async (customerId) => {
   const [r] = await db.query(
-    "SELECT * FROM notification WHERE customer_id = ? ORDER BY sent_at DESC",
+    "SELECT * FROM notification WHERE user_id = ? ORDER BY sent_at DESC",
     [customerId],
   );
   return r.map(mapNotificationDTOResponse);
@@ -25,7 +25,7 @@ export const getNotificationsByUser = async (customerId) => {
 // Devolve apenas as notificações não lidas de um cliente
 export const getUnreadNotifications = async (customerId) => {
   const [r] = await db.query(
-    "SELECT * FROM notification WHERE customer_id = ? AND is_read = FALSE ORDER BY sent_at DESC",
+    "SELECT * FROM notification WHERE user_id = ? AND is_read = FALSE ORDER BY sent_at DESC",
     [customerId],
   );
   return r.map(mapNotificationDTOResponse);
@@ -35,8 +35,8 @@ export const getUnreadNotifications = async (customerId) => {
 export const createNotification = async (data) => {
   const now = new Date(); // Timestamp de envio
   const [result] = await db.query(
-    "INSERT INTO notification (customer_id, title, message, sent_at) VALUES (?, ?, ?, ?)",
-    [data.customer_id, data.title || "Notificação", data.message, now],
+    "INSERT INTO notification (user_id, title, message, sent_at) VALUES (?, ?, ?, ?)",
+    [data.user_id, data.title || "Notificação", data.message, now],
   );
   return mapNotificationDTOResponse({
     id: result.insertId,

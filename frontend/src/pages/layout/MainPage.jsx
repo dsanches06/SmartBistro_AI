@@ -398,21 +398,21 @@ export default function MainPage() {
               <button
                 onClick={() => setShowLogin(true)}
                 title="Entrar"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:border-[var(--primary)] hover:text-[var(--primary)]"
                 style={headerBtnStyle}
               >
                 <IconLogin />
-                <span className="hidden sm:inline">Entrar</span>
+                <span>Entrar</span>
               </button>
 
               <button
                 onClick={() => setShowRegister(true)}
                 title="Registar"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
                 style={{ background: "var(--primary)", color: "#fff", border: "1.5px solid var(--primary)" }}
               >
                 <IconRegister />
-                <span className="hidden sm:inline">Registar</span>
+                <span>Registar</span>
               </button>
             </>
           )}
@@ -813,22 +813,30 @@ export default function MainPage() {
                 })}
               </div>
             ) : (
-              <>
+              <div className="grid grid-cols-2 gap-2 w-full pt-4">
                 <button
                   onClick={() => { setNavOpen(false); setShowLogin(true); }}
-                  className="flex flex-col items-center gap-1"
+                  className="group flex flex-col items-center justify-center gap-1 rounded-2xl py-3 min-h-[5rem] text-[10px] font-semibold uppercase text-center select-none transition-colors duration-200 text-[var(--text-muted)] hover:text-[var(--primary)]"
+                  style={{
+                    background: "var(--surface)",
+                    border: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.12)"}`,
+                  }}
                 >
-                  <i className="fa-solid fa-right-to-bracket text-xl" style={{ color: "var(--text-secondary)" }} />
-                  <span className="text-[11px] font-semibold" style={{ color: "var(--text)" }}>Entrar</span>
+                  <i className="fa-solid fa-right-to-bracket text-2xl transition-transform duration-200 group-hover:scale-110" />
+                  <span className="leading-none">Entrar</span>
                 </button>
                 <button
                   onClick={() => { setNavOpen(false); setShowRegister(true); }}
-                  className="flex flex-col items-center gap-1"
+                  className="group flex flex-col items-center justify-center gap-1 rounded-2xl py-3 min-h-[5rem] text-[10px] font-semibold uppercase text-center select-none transition-colors duration-200 text-[var(--text-muted)] hover:text-[var(--primary)]"
+                  style={{
+                    background: "var(--surface)",
+                    border: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.12)"}`,
+                  }}
                 >
-                  <i className="fa-solid fa-user-plus text-xl" style={{ color: "var(--text-secondary)" }} />
-                  <span className="text-[11px] font-semibold" style={{ color: "var(--text)" }}>Registar</span>
+                  <i className="fa-solid fa-user-plus text-2xl transition-transform duration-200 group-hover:scale-110" />
+                  <span className="leading-none">Registar</span>
                 </button>
-              </>
+              </div>
             )}
           </nav>
         )}

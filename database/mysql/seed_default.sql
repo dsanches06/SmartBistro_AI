@@ -1,10 +1,10 @@
 -- =========================================================================
 -- SEED DEFAULT — SmartBistro AI
--- Dados de arranque sem clientes, utilizadores nem atividade operacional.
+-- Dados de arranque sem utilizadores regulares nem atividade operacional.
 -- Mesas todas livres (Available), sem reservas nem pedidos.
 -- Executar DEPOIS de schema.sql.
 --
--- Inclui:  roles · customers (admin/manager, sem credenciais) · tables
+-- Inclui:  roles · users (admin/manager) · staff · auth_accounts · tables
 --          ingredients · stock · items · recipe_items
 -- Exclui:  conversations · chat_history
 --          notification · reservations · orders · order_items
@@ -17,23 +17,31 @@ USE smartbistro;
 -- 1. ROLES
 -- =========================================================================
 INSERT INTO roles (name, flow_order) VALUES
-('ADMIN', 1),
+('STAFF', 1),
 ('USER',  2),
 ('MODEL', 3);
 
 -- =========================================================================
--- 2. UTILIZADORES BASE (com credenciais de acesso)
+-- 2. UTILIZADORES BASE (Admin e Manager)
 -- =========================================================================
-INSERT INTO customers (name, email, active, role_id) VALUES
+INSERT INTO users (name, email, active, role_id) VALUES
 ('Admin SmartBistro',   'admin@smartbistro.pt',   TRUE, 1),
 ('Manager SmartBistro', 'manager@smartbistro.pt', TRUE, 1);
 
-INSERT INTO auth_accounts (customer_id, username, password_hash) VALUES
+-- =========================================================================
+-- 3. STAFF (Admin e Manager são funcionários)
+-- =========================================================================
+INSERT INTO staff (user_id) VALUES (1), (2);
+
+-- =========================================================================
+-- 4. AUTH ACCOUNTS (admin→admin123 | manager→manager123)
+-- =========================================================================
+INSERT INTO auth_accounts (user_id, username, password_hash) VALUES
 (1, 'admin',   '$2b$10$e6BP1FypTH1HoEdcGkFvSONNRq7NVHbMvHGsS6pCPnTRKy1325Kyq'),
 (2, 'manager', '$2b$10$8xnntok3EVYFLuse1MYds.klcWYqzZLXijT1S1r9/CdNvUkWZbgju');
 
 -- =========================================================================
--- 4. MESAS — todas disponíveis, sem ocupação nem reserva
+-- 5. MESAS — todas disponíveis, sem ocupação nem reserva
 -- =========================================================================
 INSERT INTO tables (table_number, capacity, status) VALUES
 ('T01',  2, 'Available'),
@@ -62,7 +70,7 @@ INSERT INTO tables (table_number, capacity, status) VALUES
 ('T24',  8, 'Available');
 
 -- =========================================================================
--- 5. INGREDIENTES
+-- 6. INGREDIENTES
 -- =========================================================================
 INSERT INTO ingredients (name, measurement_unit) VALUES
 ('Long Italian Pasta',  'kg'),
@@ -103,7 +111,7 @@ INSERT INTO ingredients (name, measurement_unit) VALUES
 ('Sumol',               'L');
 
 -- =========================================================================
--- 6. STOCK
+-- 7. STOCK
 -- =========================================================================
 INSERT INTO stock (ingredient_id, available_quantity, unit_cost) VALUES
 ( 1, 20.00,  1.5000), ( 2, 15.00,  7.5000), ( 3, 50.00,  0.4000),
@@ -118,7 +126,7 @@ INSERT INTO stock (ingredient_id, available_quantity, unit_cost) VALUES
 (33,  5.00, 15.0000), (34, 10.00,  2.0000), (35, 40.00,  0.8000), (36, 30.00,  0.7000);
 
 -- =========================================================================
--- 7. ITENS DO MENU
+-- 8. ITENS DO MENU
 -- =========================================================================
 INSERT INTO items (name, category, price) VALUES
 ('Esparguete Bolonhesa', 'Main Course', 12.50),
@@ -151,7 +159,7 @@ INSERT INTO items (name, category, price) VALUES
 ('Pão',                  'Appetizer',    2.50);
 
 -- =========================================================================
--- 8. FICHAS TÉCNICAS (receitas)
+-- 9. FICHAS TÉCNICAS (receitas)
 -- =========================================================================
 INSERT INTO recipe_items (item_id, ingredient_id, required_quantity) VALUES
 (1,  1, 0.12), (1,  2, 0.15),

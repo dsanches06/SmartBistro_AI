@@ -22,11 +22,11 @@ const normalizeOrderStatus = (orderStatus) => {
   return "Pending";
 };
 
-// Base SELECT com JOIN para incluir o nome do cliente
+// Base SELECT com JOIN para incluir o nome do utilizador
 const SELECT_ORDERS = `
-  SELECT o.*, c.name AS customer_name
+  SELECT o.*, u.name AS user_name
   FROM orders o
-  LEFT JOIN customers c ON c.id = o.customer_id
+  LEFT JOIN users u ON u.id = o.user_id
 `;
 
 // Devolve todos os pedidos com filtro opcional de status / service_type
@@ -51,7 +51,7 @@ export const getOrderById = async (id) => {
 // Devolve todos os pedidos de um cliente
 export const getOrdersByCustomerId = async (customerId) => {
   const [r] = await db.query(
-    SELECT_ORDERS + " WHERE o.customer_id = ? ORDER BY o.created_at DESC",
+    SELECT_ORDERS + " WHERE o.user_id = ? ORDER BY o.created_at DESC",
     [customerId],
   );
   return r.map(mapOrderDTOResponse);
@@ -70,10 +70,10 @@ export const createOrder = async (data) => {
   const orderStatus = normalizeOrderStatus(data.order_status ?? "Pending");
   const [result] = await db.query(
     `INSERT INTO orders
-      (customer_id, table_id, service_type, allergy_restrictions, kitchen_sequence_json, order_status)
+      (user_id, table_id, service_type, allergy_restrictions, kitchen_sequence_json, order_status)
      VALUES (?, ?, ?, ?, ?, ?)`,
     [
-      data.customer_id ?? null,
+      data.user_id ?? null,
       data.table_id ?? null,
       data.service_type,
       data.allergy_restrictions ?? null,
@@ -83,8 +83,8 @@ export const createOrder = async (data) => {
   );
   return mapOrderDTOResponse({
     id: result.insertId,
-    customer_id: data.customer_id ?? null,
-    customer_name: data.customer_name ?? null,
+    user_id: data.user_id ?? null,
+    user_name: data.user_name ?? null,
     table_id: data.table_id ?? null,
     service_type: data.service_type,
     allergy_restrictions: data.allergy_restrictions ?? null,

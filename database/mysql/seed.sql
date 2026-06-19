@@ -10,20 +10,20 @@ USE smartbistro;
 -- 1. ROLES
 -- =========================================================================
 INSERT INTO roles (name, flow_order) VALUES
-('ADMIN', 1),
+('STAFF', 1),
 ('USER',  2),
 ('MODEL', 3);
 
 -- =========================================================================
--- 2. CLIENTES
+-- 2. UTILIZADORES
 -- =========================================================================
 -- Admin e Manager (role_id=1)
-INSERT INTO customers (name, email, phone, active, role_id) VALUES
+INSERT INTO users (name, email, phone, active, role_id) VALUES
 ('Admin SmartBistro',   'admin@smartbistro.pt',   NULL,        TRUE, 1),
 ('Manager SmartBistro', 'manager@smartbistro.pt', '555-0100',  TRUE, 1);
 
--- Clientes regulares (active=TRUE explícito — schema tem DEFAULT FALSE)
-INSERT INTO customers (name, phone, active) VALUES
+-- Utilizadores regulares (role_id=2 via DEFAULT)
+INSERT INTO users (name, phone, active) VALUES
 ('Hugo Neto',        '555-0108', TRUE),  -- id=3
 ('Ana Silva',        '555-0101', TRUE),  -- id=4
 ('Joana Luz',        '555-0110', TRUE),  -- id=5
@@ -42,7 +42,7 @@ INSERT INTO customers (name, phone, active) VALUES
 ('Joana Martins',    '555-0116', TRUE),  -- id=18
 ('Danilson Sanches', '555-0120', TRUE),  -- id=19
 ('Abel Pinto',       '555-0155', TRUE),  -- id=20
--- Clientes sem mesa nem pedido (disponíveis para atribuição/reserva)
+-- Utilizadores sem mesa nem pedido (disponíveis para atribuição/reserva)
 ('Ricardo Fonseca',  '555-0130', TRUE),  -- id=21
 ('Sofia Mendes',     '555-0131', TRUE),  -- id=22
 ('Tiago Ferreira',   '555-0132', TRUE),  -- id=23
@@ -51,45 +51,49 @@ INSERT INTO customers (name, phone, active) VALUES
 ('Catarina Lima',    '555-0135', TRUE);  -- id=26
 
 -- =========================================================================
--- 2b. AUTH ACCOUNTS
--- Passwords: admin→admin123 | manager→manager123
+-- 3. STAFF (Admin e Manager são funcionários)
 -- =========================================================================
-INSERT INTO auth_accounts (customer_id, username, password_hash) VALUES
+INSERT INTO staff (user_id) VALUES (1), (2);
+
+-- =========================================================================
+-- 4. AUTH ACCOUNTS (admin→admin123 | manager→manager123)
+-- =========================================================================
+INSERT INTO auth_accounts (user_id, username, password_hash) VALUES
 (1, 'admin',   '$2b$10$e6BP1FypTH1HoEdcGkFvSONNRq7NVHbMvHGsS6pCPnTRKy1325Kyq'),
 (2, 'manager', '$2b$10$8xnntok3EVYFLuse1MYds.klcWYqzZLXijT1S1r9/CdNvUkWZbgju');
 
 -- =========================================================================
--- 3. MESAS
+-- 5. MESAS
 -- Occupied → pedido activo  |  Reserved → reserva futura  |  Available → livre
 -- =========================================================================
 INSERT INTO tables (table_number, capacity, status) VALUES
-('T01',  2, 'Available'),   -- id=1
-('T02',  4, 'Available'),   -- id=2
-('T03',  4, 'Occupied'),    -- id=3   pedido #5
-('T04',  4, 'Reserved'),    -- id=4   reserva confirmada esta noite
-('T05',  6, 'Occupied'),    -- id=5   pedido #9
-('T06',  6, 'Occupied'),    -- id=6   pedido #14
-('T07',  8, 'Occupied'),    -- id=7   pedido #6
-('T08',  8, 'Available'),   -- id=8
-('T09',  2, 'Available'),   -- id=9
-('T10', 10, 'Available'),   -- id=10
-('T11',  2, 'Reserved'),    -- id=11  reserva confirmada esta noite
-('T12',  4, 'Occupied'),    -- id=12  pedidos #3 e #8
-('T13',  4, 'Occupied'),    -- id=13  pedido #15
-('T14',  6, 'Reserved'),    -- id=14  reserva confirmada esta noite
-('T15',  8, 'Available'),   -- id=15
-('T16',  2, 'Available'),   -- id=16
-('T17',  4, 'Occupied'),    -- id=17  pedido #10
-('T18',  4, 'Available'),   -- id=18
-('T19',  6, 'Available'),   -- id=19  reserva futura confirmada (+5 dias)
-('T20', 10, 'Available'),   -- id=20
-('T21',  4, 'Occupied'),    -- id=21  pedido #12
-('T22',  4, 'Occupied'),    -- id=22  pedido #11
-('T23',  6, 'Occupied'),    -- id=23  pedido #13
-('T24',  8, 'Available');   -- id=24
+('T01',  2, 'Available'),
+('T02',  4, 'Available'),
+('T03',  4, 'Occupied'),
+('T04',  4, 'Reserved'),
+('T05',  6, 'Occupied'),
+('T06',  6, 'Occupied'),
+('T07',  8, 'Occupied'),
+('T08',  8, 'Available'),
+('T09',  2, 'Available'),
+('T10', 10, 'Available'),
+('T11',  2, 'Reserved'),
+('T12',  4, 'Occupied'),
+('T13',  4, 'Occupied'),
+('T14',  6, 'Reserved'),
+('T15',  8, 'Available'),
+('T16',  2, 'Available'),
+('T17',  4, 'Occupied'),
+('T18',  4, 'Available'),
+('T19',  6, 'Available'),
+('T20', 10, 'Available'),
+('T21',  4, 'Occupied'),
+('T22',  4, 'Occupied'),
+('T23',  6, 'Occupied'),
+('T24',  8, 'Available');
 
 -- =========================================================================
--- 4. INGREDIENTES + STOCK
+-- 6. INGREDIENTES + STOCK
 -- =========================================================================
 INSERT INTO ingredients (name, measurement_unit) VALUES
 ('Long Italian Pasta',  'kg'),
@@ -142,7 +146,7 @@ INSERT INTO stock (ingredient_id, available_quantity, unit_cost) VALUES
 (33,  5.00, 15.0000), (34, 10.00,  2.0000), (35, 40.00,  0.8000), (36, 30.00,  0.7000);
 
 -- =========================================================================
--- 5. ITENS DO MENU + FICHAS TÉCNICAS
+-- 7. ITENS DO MENU + FICHAS TÉCNICAS
 -- =========================================================================
 INSERT INTO items (name, category, price) VALUES
 ('Esparguete Bolonhesa', 'Main Course', 12.50),
@@ -199,9 +203,9 @@ INSERT INTO recipe_items (item_id, ingredient_id, required_quantity) VALUES
 (25, 35, 0.33), (26, 36, 0.33), (27, 33, 0.01), (28, 17, 1.00);
 
 -- =========================================================================
--- 6. RESERVAS (datas futuras a partir de hoje)
+-- 8. RESERVAS (datas futuras a partir de hoje)
 -- =========================================================================
-INSERT INTO reservations (customer_id, table_id, reservation_date, party_size, status, phone, notes) VALUES
+INSERT INTO reservations (user_id, table_id, reservation_date, party_size, status, phone, notes) VALUES
 (11, 11, DATE_ADD(CURDATE(), INTERVAL  1 DAY) + INTERVAL 19 HOUR, 2, 'Confirmed', '555-0111', NULL),
 (12,  4, DATE_ADD(CURDATE(), INTERVAL  1 DAY) + INTERVAL 20 HOUR, 4, 'Confirmed', '555-0112', NULL),
 (14, 14, DATE_ADD(CURDATE(), INTERVAL  1 DAY) + INTERVAL 20 HOUR + INTERVAL 30 MINUTE, 5, 'Confirmed', '555-0114', 'Sem glúten'),
@@ -216,120 +220,81 @@ INSERT INTO reservations (customer_id, table_id, reservation_date, party_size, s
 ( 7,  3, DATE_ADD(CURDATE(), INTERVAL -6 DAY) + INTERVAL 19 HOUR, 4, 'Completed', '555-0106', NULL),
 ( 8, 15, DATE_ADD(CURDATE(), INTERVAL -5 DAY) + INTERVAL 20 HOUR, 6, 'Completed', '555-0105', NULL),
 ( 9,  4, DATE_ADD(CURDATE(), INTERVAL -4 DAY) + INTERVAL 19 HOUR, 2, 'Completed', '555-0104', NULL),
-(10,  6, DATE_ADD(CURDATE(), INTERVAL -8 DAY) + INTERVAL 20 HOUR, 5, 'Cancelled', '555-0107', 'Cancelado pelo cliente');
+(10,  6, DATE_ADD(CURDATE(), INTERVAL -8 DAY) + INTERVAL 20 HOUR, 5, 'Cancelled', '555-0107', 'Cancelado pelo utilizador');
 
 -- =========================================================================
--- 7. PEDIDOS (KDS)
---
--- Estados para demo com Chef AI:
---   Delivered      → histórico (pago, concluído)           — 90-120 min atrás
---   Ready          → preparado, aguarda entrega do Maître  — 25-35 min atrás
---   In Preparation → Chef a preparar (updated_at = NOW())  — 10-20 min atrás (criado); timer KDS usa updated_at
---   Pending        → Chef AI processa ao abrir KDS         — 2-5 min atrás
---
--- NOTA: updated_at é auto-set a NOW() no INSERT (ON UPDATE CURRENT_TIMESTAMP),
---       por isso os pedidos "In Preparation" mostram o countdown correcto no KDS.
+-- 9. PEDIDOS (KDS)
 -- =========================================================================
-INSERT INTO orders (customer_id, table_id, service_type, allergy_restrictions, kitchen_sequence_json, order_status, created_at) VALUES
--- ── DELIVERED (histórico, pago) ──────────────────────────────────────────
-(16,  9, 'Table',    NULL, '["Grilled Salmon","Legumes Salteados","Sparkling Water"]',                        'Delivered',      NOW() - INTERVAL 110 MINUTE), -- #1  T09
-(15,  2, 'Table',    NULL, '["Frango Assado","Craft Beer"]',                                                 'Delivered',      NOW() - INTERVAL 95 MINUTE),  -- #2  T02
-
--- ── READY (preparado, aguarda Maître) ────────────────────────────────────
-(14, 12, 'Table',    NULL, '["Bruschetta","Sumol","Esparguete Bolonhesa","Caesar Salad","Chocolate Mousse"]', 'Ready',          NOW() - INTERVAL 35 MINUTE),  -- #3  T12
-(13, NULL,'Takeaway',NULL, '["Hamburguer Gourmet","Batatas Fritas","Sparkling Water"]',                       'Ready',          NOW() - INTERVAL 28 MINUTE),  -- #4  Takeaway
-(12,  3, 'Table',    NULL, '["Bruschetta","Sumol"]',                                                         'Ready',          NOW() - INTERVAL 25 MINUTE),  -- #5  T03
-
--- ── PENDING (Chef AI processa ao abrir o KDS) ────────────────────────────
-(11,  7, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL 5 MINUTE),   -- #6  T07
-(12,  3, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL 4 MINUTE),   -- #7  T03
-(14, 12, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL 3 MINUTE),   -- #8  T12
-( 9,  5, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL 3 MINUTE),   -- #9  T05
-
--- ── IN PREPARATION (Chef já processou — countdown no KDS usa updated_at = NOW()) ──
-(20, 17, 'Table',    NULL, '["Esparguete Bolonhesa","Tiramisu"]',                                            'In Preparation', NOW() - INTERVAL 18 MINUTE),  -- #10 T17
-( 3, 22, 'Table',    NULL, '["Chicken Wings","Coca-Cola"]',                                                  'In Preparation', NOW() - INTERVAL 14 MINUTE),  -- #11 T22
-( 4, 21, 'Table',    NULL, '["Creme Soup","Vegetarian Pasta","Cheesecake"]',                                 'In Preparation', NOW() - INTERVAL 12 MINUTE),  -- #12 T21
-( 5, 23, 'Table',    NULL, '["Chicken Parmigiana","Craft Beer","Tiramisu"]',                                 'In Preparation', NOW() - INTERVAL 10 MINUTE),  -- #13 T23
-
--- ── PENDING (Chef AI processa ao abrir o KDS) ────────────────────────────
-( 7,  6, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL 2 MINUTE),   -- #14 T06
-( 8, 13, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL 1 MINUTE);   -- #15 T13
+INSERT INTO orders (user_id, table_id, service_type, allergy_restrictions, kitchen_sequence_json, order_status, created_at) VALUES
+-- DELIVERED (histórico, pago)
+(16,  9, 'Table',    NULL, '["Grilled Salmon","Legumes Salteados","Sparkling Water"]',                        'Delivered',      NOW() - INTERVAL 110 MINUTE),
+(15,  2, 'Table',    NULL, '["Frango Assado","Craft Beer"]',                                                 'Delivered',      NOW() - INTERVAL 95 MINUTE),
+-- READY (preparado, aguarda Maître)
+(14, 12, 'Table',    NULL, '["Bruschetta","Sumol","Esparguete Bolonhesa","Caesar Salad","Chocolate Mousse"]', 'Ready',          NOW() - INTERVAL 35 MINUTE),
+(13, NULL,'Takeaway',NULL, '["Hamburguer Gourmet","Batatas Fritas","Sparkling Water"]',                       'Ready',          NOW() - INTERVAL 28 MINUTE),
+(12,  3, 'Table',    NULL, '["Bruschetta","Sumol"]',                                                         'Ready',          NOW() - INTERVAL 25 MINUTE),
+-- PENDING (Chef AI processa ao abrir o KDS)
+(11,  7, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL 5 MINUTE),
+(12,  3, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL 4 MINUTE),
+(14, 12, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL 3 MINUTE),
+( 9,  5, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL 3 MINUTE),
+-- IN PREPARATION
+(20, 17, 'Table',    NULL, '["Esparguete Bolonhesa","Tiramisu"]',                                            'In Preparation', NOW() - INTERVAL 18 MINUTE),
+( 3, 22, 'Table',    NULL, '["Chicken Wings","Coca-Cola"]',                                                  'In Preparation', NOW() - INTERVAL 14 MINUTE),
+( 4, 21, 'Table',    NULL, '["Creme Soup","Vegetarian Pasta","Cheesecake"]',                                 'In Preparation', NOW() - INTERVAL 12 MINUTE),
+( 5, 23, 'Table',    NULL, '["Chicken Parmigiana","Craft Beer","Tiramisu"]',                                 'In Preparation', NOW() - INTERVAL 10 MINUTE),
+-- PENDING
+( 7,  6, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL 2 MINUTE),
+( 8, 13, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL 1 MINUTE);
 
 -- =========================================================================
--- 8. ORDER ITEMS
+-- 10. ORDER ITEMS
 -- =========================================================================
 INSERT INTO order_items (order_id, item_id, quantity) VALUES
--- #1  Grilled Salmon, Legumes Salteados, Sparkling Water
 ( 1,  7, 1), ( 1, 24, 1), ( 1, 16, 1),
--- #2  Frango Assado, Craft Beer
 ( 2, 23, 1), ( 2, 14, 1),
--- #3  Bruschetta, Sumol, Esparguete Bolonhesa, Caesar Salad, Chocolate Mousse
 ( 3,  3, 1), ( 3, 26, 1), ( 3,  1, 1), ( 3,  4, 1), ( 3, 10, 1),
--- #4  Hamburguer Gourmet, Batatas Fritas, Sparkling Water
 ( 4,  2, 1), ( 4, 19, 1), ( 4, 16, 1),
--- #5  Bruschetta, Sumol
 ( 5,  3, 1), ( 5, 26, 1),
--- #6  Bife à Casa, Arroz de Marisco, Batatas Fritas, Coca-Cola
 ( 6, 17, 1), ( 6, 18, 1), ( 6, 19, 1), ( 6, 25, 1),
--- #7  Pizza Margherita, Sumol
 ( 7, 20, 1), ( 7, 26, 1),
--- #8  Bacalhau à Brás, Salada Mista, Red Wine Glass, Pão, Café
 ( 8, 21, 1), ( 8, 22, 1), ( 8, 15, 1), ( 8, 28, 1), ( 8, 27, 1),
--- #9  Caesar Salad, Grilled Salmon, Orange Juice
 ( 9,  4, 1), ( 9,  7, 1), ( 9, 13, 1),
--- #10 Esparguete Bolonhesa, Tiramisu
 (10,  1, 1), (10, 11, 1),
--- #11 Chicken Wings, Coca-Cola
 (11,  5, 1), (11, 25, 1),
--- #12 Creme Soup, Vegetarian Pasta, Cheesecake
 (12,  6, 1), (12,  9, 1), (12, 12, 1),
--- #13 Chicken Parmigiana, Craft Beer, Tiramisu
 (13,  8, 1), (13, 14, 1), (13, 11, 1),
--- #14 Bife à Casa, Red Wine Glass
 (14, 17, 1), (14, 15, 1),
--- #15 Caesar Salad, Grilled Salmon, Craft Beer
 (15,  4, 1), (15,  7, 1), (15, 14, 1);
 
 -- =========================================================================
--- 9. FATURAS (apenas Delivered + Ready com fatura)
--- IVA 13% (taxa intermédia restauração Portugal)
+-- 11. FATURAS
 -- =========================================================================
--- #1  Grilled Salmon(18.50)+Legumes Salteados(7.50)+Sparkling Water(2.00) = 28.00
 INSERT INTO invoices (order_id, subtotal_amount, tax_amount, total_amount, profit_margin, issued_at)
 VALUES (1, 28.00, 3.64, 31.64, 27.48, NOW() - INTERVAL 90 MINUTE);
-
--- #2  Frango Assado(14.50)+Craft Beer(4.50) = 19.00
 INSERT INTO invoices (order_id, subtotal_amount, tax_amount, total_amount, profit_margin, issued_at)
 VALUES (2, 19.00, 2.47, 21.47, 18.71, NOW() - INTERVAL 75 MINUTE);
-
--- #3  Bruschetta(7.50)+Sumol(2.00)+EspBol(12.50)+Caesar(9.00)+ChoMousse(6.00) = 37.00
 INSERT INTO invoices (order_id, subtotal_amount, tax_amount, total_amount, profit_margin, issued_at)
 VALUES (3, 37.00, 4.81, 41.81, 36.40, NOW() - INTERVAL 25 MINUTE);
-
--- #4  Hamburguer(14.00)+Batatas(4.00)+Sparkling(2.00) = 20.00
 INSERT INTO invoices (order_id, subtotal_amount, tax_amount, total_amount, profit_margin, issued_at)
 VALUES (4, 20.00, 2.60, 22.60, 19.80, NOW() - INTERVAL 18 MINUTE);
-
--- #5  Bruschetta(7.50)+Sumol(2.00) = 9.50
 INSERT INTO invoices (order_id, subtotal_amount, tax_amount, total_amount, profit_margin, issued_at)
 VALUES (5, 9.50, 1.24, 10.74, 9.68, NOW() - INTERVAL 15 MINUTE);
 
 -- =========================================================================
--- 10. PAGAMENTOS
--- Delivered → Completed  |  Ready → Pending (cliente ainda não pagou)
+-- 12. PAGAMENTOS
 -- =========================================================================
-INSERT INTO payments (invoice_id, customer_id, amount, payment_method, payment_status, processed_at) VALUES
-(1, 16, 31.64, 'MB Way',      'Completed', NOW() - INTERVAL 85 MINUTE),  -- #1 Delivered ✓
-(2, 15, 21.47, 'Cash',        'Completed', NOW() - INTERVAL 70 MINUTE),  -- #2 Delivered ✓
-(3, 14, 41.81, 'Multibanco',  'Pending',   NULL),                         -- #3 Ready, aguarda pagamento
-(4, 13, 22.60, 'MB Way',      'Pending',   NULL),                         -- #4 Ready Takeaway
-(5, 12, 10.74, 'Credit Card', 'Pending',   NULL);                         -- #5 Ready, aguarda pagamento
+INSERT INTO payments (invoice_id, user_id, amount, payment_method, payment_status, processed_at) VALUES
+(1, 16, 31.64, 'MB Way',      'Completed', NOW() - INTERVAL 85 MINUTE),
+(2, 15, 21.47, 'Cash',        'Completed', NOW() - INTERVAL 70 MINUTE),
+(3, 14, 41.81, 'Multibanco',  'Pending',   NULL),
+(4, 13, 22.60, 'MB Way',      'Pending',   NULL),
+(5, 12, 10.74, 'Credit Card', 'Pending',   NULL);
 
 -- =========================================================================
--- 11. NOTIFICAÇÕES
+-- 13. NOTIFICAÇÕES
 -- =========================================================================
-INSERT INTO notification (customer_id, title, message, is_read, sent_at) VALUES
+INSERT INTO notification (user_id, title, message, is_read, sent_at) VALUES
 (16, 'Pagamento recebido',      'O seu pagamento de 31,64 € foi processado com sucesso. Obrigado!',            TRUE,  NOW() - INTERVAL 85 MINUTE),
 (15, 'Pagamento recebido',      'O seu pagamento de 21,47 € foi processado com sucesso. Obrigado!',            TRUE,  NOW() - INTERVAL 70 MINUTE),
 (14, 'A sua conta está pronta', 'A sua fatura de 41,81 € está disponível. Pode pagar ao balcão ou via app.',   FALSE, NOW() - INTERVAL 25 MINUTE),

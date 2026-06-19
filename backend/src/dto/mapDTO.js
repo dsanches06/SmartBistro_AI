@@ -7,7 +7,7 @@ export function mapRoleDTOResponse(data) {
   };
 }
 
-// Mapeia o registo de cliente para o formato de resposta da API
+// Mapeia o registo de cliente (tabela legada) para o formato de resposta da API
 export function mapCustomerDTOResponse(data) {
   return {
     id: data.id,
@@ -19,11 +19,39 @@ export function mapCustomerDTOResponse(data) {
   };
 }
 
+// Mapeia o registo de utilizador para o formato de resposta da API
+export function mapUserDTOResponse(data) {
+  return {
+    id: data.id,
+    name: data.name,
+    email: data.email ?? null,
+    phone: data.phone ?? null,
+    active: data.active,
+    role_id: data.role_id,
+    created_at: data.created_at,
+  };
+}
+
+// Mapeia o registo de staff para o formato de resposta da API
+export function mapStaffDTOResponse(data) {
+  return {
+    user_id: data.user_id,
+    employee_number: data.employee_number,
+    hire_date: data.hire_date,
+    name: data.name,
+    email: data.email ?? null,
+    phone: data.phone ?? null,
+    active: data.active,
+    role_id: data.role_id,
+    created_at: data.created_at,
+  };
+}
+
 // Mapeia a conversa para o formato de resposta da API
 export function mapConversationDTOResponse(data) {
   return {
     id: data.id,
-    customer_id: data.customer_id,
+    user_id: data.user_id ?? null,
     title: data.title,
     created_at: data.created_at,
   };
@@ -44,7 +72,7 @@ export function mapChatHistoryDTOResponse(data) {
 export function mapNotificationDTOResponse(data) {
   return {
     id: data.id,
-    customer_id: data.customer_id,
+    user_id: data.user_id ?? null,
     title: data.title,
     message: data.message,
     is_read: data.is_read,
@@ -62,7 +90,7 @@ export function mapTableDTOResponse(data) {
   };
 }
 
-// Mapeia a itens do menu para o formato de resposta da API
+// Mapeia os itens do menu para o formato de resposta da API
 export function mapItemDTOResponse(data) {
   return {
     id: data.id,
@@ -73,7 +101,7 @@ export function mapItemDTOResponse(data) {
   };
 }
 
-// Mapeia ingredientes do catalogo para o formato de resposta da API
+// Mapeia ingredientes do catálogo para o formato de resposta da API
 export function mapIngredientDTOResponse(data) {
   return {
     id: data.id,
@@ -104,12 +132,12 @@ export function mapRecipeItemDTOResponse(data) {
 }
 
 // Mapeia o pedido para o formato de resposta da API
-// customer_name vem do JOIN com customers (alias na query)
+// user_name vem do JOIN com users (alias na query)
 export function mapOrderDTOResponse(data) {
   return {
     id: data.id,
-    customer_id: data.customer_id,
-    customer_name: data.customer_name ?? null,
+    user_id: data.user_id ?? null,
+    user_name: data.user_name ?? null,
     table_id: data.table_id,
     service_type: data.service_type,
     allergy_restrictions: data.allergy_restrictions,
@@ -148,7 +176,7 @@ export function mapPaymentDTOResponse(data) {
   return {
     id: data.id,
     invoice_id: data.invoice_id,
-    customer_id: data.customer_id ?? null,
+    user_id: data.user_id ?? null,
     amount: data.amount,
     payment_method: data.payment_method,
     payment_status: data.payment_status,
