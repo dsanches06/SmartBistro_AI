@@ -22,24 +22,33 @@ INSERT INTO customers (name, email, phone, active, role_id) VALUES
 ('Admin SmartBistro',   'admin@smartbistro.pt',   NULL,        TRUE, 1),
 ('Manager SmartBistro', 'manager@smartbistro.pt', '555-0100',  TRUE, 1);
 
--- Clientes sem auth (criados pelo chatbot/pipeline)
-INSERT INTO customers (name, phone) VALUES
-('Hugo Neto',      '555-0108'),
-('Ana Silva',      '555-0101'),
-('Joana Luz',      '555-0110'),
-('Bruno Costa',    '555-0102'),
-('Igor Lima',      '555-0109'),
-('Carla Dias',     '555-0103'),
-('Filipe Gil',     '555-0106'),
-('Elena Vaz',      '555-0105'),
-('David Reas',     '555-0104'),
-('Gina Rosa',      '555-0107'),
-('Ana Pereira',    '555-0111'),
-('Carlos Silva',   '555-0112'),
-('Manuel Santos',  '555-0113'),
-('Mariana Costa',  '555-0114'),
-('Pedro Almeida',  '555-0115'),
-('Joana Martins',  '555-0116');
+-- Clientes regulares (active=TRUE explícito — schema tem DEFAULT FALSE)
+INSERT INTO customers (name, phone, active) VALUES
+('Hugo Neto',        '555-0108', TRUE),  -- id=3
+('Ana Silva',        '555-0101', TRUE),  -- id=4
+('Joana Luz',        '555-0110', TRUE),  -- id=5
+('Bruno Costa',      '555-0102', TRUE),  -- id=6
+('Igor Lima',        '555-0109', TRUE),  -- id=7
+('Carla Dias',       '555-0103', TRUE),  -- id=8
+('Filipe Gil',       '555-0106', TRUE),  -- id=9
+('Elena Vaz',        '555-0105', TRUE),  -- id=10
+('David Reas',       '555-0104', TRUE),  -- id=11
+('Gina Rosa',        '555-0107', TRUE),  -- id=12
+('Ana Pereira',      '555-0111', TRUE),  -- id=13
+('Carlos Silva',     '555-0112', TRUE),  -- id=14
+('Manuel Santos',    '555-0113', TRUE),  -- id=15
+('Mariana Costa',    '555-0114', TRUE),  -- id=16
+('Pedro Almeida',    '555-0115', TRUE),  -- id=17
+('Joana Martins',    '555-0116', TRUE),  -- id=18
+('Danilson Sanches', '555-0120', TRUE),  -- id=19
+('Abel Pinto',       '555-0155', TRUE),  -- id=20
+-- Clientes sem mesa nem pedido (disponíveis para atribuição/reserva)
+('Ricardo Fonseca',  '555-0130', TRUE),  -- id=21
+('Sofia Mendes',     '555-0131', TRUE),  -- id=22
+('Tiago Ferreira',   '555-0132', TRUE),  -- id=23
+('Beatriz Neves',    '555-0133', TRUE),  -- id=24
+('Nuno Rodrigues',   '555-0134', TRUE),  -- id=25
+('Catarina Lima',    '555-0135', TRUE);  -- id=26
 
 -- =========================================================================
 -- 2b. AUTH ACCOUNTS
@@ -72,7 +81,7 @@ INSERT INTO tables (table_number, capacity, status) VALUES
 ('T16',  2, 'Available'),   -- id=16
 ('T17',  4, 'Occupied'),    -- id=17  pedido #10
 ('T18',  4, 'Available'),   -- id=18
-('T19',  6, 'Reserved'),    -- id=19  reserva futura
+('T19',  6, 'Available'),   -- id=19  reserva futura confirmada (+5 dias)
 ('T20', 10, 'Available'),   -- id=20
 ('T21',  4, 'Occupied'),    -- id=21  pedido #12
 ('T22',  4, 'Occupied'),    -- id=22  pedido #11
@@ -198,8 +207,8 @@ INSERT INTO reservations (customer_id, table_id, reservation_date, party_size, s
 (14, 14, DATE_ADD(CURDATE(), INTERVAL  1 DAY) + INTERVAL 20 HOUR + INTERVAL 30 MINUTE, 5, 'Confirmed', '555-0114', 'Sem glúten'),
 (15,  2, DATE_ADD(CURDATE(), INTERVAL  2 DAY) + INTERVAL 12 HOUR + INTERVAL 30 MINUTE, 2, 'Pending',   '555-0115', NULL),
 (16,  9, DATE_ADD(CURDATE(), INTERVAL  2 DAY) + INTERVAL 13 HOUR, 1, 'Pending',   '555-0116', 'Mesa na esplanada'),
-( 1, 10, DATE_ADD(CURDATE(), INTERVAL  2 DAY) + INTERVAL 19 HOUR, 8, 'Confirmed', '555-0108', 'Reunião de empresa'),
-( 2, 18, DATE_ADD(CURDATE(), INTERVAL  2 DAY) + INTERVAL 19 HOUR + INTERVAL 30 MINUTE, 3, 'Confirmed', '555-0101', NULL),
+(10, 10, DATE_ADD(CURDATE(), INTERVAL  2 DAY) + INTERVAL 19 HOUR, 8, 'Confirmed', '555-0105', 'Reunião de empresa'),
+(17, 18, DATE_ADD(CURDATE(), INTERVAL  2 DAY) + INTERVAL 19 HOUR + INTERVAL 30 MINUTE, 2, 'Confirmed', '555-0115', NULL),
 ( 3, 16, DATE_ADD(CURDATE(), INTERVAL  3 DAY) + INTERVAL 12 HOUR, 2, 'Pending',   '555-0110', NULL),
 ( 4, 15, DATE_ADD(CURDATE(), INTERVAL  3 DAY) + INTERVAL 20 HOUR, 3, 'Pending',   '555-0102', NULL),
 ( 5, 20, DATE_ADD(CURDATE(), INTERVAL  5 DAY) + INTERVAL 13 HOUR, 9, 'Confirmed', '555-0109', 'Aniversário'),
@@ -235,10 +244,10 @@ INSERT INTO orders (customer_id, table_id, service_type, allergy_restrictions, k
 (11,  7, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL 5 MINUTE),   -- #6  T07
 (12,  3, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL 4 MINUTE),   -- #7  T03
 (14, 12, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL 3 MINUTE),   -- #8  T12
-( 2,  5, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL 3 MINUTE),   -- #9  T05
+( 9,  5, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL 3 MINUTE),   -- #9  T05
 
 -- ── IN PREPARATION (Chef já processou — countdown no KDS usa updated_at = NOW()) ──
-( 1, 17, 'Table',    NULL, '["Esparguete Bolonhesa","Tiramisu"]',                                            'In Preparation', NOW() - INTERVAL 18 MINUTE),  -- #10 T17
+(20, 17, 'Table',    NULL, '["Esparguete Bolonhesa","Tiramisu"]',                                            'In Preparation', NOW() - INTERVAL 18 MINUTE),  -- #10 T17
 ( 3, 22, 'Table',    NULL, '["Chicken Wings","Coca-Cola"]',                                                  'In Preparation', NOW() - INTERVAL 14 MINUTE),  -- #11 T22
 ( 4, 21, 'Table',    NULL, '["Creme Soup","Vegetarian Pasta","Cheesecake"]',                                 'In Preparation', NOW() - INTERVAL 12 MINUTE),  -- #12 T21
 ( 5, 23, 'Table',    NULL, '["Chicken Parmigiana","Craft Beer","Tiramisu"]',                                 'In Preparation', NOW() - INTERVAL 10 MINUTE),  -- #13 T23

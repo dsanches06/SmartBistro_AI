@@ -383,29 +383,39 @@ export default function MainPage() {
               <NotificationBell user={user} />
               <UserMenuCompact user={user} onLogout={logout} />
             </>
-          ) : !user ? (
+          ) : user ? (
+            /* admin/manager logado — botão de regresso ao painel */
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+              style={{ background: "var(--primary)", color: "#fff", border: "1.5px solid var(--primary)" }}
+            >
+              <i className="fa-solid fa-gauge text-xs" />
+              <span>Painel</span>
+            </button>
+          ) : (
             <>
               <button
                 onClick={() => setShowLogin(true)}
                 title="Entrar"
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:border-[var(--primary)] hover:text-[var(--primary)]"
                 style={headerBtnStyle}
               >
                 <IconLogin />
-                <span>Entrar</span>
+                <span className="hidden sm:inline">Entrar</span>
               </button>
 
               <button
                 onClick={() => setShowRegister(true)}
                 title="Registar"
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
                 style={{ background: "var(--primary)", color: "#fff", border: "1.5px solid var(--primary)" }}
               >
                 <IconRegister />
-                <span>Registar</span>
+                <span className="hidden sm:inline">Registar</span>
               </button>
             </>
-          ) : null}
+          )}
 
           <ThemeToggle />
         </div>
