@@ -192,7 +192,7 @@ export function ChatUI({ isOpen, onClose }) {
       makeOnChunk(botMsgId),
       makeOnDone(botMsgId),
       conversationId,
-      1,
+      user?.id ?? null,
       null,
       customerName,
     );

@@ -124,6 +124,7 @@ export const getOrdersForAutoAdvance = async () => {
   return Array.isArray(r) ? r : [];
 };
 
+
 // Elimina um pedido
 export const deleteOrder = async (id) => {
   const [r] = await db.query("DELETE FROM orders WHERE id = ?", [id]);

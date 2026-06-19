@@ -28,12 +28,8 @@ export function ProviderErrorCard({ errorType = "UNKNOWN", message, onRetry }) {
       {onRetry && (
         <button
           onClick={onRetry}
-          className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-          style={{
-            background: cfg.color,
-            color:      "#fff",
-          }}
           className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-opacity hover:opacity-85"
+          style={{ background: cfg.color, color: "#fff" }}
         >
           ↺ Tentar novamente
         </button>

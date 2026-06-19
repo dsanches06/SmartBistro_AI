@@ -25,18 +25,32 @@ const CustomerProfilePage    = lazy(() => import("@/pages/customer/ProfilePage")
 const CustomerDashboardPage  = lazy(() => import("@/pages/customer/DashboardPage"));
 const CustomerOrdersPage     = lazy(() => import("@/pages/customer/OrdersPage"));
 
-// Fallback para Vercel (serverless): o Chef AI usa setTimeout no backend para avançar
-// estados, mas em ambientes serverless os timeouts não persistem entre invocações.
-// Este componente chama /orders/auto-advance como segurança extra para qualquer utilizador.
-// Em servidor local (Node.js), o scheduleChefAdvance no backend trata de tudo.
+// Serviço de background para qualquer utilizador autenticado:
+// 1. Avança In Preparation → Ready → Delivered via backend (sem auth de admin)
+// 2. Chama chefStart para pedidos Pending antigos do próprio utilizador
+//    (pedidos criados via chatbot que não foram processados pelo Chef AI)
 function OrderAutoAdvance() {
   const { user } = useAuth();
 
   useEffect(() => {
     if (!user) return;
 
-    const advance = () => {
+    const advance = async () => {
+      // Avança estados: In Preparation → Ready → Delivered
       orderService.autoAdvance().catch(() => {});
+
+      // Fallback Chef AI: pedidos Pending há mais de 45s (chatbot ou chefStart falhado)
+      try {
+        const orders = await orderService.getByCustomer(user.id).catch(() => []);
+        const now = Date.now();
+        (Array.isArray(orders) ? orders : [])
+          .filter(o => {
+            if (o.order_status !== 'Pending') return false;
+            const ref = new Date(o.updated_at || o.created_at).getTime();
+            return (now - ref) / 1000 >= 45;
+          })
+          .forEach(o => orderService.chefStart(o.id).catch(() => {}));
+      } catch { /* silent */ }
     };
 
     advance();
