@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "@/context/ThemeContext";
 import { useTableRefresh } from "@/context/TableRefreshContext";
-import { reservationService, tableService, orderService } from "@/services";
+import { reservationService, tableService, orderService, customerService, invoiceService } from "@/services";
 import { STATUS_CONFIG } from "@/utils/tablePageUtils";
 import { getItemEmoji, formatMenuPrice } from "@/utils";
-import { PageSection, StatCard, TableCard } from "@/components";
+import { PageSection, StatCard, TableCard, PaymentModal } from "@/components";
 
 const formatTableLabel = (number) => `T${String(number).padStart(2, "0")}`;
 
@@ -75,6 +75,293 @@ function NovaMesaModal({ onClose, onCreate }) {
   );
 }
 
+/* ── AtribuirMesaModal ── */
+function AtribuirMesaModal({ table, onClose, onAssigned }) {
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [assigning, setAssigning] = useState(null);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [allCustomers, allOrders] = await Promise.all([
+          customerService.getAll(),
+          orderService.getAll(),
+        ]);
+        const seatedIds = new Set(
+          (Array.isArray(allOrders) ? allOrders : [])
+            .filter(o => o.table_id && !["Cancelled", "Delivered", "Done"].includes(o.order_status))
+            .map(o => o.customer_id)
+            .filter(Boolean),
+        );
+        setCustomers(
+          (Array.isArray(allCustomers) ? allCustomers : []).filter(c => c.active && !seatedIds.has(c.id)),
+        );
+      } catch {
+        setErr("Erro ao carregar clientes.");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const filtered = customers.filter(c =>
+    c.name?.toLowerCase().includes(search.toLowerCase()) || c.phone?.includes(search),
+  );
+
+  const handleAssign = async (customer) => {
+    setAssigning(customer.id); setErr("");
+    try {
+      await orderService.create({
+        customer_id: customer.id,
+        table_id: table.id,
+        service_type: "Table",
+        order_status: "Pending",
+        kitchen_sequence_json: [],
+        allergy_restrictions: "",
+      });
+      await tableService.updateStatus(table.id, "Occupied");
+      onAssigned();
+      onClose();
+    } catch {
+      setErr("Erro ao atribuir mesa. Tente novamente.");
+    } finally {
+      setAssigning(null);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.5)" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="rounded-[24px] p-6 w-full max-w-sm shadow-2xl flex flex-col gap-4"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>Atribuir Mesa</h2>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl"
+            style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
+            <i className="fa-solid fa-xmark text-sm" />
+          </button>
+        </div>
+        <input
+          autoFocus
+          type="text"
+          placeholder="Pesquisar cliente…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+          style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }}
+        />
+        {loading ? (
+          <p className="text-center text-sm py-4" style={{ color: "var(--text-muted)" }}>
+            <i className="fa-solid fa-spinner fa-spin mr-2" />A carregar...
+          </p>
+        ) : err ? (
+          <p className="text-xs text-red-500">{err}</p>
+        ) : filtered.length === 0 ? (
+          <p className="text-center text-sm py-4" style={{ color: "var(--text-muted)" }}>Nenhum cliente disponível.</p>
+        ) : (
+          <div className="flex flex-col gap-2 overflow-y-auto max-h-64">
+            {filtered.map(c => (
+              <button key={c.id} onClick={() => handleAssign(c)} disabled={!!assigning}
+                className="flex items-center justify-between w-full rounded-xl px-3 py-2.5 text-left transition-colors disabled:opacity-60"
+                style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{c.name}</p>
+                  {c.phone && <p className="text-xs" style={{ color: "var(--text-muted)" }}>{c.phone}</p>}
+                </div>
+                {assigning === c.id
+                  ? <i className="fa-solid fa-spinner fa-spin text-xs" style={{ color: "var(--primary)" }} />
+                  : <i className="fa-solid fa-arrow-right text-xs" style={{ color: "var(--primary)" }} />}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── ReservarModal ── */
+function ReservarModal({ table, onClose, onReserved }) {
+  const [step, setStep] = useState(1);
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const todayStr = new Date().toISOString().split("T")[0];
+  const [form, setForm] = useState({ date: "", time: "19:00", party_size: "2", phone: "" });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  useEffect(() => {
+    customerService.getAll()
+      .then(data => setCustomers(Array.isArray(data) ? data.filter(c => c.active) : []))
+      .catch(() => setErr("Erro ao carregar clientes."))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filtered = customers.filter(c =>
+    c.name?.toLowerCase().includes(search.toLowerCase()) || c.phone?.includes(search),
+  );
+
+  const handleSelectCustomer = (c) => {
+    setSelectedCustomer(c);
+    setForm(f => ({ ...f, phone: c.phone || "" }));
+    setSearch(""); setErr("");
+    setStep(2);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.date) return setErr("Data obrigatória.");
+    if (!form.time) return setErr("Hora obrigatória.");
+    setSaving(true); setErr("");
+    try {
+      await reservationService.create({
+        customer_id: selectedCustomer.id,
+        table_id: table.id,
+        reservation_date: `${form.date}T${form.time}:00`,
+        party_size: parseInt(form.party_size) || 2,
+        phone: form.phone || selectedCustomer.phone || null,
+        status: "Pending",
+      });
+      await tableService.updateStatus(table.id, "Reserved");
+      onReserved();
+      onClose();
+    } catch {
+      setErr("Erro ao criar reserva. Tente novamente.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.5)" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="rounded-[24px] p-6 w-full max-w-sm shadow-2xl"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            {step === 2 && (
+              <button onClick={() => setStep(1)} className="w-7 h-7 flex items-center justify-center rounded-lg"
+                style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
+                <i className="fa-solid fa-arrow-left text-xs" />
+              </button>
+            )}
+            <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>
+              {step === 1 ? "Reservar Mesa" : "Detalhes da Reserva"}
+            </h2>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl"
+            style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
+            <i className="fa-solid fa-xmark text-sm" />
+          </button>
+        </div>
+
+        {/* Step bar */}
+        <div className="flex gap-2 mb-5">
+          {[1, 2].map(s => (
+            <div key={s} className="h-1 flex-1 rounded-full transition-colors"
+              style={{ background: s <= step ? "var(--primary)" : "var(--border)" }} />
+          ))}
+        </div>
+
+        {/* Step 1 — select customer */}
+        {step === 1 && (
+          <div className="flex flex-col gap-3">
+            <input autoFocus type="text" placeholder="Pesquisar cliente…"
+              value={search} onChange={e => setSearch(e.target.value)}
+              className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+            {loading ? (
+              <p className="text-center text-sm py-4" style={{ color: "var(--text-muted)" }}>
+                <i className="fa-solid fa-spinner fa-spin mr-2" />A carregar...
+              </p>
+            ) : filtered.length === 0 ? (
+              <p className="text-center text-sm py-4" style={{ color: "var(--text-muted)" }}>Nenhum cliente encontrado.</p>
+            ) : (
+              <div className="flex flex-col gap-2 overflow-y-auto max-h-60">
+                {filtered.map(c => (
+                  <button key={c.id} onClick={() => handleSelectCustomer(c)}
+                    className="flex items-center justify-between w-full rounded-xl px-3 py-2.5 text-left transition-colors"
+                    style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{c.name}</p>
+                      {c.phone && <p className="text-xs" style={{ color: "var(--text-muted)" }}>{c.phone}</p>}
+                    </div>
+                    <i className="fa-solid fa-arrow-right text-xs" style={{ color: "var(--primary)" }} />
+                  </button>
+                ))}
+              </div>
+            )}
+            {err && <p className="text-xs text-red-500">{err}</p>}
+          </div>
+        )}
+
+        {/* Step 2 — date, time, party size */}
+        {step === 2 && (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="rounded-xl px-3 py-2.5" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>Cliente</p>
+              <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{selectedCustomer?.name}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Data *</label>
+                <input type="date" value={form.date} min={todayStr}
+                  onChange={e => set("date", e.target.value)}
+                  className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+                  style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Hora *</label>
+                <input type="time" value={form.time}
+                  onChange={e => set("time", e.target.value)}
+                  className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+                  style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Nº de Pessoas</label>
+              <input type="number" min="1" max="20" value={form.party_size}
+                onChange={e => set("party_size", e.target.value)}
+                className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+                style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Contacto</label>
+              <input type="tel" value={form.phone} placeholder={selectedCustomer?.phone || "555-0000"}
+                onChange={e => set("phone", e.target.value)}
+                className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+                style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+            </div>
+            {err && <p className="text-xs text-red-500">{err}</p>}
+            <div className="flex gap-2 pt-1">
+              <button type="button" onClick={onClose}
+                className="flex-1 py-2 rounded-xl text-sm font-semibold"
+                style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
+                Cancelar
+              </button>
+              <button type="submit" disabled={saving}
+                className="flex-1 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
+                style={{ background: "var(--primary)" }}>
+                {saving ? <i className="fa-solid fa-spinner fa-spin" /> : "Reservar"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function TablePage() {
   const [mesas, setMesas] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -86,6 +373,9 @@ export default function TablePage() {
   const [detailsError, setDetailsError] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [showCreateMesa, setShowCreateMesa] = useState(false);
+  const [showAtribuirMesa, setShowAtribuirMesa] = useState(false);
+  const [showReservar, setShowReservar] = useState(false);
+  const [fecharMesaData, setFecharMesaData] = useState(null);
   const { tableRefreshCount, ordersRefreshCount } = useTableRefresh();
   const selectedTableIdRef = useRef(selectedTableId);
   useEffect(() => { selectedTableIdRef.current = selectedTableId; }, [selectedTableId]);
@@ -207,6 +497,41 @@ export default function TablePage() {
     }
   };
 
+  const handleFecharMesa = async () => {
+    if (!activeOrder?.id) return;
+    setActionLoading(true); setDetailsError(null);
+    try {
+      const subtotal = parseFloat(Number(activeOrder.total_amount ?? 0).toFixed(2));
+      const tax      = parseFloat((subtotal * 0.23).toFixed(2));
+      const total    = parseFloat((subtotal + tax).toFixed(2));
+      const profit_margin = parseFloat((subtotal * 0.30).toFixed(2));
+
+      let invoice;
+      try {
+        invoice = await invoiceService.create({ order_id: activeOrder.id, subtotal_amount: subtotal, tax_amount: tax, total_amount: total, profit_margin });
+      } catch (e) {
+        if (e?.message?.includes("409")) {
+          invoice = await invoiceService.getByOrder(activeOrder.id);
+        } else throw e;
+      }
+      setFecharMesaData({ invoice, customerId: activeOrder.customer_id ?? null });
+    } catch (err) {
+      setDetailsError(err.message || "Erro ao fechar mesa.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleFecharMesaPaid = async () => {
+    try {
+      if (activeOrder?.id)   await orderService.updateStatus(activeOrder.id, "Delivered");
+      if (selectedTable?.id) await tableService.updateStatus(selectedTable.id, "Available");
+      await Promise.all([fetchMesas({ silent: true }), fetchOccupancy()]);
+      setSelectedTableId(null);
+    } catch { /* silently ignore */ }
+    setFecharMesaData(null);
+  };
+
   const selectedTable = useMemo(
     () => mesas.find((mesa) => mesa.id === selectedTableId),
     [mesas, selectedTableId],
@@ -236,6 +561,8 @@ export default function TablePage() {
   const activeOrder       = tableDetails?.activeOrder       ?? null;
   const activeReservation = tableDetails?.activeReservation ?? null;
   const isReserved        = selectedTable?.status === "Reserved";
+  const isAvailable       = selectedTable?.status === "Available";
+  const isOccupied        = selectedTable?.status === "Occupied";
 
   const formatReservationDate = (dateStr) => {
     if (!dateStr) return "--";
@@ -255,6 +582,41 @@ export default function TablePage() {
         <NovaMesaModal
           onClose={() => setShowCreateMesa(false)}
           onCreate={() => { setShowCreateMesa(false); fetchMesas(); }}
+        />
+      )}
+
+      {showAtribuirMesa && selectedTable && (
+        <AtribuirMesaModal
+          table={selectedTable}
+          onClose={() => setShowAtribuirMesa(false)}
+          onAssigned={() => {
+            setShowAtribuirMesa(false);
+            fetchMesas({ silent: true });
+            fetchOccupancy();
+            fetchTableDetails(selectedTableId);
+          }}
+        />
+      )}
+
+      {showReservar && selectedTable && (
+        <ReservarModal
+          table={selectedTable}
+          onClose={() => setShowReservar(false)}
+          onReserved={() => {
+            setShowReservar(false);
+            fetchMesas({ silent: true });
+            fetchOccupancy();
+            fetchTableDetails(selectedTableId);
+          }}
+        />
+      )}
+
+      {fecharMesaData && (
+        <PaymentModal
+          unpaidInvoices={[{ inv: fecharMesaData.invoice }]}
+          customerId={fecharMesaData.customerId}
+          onClose={() => setFecharMesaData(null)}
+          onPaid={handleFecharMesaPaid}
         />
       )}
 
@@ -424,18 +786,24 @@ export default function TablePage() {
                   )}
 
                   <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                    <button
-                      className={`flex-1 rounded-full px-4 py-3 text-sm font-semibold text-white transition ${
-                        activeReservation && !actionLoading
-                          ? "bg-[var(--primary)] hover:bg-[var(--primary-hover)]"
-                          : "bg-[var(--surface-2)] text-[var(--text-secondary)] cursor-not-allowed"
-                      }`}
-                      type="button"
-                      disabled={!activeReservation || actionLoading}
-                      onClick={handleConfirmReservation}
-                    >
-                      {actionLoading ? "A processar..." : "Confirmar reserva"}
-                    </button>
+                    {(() => {
+                      const isConfirmed = activeReservation?.status === "Confirmed";
+                      const confirmDisabled = !activeReservation || actionLoading || isConfirmed;
+                      return (
+                        <button
+                          className={`flex-1 rounded-full px-4 py-3 text-sm font-semibold text-white transition ${
+                            !confirmDisabled
+                              ? "bg-[var(--primary)] hover:bg-[var(--primary-hover)]"
+                              : "bg-[var(--surface-2)] text-[var(--text-secondary)] cursor-not-allowed"
+                          }`}
+                          type="button"
+                          disabled={confirmDisabled}
+                          onClick={handleConfirmReservation}
+                        >
+                          {actionLoading ? "A processar..." : isConfirmed ? "Reserva confirmada ✓" : "Confirmar reserva"}
+                        </button>
+                      );
+                    })()}
                     <button
                       className={`flex-1 rounded-full border border-[var(--border)] px-4 py-3 text-sm font-semibold transition ${
                         activeReservation && !actionLoading
@@ -513,6 +881,41 @@ export default function TablePage() {
                       </div>
                     );
                   })()}
+
+                  {/* Ações para mesa OCUPADA */}
+                  {isOccupied && (
+                    <div className="mt-6">
+                      <button
+                        onClick={handleFecharMesa}
+                        disabled={actionLoading || !activeOrder}
+                        className="w-full rounded-full px-4 py-3 text-sm font-semibold text-white transition disabled:opacity-60"
+                        style={{ background: "#ef4444" }}
+                      >
+                        {actionLoading ? "A processar..." : "Fechar Mesa e Pagar"}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Ações para mesa LIVRE */}
+                  {isAvailable && (
+                    <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                      <button
+                        onClick={() => setShowAtribuirMesa(true)}
+                        className="flex-1 rounded-full px-4 py-3 text-sm font-semibold text-white transition"
+                        style={{ background: "var(--primary)" }}
+                      >
+                        <i className="fa-solid fa-user-plus mr-2 text-xs" />
+                        Atribuir Mesa
+                      </button>
+                      <button
+                        onClick={() => setShowReservar(true)}
+                        className="flex-1 rounded-full border border-[var(--border)] px-4 py-3 text-sm font-semibold transition bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-2)]"
+                      >
+                        <i className="fa-solid fa-calendar-plus mr-2 text-xs" />
+                        Reservar
+                      </button>
+                    </div>
+                  )}
 
                 </>
               )}
