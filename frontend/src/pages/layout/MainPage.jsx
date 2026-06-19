@@ -144,7 +144,7 @@ function UserMenuCompact({ user, onLogout }) {
    MainPage
 ══════════════════════════════════════════ */
 // Página principal que junta menu, carrinho, autenticação e navegação.
-export default function MainPage() {
+export default function MainPage({ onNavChange }) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const payingRef = useRef(false);
@@ -159,6 +159,8 @@ export default function MainPage() {
   const [showRegister, setShowRegister] = useState(false);
   const [showRegisterSuccess, setShowRegisterSuccess] = useState(false);
   const [navOpen, setNavOpen]           = useState(false);
+
+  useEffect(() => { onNavChange?.(navOpen); }, [navOpen, onNavChange]);
   const [cart, setCart]                 = useState({});
   const [showCart, setShowCart]               = useState(false);
   const [showAllergyModal, setShowAllergyModal] = useState(false);

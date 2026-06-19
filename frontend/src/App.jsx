@@ -104,7 +104,7 @@ function AppContent() {
       <OrderAutoAdvance />
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route path="/" element={<MainPage />} />
+          <Route path="/" element={<MainPage onNavChange={setBottomNavOpen} />} />
           <Route path="/menu" element={
             <MenuRoute
               bottomNavOpen={bottomNavOpen}
@@ -145,7 +145,9 @@ function AppContent() {
           style={{
             bottom: isMobile
               ? isPublicPage
-                ? '4.5rem'                            // acima do BottomNav do MainPage (~56px)
+                ? bottomNavOpen
+                  ? '7rem'                             // BottomNav MainPage aberto (~6.5rem + margem)
+                  : '4rem'                             // Apenas o tab handle visível
                 : bottomNavOpen
                   ? `calc(${NAV_OPEN_H} + 1rem)`
                   : '0.75rem'
