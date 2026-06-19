@@ -22,7 +22,13 @@ export function isRetryableGroqError(error) {
     // Alguns modelos de fallback passam tipos errados ou não suportam tool calling
     msg.includes("tool call validation failed") ||
     msg.includes("tool calling` is not supported") ||
-    msg.includes("tool_calls is not supported")
+    msg.includes("tool_calls is not supported") ||
+    // failed_generation (status 0): modelo gerou JSON inválido numa function call
+    // → tenta o próximo modelo da fila em vez de mostrar erro ao utilizador
+    msg.includes("failed to call a function") ||
+    msg.includes("failed_generation") ||
+    msg.includes("please adjust your prompt") ||
+    (status === 0 && msg.includes("failed"))
   );
 }
 

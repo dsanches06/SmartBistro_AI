@@ -68,5 +68,13 @@ export function classifyGroqError(error) {
     msg.includes("bad request")
   ) return { type: "INVALID_REQUEST", userMessage: "O pedido não pôde ser processado. Tente reformular a mensagem. ✏️" };
 
+  // ── failed_generation (status 0) — todos os modelos falharam a gerar a chamada ──
+  if (
+    msg.includes("failed to call a function") ||
+    msg.includes("failed_generation") ||
+    msg.includes("please adjust your prompt") ||
+    (status === 0 && msg.includes("failed"))
+  ) return { type: "INVALID_REQUEST", userMessage: "O assistente não conseguiu processar o pedido. Tente reformular a mensagem ou ser mais específico. ✏️" };
+
   return { type: "UNKNOWN", userMessage: "O assistente de IA não está disponível de momento. Tente novamente. 🤖" };
 }
