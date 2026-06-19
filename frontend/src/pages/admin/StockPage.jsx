@@ -11,6 +11,97 @@ import {
   mergeStockWithIngredients,
 } from "@/utils";
 
+const UNITS = ["kg", "g", "L", "mL", "units"];
+
+/* ── NovoProdutoModal ── */
+function NovoProdutoModal({ onClose, onCreated }) {
+  const [form, setForm] = useState({ name: "", unit: "kg", quantity: "0", unit_cost: "0.00" });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.name.trim()) return setErr("Nome do produto obrigatório.");
+    const quantity = parseFloat(form.quantity);
+    const unit_cost = parseFloat(form.unit_cost);
+    if (isNaN(quantity) || quantity < 0) return setErr("Quantidade inválida.");
+    if (isNaN(unit_cost) || unit_cost < 0) return setErr("Custo inválido.");
+    setSaving(true); setErr("");
+    try {
+      const ingredient = await ingredientService.create({ name: form.name.trim(), measurement_unit: form.unit });
+      await stockService.create({ ingredient_id: ingredient.id, available_quantity: quantity, unit_cost });
+      onCreated();
+      onClose();
+    } catch {
+      setErr("Erro ao criar produto. O nome pode já existir.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.5)" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="rounded-[24px] p-6 w-full max-w-sm shadow-2xl"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>Novo Produto</h2>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl"
+            style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
+            <i className="fa-solid fa-xmark text-sm" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div>
+            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Nome do Produto *</label>
+            <input autoFocus type="text" value={form.name} onChange={e => set("name", e.target.value)}
+              placeholder="Ex: Batata Doce"
+              className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Unidade</label>
+            <select value={form.unit} onChange={e => set("unit", e.target.value)}
+              className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }}>
+              {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Quantidade inicial</label>
+              <input type="number" min="0" step="0.01" value={form.quantity} onChange={e => set("quantity", e.target.value)}
+                className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+                style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Custo unitário (€)</label>
+              <input type="number" min="0" step="0.01" value={form.unit_cost} onChange={e => set("unit_cost", e.target.value)}
+                className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+                style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+            </div>
+          </div>
+          {err && <p className="text-xs text-red-500">{err}</p>}
+          <div className="flex gap-2 pt-1">
+            <button type="button" onClick={onClose}
+              className="flex-1 py-2 rounded-xl text-sm font-semibold"
+              style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
+              Cancelar
+            </button>
+            <button type="submit" disabled={saving}
+              className="flex-1 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
+              style={{ background: "var(--primary)" }}>
+              {saving ? <i className="fa-solid fa-spinner fa-spin" /> : "Criar Produto"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 /* ── ProductIcon ── */
 function ProductIcon({ name, size = 32 }) {
   const { emoji, bg } = getIngredientEmoji(name);
@@ -197,6 +288,7 @@ export default function StockPage() {
   const [page,      setPage]      = useState(1);
   const [editingId, setEditingId] = useState(null);
   const [savingId,  setSavingId]  = useState(null);
+  const [showNovoProduto, setShowNovoProduto] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -254,6 +346,13 @@ export default function StockPage() {
 
   return (
     <PageSection>
+      {showNovoProduto && (
+        <NovoProdutoModal
+          onClose={() => setShowNovoProduto(false)}
+          onCreated={() => { setShowNovoProduto(false); load(); }}
+        />
+      )}
+
       <div className="rounded-[32px] bg-surface p-6 shadow-sm">
 
         {/* ── Header ── */}
@@ -264,6 +363,7 @@ export default function StockPage() {
             <h2 className="text-xl sm:text-2xl font-bold" style={{ color: "var(--text)" }}>Stock</h2>
             <div className="flex items-center gap-2 flex-shrink-0">
               <button
+                onClick={() => setShowNovoProduto(true)}
                 className="flex items-center gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white whitespace-nowrap"
                 style={{ background: "var(--primary)" }}
               >

@@ -1,12 +1,169 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "@/context/ThemeContext";
 import { useTableRefresh } from "@/context/TableRefreshContext";
-import { reservationService, tableService, orderService } from "@/services";
+import { reservationService, tableService, orderService, customerService, invoiceService, itemService, orderItemService } from "@/services";
 import { STATUS_CONFIG } from "@/utils/tablePageUtils";
 import { getItemEmoji, formatMenuPrice } from "@/utils";
-import { PageSection, StatCard, TableCard } from "@/components";
+import { PageSection, StatCard, TableCard, PaymentModal } from "@/components";
 
 const formatTableLabel = (number) => `T${String(number).padStart(2, "0")}`;
+
+/* ── FazerPedidoModal ── */
+function FazerPedidoModal({ order, onClose, onPlaced }) {
+  const [menuItems, setMenuItems] = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [cart, setCart]           = useState({});
+  const [saving, setSaving]       = useState(false);
+  const [err, setErr]             = useState("");
+
+  useEffect(() => {
+    itemService.getActive()
+      .then(data => setMenuItems(Array.isArray(data) ? data : []))
+      .catch(() => setErr("Erro ao carregar o menu."))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const cartItems = Object.values(cart).filter(c => c.qty > 0);
+  const cartTotal = cartItems.reduce((s, c) => s + Number(c.item.price) * c.qty, 0);
+  const cartCount = cartItems.reduce((s, c) => s + c.qty, 0);
+
+  const addItem = (item) =>
+    setCart(prev => ({ ...prev, [item.id]: { item, qty: (prev[item.id]?.qty || 0) + 1 } }));
+  const removeItem = (itemId) =>
+    setCart(prev => {
+      const qty = (prev[itemId]?.qty || 0) - 1;
+      if (qty <= 0) { const next = { ...prev }; delete next[itemId]; return next; }
+      return { ...prev, [itemId]: { ...prev[itemId], qty } };
+    });
+
+  const handleSubmit = async () => {
+    if (!cartItems.length) return;
+    setSaving(true); setErr("");
+    try {
+      await orderItemService.createBulk({
+        order_id: order.id,
+        items: cartItems.map(c => ({ item_id: c.item.id, quantity: c.qty })),
+      });
+
+      const existing = (() => {
+        try {
+          const raw = order.kitchen_sequence_json;
+          return Array.isArray(raw) ? raw : JSON.parse(raw || "[]");
+        } catch { return []; }
+      })();
+      const newNames = cartItems.flatMap(c => Array(c.qty).fill(c.item.name));
+
+      await orderService.update(order.id, {
+        kitchen_sequence_json: JSON.stringify([...existing, ...newNames]),
+        order_status: "Pending",
+      });
+
+      onPlaced();
+      onClose();
+    } catch {
+      setErr("Erro ao registar pedido. Tente novamente.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.6)" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="rounded-[24px] w-full max-w-lg shadow-2xl flex flex-col"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)", maxHeight: "85vh" }}>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0"
+          style={{ borderColor: "var(--border)" }}>
+          <h2 className="text-base font-bold" style={{ color: "var(--text)" }}>
+            <i className="fa-solid fa-utensils mr-2" style={{ color: "var(--primary)" }} />
+            Fazer Pedido
+          </h2>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl"
+            style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
+            <i className="fa-solid fa-xmark text-sm" />
+          </button>
+        </div>
+
+        {/* Menu */}
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          {loading ? (
+            <p className="text-center py-8" style={{ color: "var(--text-muted)" }}>
+              <i className="fa-solid fa-spinner fa-spin mr-2" />A carregar menu...
+            </p>
+          ) : err && !menuItems.length ? (
+            <p className="text-xs text-center py-8" style={{ color: "#ef4444" }}>{err}</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {menuItems.map(item => {
+                const qty = cart[item.id]?.qty || 0;
+                return (
+                  <div key={item.id}
+                    className="flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors"
+                    style={{
+                      background: qty > 0 ? "rgba(99,102,241,0.08)" : "var(--surface-2)",
+                      border: qty > 0 ? "1.5px solid var(--primary)" : "1px solid var(--border)",
+                    }}>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span style={{ fontSize: 20 }}>{getItemEmoji(item.name)}</span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold truncate" style={{ color: "var(--text)" }}>{item.name}</p>
+                        <p className="text-xs font-semibold" style={{ color: "var(--primary)" }}>
+                          {formatMenuPrice(item.price)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {qty > 0 && (
+                        <>
+                          <button onClick={() => removeItem(item.id)}
+                            className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm"
+                            style={{ background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)" }}>
+                            −
+                          </button>
+                          <span className="text-sm font-bold w-5 text-center" style={{ color: "var(--primary)" }}>{qty}</span>
+                        </>
+                      )}
+                      <button onClick={() => addItem(item)}
+                        className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm text-white"
+                        style={{ background: "var(--primary)" }}>
+                        +
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-4 border-t flex-shrink-0 flex flex-col gap-3"
+          style={{ borderColor: "var(--border)" }}>
+          {err && cartItems.length === 0 && <p className="text-xs" style={{ color: "#ef4444" }}>{err}</p>}
+          <div className="flex items-center justify-between">
+            <span className="text-sm" style={{ color: "var(--text-muted)" }}>
+              {cartCount > 0 ? `${cartCount} item${cartCount !== 1 ? "s" : ""}` : "Nenhum item selecionado"}
+            </span>
+            <span className="text-lg font-bold" style={{ color: "var(--primary)" }}>
+              {formatMenuPrice(cartTotal)}
+            </span>
+          </div>
+          <button
+            onClick={handleSubmit}
+            disabled={saving || cartItems.length === 0}
+            className="w-full py-3 rounded-2xl text-sm font-bold text-white disabled:opacity-50 transition-opacity"
+            style={{ background: "var(--primary)" }}>
+            {saving ? <i className="fa-solid fa-spinner fa-spin mr-2" /> : null}
+            {saving ? "A registar..." : "Confirmar pedido"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* ── NovaMesaModal ── */
 function NovaMesaModal({ onClose, onCreate }) {
@@ -75,6 +232,293 @@ function NovaMesaModal({ onClose, onCreate }) {
   );
 }
 
+/* ── CustomerCombobox ── */
+function CustomerCombobox({ customers, loading, err, onSelect, placeholder = "Pesquisar cliente…" }) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const filtered = customers.filter(c =>
+    c.name?.toLowerCase().includes(query.toLowerCase()) || c.phone?.includes(query),
+  );
+
+  return (
+    <div ref={containerRef} className="relative">
+      <input
+        autoFocus
+        type="text"
+        value={query}
+        onChange={e => { setQuery(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        placeholder={placeholder}
+        className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+        style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }}
+      />
+      {open && (
+        <div className="absolute left-0 right-0 top-full mt-1 rounded-xl shadow-xl z-20 overflow-y-auto"
+          style={{ background: "var(--surface)", border: "1px solid var(--border)", maxHeight: 220 }}>
+          {loading ? (
+            <p className="px-3 py-3 text-sm text-center" style={{ color: "var(--text-muted)" }}>
+              <i className="fa-solid fa-spinner fa-spin mr-1" />A carregar...
+            </p>
+          ) : err ? (
+            <p className="px-3 py-3 text-xs text-center" style={{ color: "#ef4444" }}>{err}</p>
+          ) : filtered.length === 0 ? (
+            <p className="px-3 py-3 text-sm text-center" style={{ color: "var(--text-muted)" }}>Nenhum cliente encontrado.</p>
+          ) : (
+            filtered.map(c => (
+              <button key={c.id} type="button"
+                onClick={() => { onSelect(c); setQuery(""); setOpen(false); }}
+                className="flex items-center justify-between w-full px-3 py-2.5 text-left transition-colors hover:bg-[var(--surface-2)]"
+                style={{ borderBottom: "1px solid var(--border)" }}>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{c.name}</p>
+                  {c.phone && <p className="text-xs" style={{ color: "var(--text-muted)" }}>{c.phone}</p>}
+                </div>
+                <i className="fa-solid fa-arrow-right text-xs" style={{ color: "var(--primary)" }} />
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── AtribuirMesaModal ── */
+function AtribuirMesaModal({ table, onClose, onAssigned }) {
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [assigning, setAssigning] = useState(false);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [allCustomers, allOrders] = await Promise.all([
+          customerService.getAll(),
+          orderService.getAll(),
+        ]);
+        const seatedIds = new Set(
+          (Array.isArray(allOrders) ? allOrders : [])
+            .filter(o => o.table_id && !["Cancelled", "Delivered", "Done"].includes(o.order_status))
+            .map(o => o.customer_id)
+            .filter(Boolean),
+        );
+        setCustomers(
+          (Array.isArray(allCustomers) ? allCustomers : []).filter(
+            c => c.active && c.role_id !== 1 && !seatedIds.has(c.id),
+          ),
+        );
+      } catch {
+        setErr("Erro ao carregar clientes.");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const handleAssign = async (customer) => {
+    setAssigning(true); setErr("");
+    try {
+      await orderService.create({
+        customer_id: customer.id,
+        table_id: table.id,
+        service_type: "Table",
+        order_status: "Pending",
+        kitchen_sequence_json: [],
+        allergy_restrictions: "",
+      });
+      await tableService.updateStatus(table.id, "Occupied");
+      onAssigned();
+      onClose();
+    } catch {
+      setErr("Erro ao atribuir mesa. Tente novamente.");
+      setAssigning(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.5)" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="rounded-[24px] p-6 w-full max-w-sm shadow-2xl flex flex-col gap-4"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>Atribuir Mesa</h2>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl"
+            style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
+            <i className="fa-solid fa-xmark text-sm" />
+          </button>
+        </div>
+        {assigning ? (
+          <p className="text-center text-sm py-4" style={{ color: "var(--text-muted)" }}>
+            <i className="fa-solid fa-spinner fa-spin mr-2" />A atribuir mesa...
+          </p>
+        ) : (
+          <CustomerCombobox customers={customers} loading={loading} err={err} onSelect={handleAssign} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── ReservarModal ── */
+function ReservarModal({ table, onClose, onReserved }) {
+  const [step, setStep] = useState(1);
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const todayStr = new Date().toISOString().split("T")[0];
+  const [form, setForm] = useState({ date: "", time: "19:00", party_size: "2", phone: "" });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  useEffect(() => {
+    customerService.getAll()
+      .then(data => setCustomers(Array.isArray(data) ? data.filter(c => c.active && c.role_id !== 1) : []))
+      .catch(() => setErr("Erro ao carregar clientes."))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSelectCustomer = (c) => {
+    setSelectedCustomer(c);
+    setForm(f => ({ ...f, phone: c.phone || "" }));
+    setErr("");
+    setStep(2);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.date) return setErr("Data obrigatória.");
+    if (!form.time) return setErr("Hora obrigatória.");
+    setSaving(true); setErr("");
+    try {
+      await reservationService.create({
+        customer_id: selectedCustomer.id,
+        table_id: table.id,
+        reservation_date: `${form.date}T${form.time}:00`,
+        party_size: parseInt(form.party_size) || 2,
+        phone: form.phone || selectedCustomer.phone || null,
+        status: "Pending",
+      });
+      await tableService.updateStatus(table.id, "Reserved");
+      onReserved();
+      onClose();
+    } catch {
+      setErr("Erro ao criar reserva. Tente novamente.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.5)" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="rounded-[24px] p-6 w-full max-w-sm shadow-2xl"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            {step === 2 && (
+              <button onClick={() => setStep(1)} className="w-7 h-7 flex items-center justify-center rounded-lg"
+                style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
+                <i className="fa-solid fa-arrow-left text-xs" />
+              </button>
+            )}
+            <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>
+              {step === 1 ? "Reservar Mesa" : "Detalhes da Reserva"}
+            </h2>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl"
+            style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
+            <i className="fa-solid fa-xmark text-sm" />
+          </button>
+        </div>
+
+        {/* Step bar */}
+        <div className="flex gap-2 mb-5">
+          {[1, 2].map(s => (
+            <div key={s} className="h-1 flex-1 rounded-full transition-colors"
+              style={{ background: s <= step ? "var(--primary)" : "var(--border)" }} />
+          ))}
+        </div>
+
+        {/* Step 1 — select customer */}
+        {step === 1 && (
+          <div className="flex flex-col gap-3">
+            <CustomerCombobox customers={customers} loading={loading} err={step === 1 ? err : ""} onSelect={handleSelectCustomer} />
+          </div>
+        )}
+
+        {/* Step 2 — date, time, party size */}
+        {step === 2 && (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="rounded-xl px-3 py-2.5" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>Cliente</p>
+              <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{selectedCustomer?.name}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Data *</label>
+                <input type="date" value={form.date} min={todayStr}
+                  onChange={e => set("date", e.target.value)}
+                  className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+                  style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Hora *</label>
+                <input type="time" value={form.time}
+                  onChange={e => set("time", e.target.value)}
+                  className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+                  style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Nº de Pessoas</label>
+              <input type="number" min="1" max="20" value={form.party_size}
+                onChange={e => set("party_size", e.target.value)}
+                className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+                style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Contacto</label>
+              <input type="tel" value={form.phone} placeholder={selectedCustomer?.phone || "555-0000"}
+                onChange={e => set("phone", e.target.value)}
+                className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+                style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+            </div>
+            {err && <p className="text-xs text-red-500">{err}</p>}
+            <div className="flex gap-2 pt-1">
+              <button type="button" onClick={onClose}
+                className="flex-1 py-2 rounded-xl text-sm font-semibold"
+                style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
+                Cancelar
+              </button>
+              <button type="submit" disabled={saving}
+                className="flex-1 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
+                style={{ background: "var(--primary)" }}>
+                {saving ? <i className="fa-solid fa-spinner fa-spin" /> : "Reservar"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function TablePage() {
   const [mesas, setMesas] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -86,6 +530,10 @@ export default function TablePage() {
   const [detailsError, setDetailsError] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [showCreateMesa, setShowCreateMesa] = useState(false);
+  const [showAtribuirMesa, setShowAtribuirMesa] = useState(false);
+  const [showReservar, setShowReservar] = useState(false);
+  const [showFazerPedido, setShowFazerPedido] = useState(false);
+  const [fecharMesaData, setFecharMesaData] = useState(null);
   const { tableRefreshCount, ordersRefreshCount } = useTableRefresh();
   const selectedTableIdRef = useRef(selectedTableId);
   useEffect(() => { selectedTableIdRef.current = selectedTableId; }, [selectedTableId]);
@@ -126,7 +574,7 @@ export default function TablePage() {
 
       for (const order of (Array.isArray(orders) ? orders : [])) {
         if (!order.table_id) continue;
-        if (order.order_status === 'Cancelled') continue;
+        if (['Cancelled', 'Delivered', 'Done'].includes(order.order_status)) continue;
 
         if (!map[order.table_id]) map[order.table_id] = { emojis: [], customerName: null };
 
@@ -134,14 +582,14 @@ export default function TablePage() {
           map[order.table_id].customerName = order.customer_name;
         }
 
-        if (order.order_status === 'Delivered') {
-          const items = (() => {
-            try {
-              return Array.isArray(order.kitchen_sequence_json)
-                ? order.kitchen_sequence_json
-                : JSON.parse(order.kitchen_sequence_json || '[]');
-            } catch { return []; }
-          })();
+        const items = (() => {
+          try {
+            return Array.isArray(order.kitchen_sequence_json)
+              ? order.kitchen_sequence_json
+              : JSON.parse(order.kitchen_sequence_json || '[]');
+          } catch { return []; }
+        })();
+        if (items.length) {
           const newEmojis = [...new Set(items.map(n => getItemEmoji(n)))];
           map[order.table_id].emojis = [...new Set([...map[order.table_id].emojis, ...newEmojis])];
         }
@@ -149,7 +597,7 @@ export default function TablePage() {
 
       for (const res of (Array.isArray(reservations) ? reservations : [])) {
         if (!res.table_id) continue;
-        if (res.status === 'Cancelled') continue;
+        if (['Cancelled', 'Completed'].includes(res.status)) continue;
         if (!map[res.table_id]) map[res.table_id] = { emojis: [], customerName: null };
         if (!map[res.table_id].customerName && res.customer_name) {
           map[res.table_id].customerName = res.customer_name;
@@ -207,6 +655,41 @@ export default function TablePage() {
     }
   };
 
+  const handleFecharMesa = async () => {
+    if (!activeOrder?.id) return;
+    setActionLoading(true); setDetailsError(null);
+    try {
+      const subtotal = parseFloat(Number(activeOrder.total_amount ?? 0).toFixed(2));
+      const tax      = parseFloat((subtotal * 0.23).toFixed(2));
+      const total    = parseFloat((subtotal + tax).toFixed(2));
+      const profit_margin = parseFloat((subtotal * 0.30).toFixed(2));
+
+      let invoice;
+      try {
+        invoice = await invoiceService.create({ order_id: activeOrder.id, subtotal_amount: subtotal, tax_amount: tax, total_amount: total, profit_margin });
+      } catch (e) {
+        if (e?.message?.includes("409")) {
+          invoice = await invoiceService.getByOrder(activeOrder.id);
+        } else throw e;
+      }
+      setFecharMesaData({ invoice, customerId: activeOrder.customer_id ?? null });
+    } catch (err) {
+      setDetailsError(err.message || "Erro ao fechar mesa.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleFecharMesaPaid = async () => {
+    try {
+      if (activeOrder?.id)   await orderService.updateStatus(activeOrder.id, "Delivered");
+      if (selectedTable?.id) await tableService.updateStatus(selectedTable.id, "Available");
+      await Promise.all([fetchMesas({ silent: true }), fetchOccupancy()]);
+      setSelectedTableId(null);
+    } catch { /* silently ignore */ }
+    setFecharMesaData(null);
+  };
+
   const selectedTable = useMemo(
     () => mesas.find((mesa) => mesa.id === selectedTableId),
     [mesas, selectedTableId],
@@ -236,6 +719,8 @@ export default function TablePage() {
   const activeOrder       = tableDetails?.activeOrder       ?? null;
   const activeReservation = tableDetails?.activeReservation ?? null;
   const isReserved        = selectedTable?.status === "Reserved";
+  const isAvailable       = selectedTable?.status === "Available";
+  const isOccupied        = selectedTable?.status === "Occupied";
 
   const formatReservationDate = (dateStr) => {
     if (!dateStr) return "--";
@@ -255,6 +740,53 @@ export default function TablePage() {
         <NovaMesaModal
           onClose={() => setShowCreateMesa(false)}
           onCreate={() => { setShowCreateMesa(false); fetchMesas(); }}
+        />
+      )}
+
+      {showAtribuirMesa && selectedTable && (
+        <AtribuirMesaModal
+          table={selectedTable}
+          onClose={() => setShowAtribuirMesa(false)}
+          onAssigned={() => {
+            setShowAtribuirMesa(false);
+            fetchMesas({ silent: true });
+            fetchOccupancy();
+            fetchTableDetails(selectedTableId);
+          }}
+        />
+      )}
+
+      {showReservar && selectedTable && (
+        <ReservarModal
+          table={selectedTable}
+          onClose={() => setShowReservar(false)}
+          onReserved={() => {
+            setShowReservar(false);
+            fetchMesas({ silent: true });
+            fetchOccupancy();
+            fetchTableDetails(selectedTableId);
+          }}
+        />
+      )}
+
+      {showFazerPedido && activeOrder && (
+        <FazerPedidoModal
+          order={activeOrder}
+          onClose={() => setShowFazerPedido(false)}
+          onPlaced={() => {
+            setShowFazerPedido(false);
+            fetchTableDetails(selectedTableId);
+            fetchOccupancy();
+          }}
+        />
+      )}
+
+      {fecharMesaData && (
+        <PaymentModal
+          unpaidInvoices={[{ inv: fecharMesaData.invoice }]}
+          customerId={fecharMesaData.customerId}
+          onClose={() => setFecharMesaData(null)}
+          onPaid={handleFecharMesaPaid}
         />
       )}
 
@@ -424,18 +956,24 @@ export default function TablePage() {
                   )}
 
                   <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                    <button
-                      className={`flex-1 rounded-full px-4 py-3 text-sm font-semibold text-white transition ${
-                        activeReservation && !actionLoading
-                          ? "bg-[var(--primary)] hover:bg-[var(--primary-hover)]"
-                          : "bg-[var(--surface-2)] text-[var(--text-secondary)] cursor-not-allowed"
-                      }`}
-                      type="button"
-                      disabled={!activeReservation || actionLoading}
-                      onClick={handleConfirmReservation}
-                    >
-                      {actionLoading ? "A processar..." : "Confirmar reserva"}
-                    </button>
+                    {(() => {
+                      const isConfirmed = activeReservation?.status === "Confirmed";
+                      const confirmDisabled = !activeReservation || actionLoading || isConfirmed;
+                      return (
+                        <button
+                          className={`flex-1 rounded-full px-4 py-3 text-sm font-semibold text-white transition ${
+                            !confirmDisabled
+                              ? "bg-[var(--primary)] hover:bg-[var(--primary-hover)]"
+                              : "bg-[var(--surface-2)] text-[var(--text-secondary)] cursor-not-allowed"
+                          }`}
+                          type="button"
+                          disabled={confirmDisabled}
+                          onClick={handleConfirmReservation}
+                        >
+                          {actionLoading ? "A processar..." : isConfirmed ? "Reserva confirmada ✓" : "Confirmar reserva"}
+                        </button>
+                      );
+                    })()}
                     <button
                       className={`flex-1 rounded-full border border-[var(--border)] px-4 py-3 text-sm font-semibold transition ${
                         activeReservation && !actionLoading
@@ -513,6 +1051,62 @@ export default function TablePage() {
                       </div>
                     );
                   })()}
+
+                  {/* Ações para mesa OCUPADA */}
+                  {isOccupied && !detailsLoading && (
+                    <div className="mt-6 flex flex-col gap-3">
+                      {(activeOrder?.items ?? 0) > 0 ? (
+                        <>
+                          <button
+                            onClick={() => setShowFazerPedido(true)}
+                            className="w-full rounded-full px-4 py-3 text-sm font-semibold text-white transition"
+                            style={{ background: "var(--primary)" }}
+                          >
+                            <i className="fa-solid fa-plus mr-2 text-xs" />
+                            Fazer mais pedido
+                          </button>
+                          <button
+                            onClick={handleFecharMesa}
+                            disabled={actionLoading}
+                            className="w-full rounded-full px-4 py-3 text-sm font-semibold text-white transition disabled:opacity-60"
+                            style={{ background: "#ef4444" }}
+                          >
+                            {actionLoading ? "A processar..." : "Fechar Mesa e Pagar"}
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => setShowFazerPedido(true)}
+                          className="w-full rounded-full px-4 py-3 text-sm font-semibold text-white transition"
+                          style={{ background: "var(--primary)" }}
+                        >
+                          <i className="fa-solid fa-utensils mr-2 text-xs" />
+                          Fazer Pedido
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Ações para mesa LIVRE */}
+                  {isAvailable && (
+                    <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                      <button
+                        onClick={() => setShowAtribuirMesa(true)}
+                        className="flex-1 rounded-full px-4 py-3 text-sm font-semibold text-white transition"
+                        style={{ background: "var(--primary)" }}
+                      >
+                        <i className="fa-solid fa-user-plus mr-2 text-xs" />
+                        Atribuir Mesa
+                      </button>
+                      <button
+                        onClick={() => setShowReservar(true)}
+                        className="flex-1 rounded-full border border-[var(--border)] px-4 py-3 text-sm font-semibold transition bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-2)]"
+                      >
+                        <i className="fa-solid fa-calendar-plus mr-2 text-xs" />
+                        Reservar
+                      </button>
+                    </div>
+                  )}
 
                 </>
               )}
