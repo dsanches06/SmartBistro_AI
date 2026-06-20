@@ -362,9 +362,7 @@ function AtribuirMesaModal({ table, onClose, onAssigned }) {
   const findBestTable = (size) => {
     const available = allTables.filter(t => t.status === "Available" && t.capacity >= size);
     if (!available.length) return null;
-    // Prefere a mesa original se tiver capacidade, senão a mais pequena com capacidade suficiente
-    const original = available.find(t => t.id === table.id);
-    if (original) return original;
+    // Melhor encaixe: mesa disponível com menor capacidade que ainda caiba o grupo
     return available.sort((a, b) => a.capacity - b.capacity)[0];
   };
 
