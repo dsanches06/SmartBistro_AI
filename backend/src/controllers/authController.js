@@ -44,7 +44,7 @@ export async function register(req, res) {
     const emailTrim = email?.trim()  || null;
     const phoneTrim = phone?.trim()  || null;
 
-    // Verificar se o username já está em uso na auth_accounts
+    // Verificar se o username já está em uso
     const [existingAuth] = await db.query(
       'SELECT id FROM auth_accounts WHERE username = ?', [userTrim]
     );
@@ -53,78 +53,77 @@ export async function register(req, res) {
 
     const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
 
-    // Ligar a cliente existente apenas por phone ou email (identificadores únicos).
-    // Nome NÃO é usado para ligar — pode haver vários clientes com o mesmo nome.
+    // Ligar a utilizador existente apenas por phone ou email (identificadores únicos)
     const conditions = [];
     const params     = [];
     if (phoneTrim) { conditions.push('phone = ?'); params.push(phoneTrim); }
     if (emailTrim) { conditions.push('email = ?'); params.push(emailTrim); }
 
-    let customerId;
+    let userId;
     let linked = false;
 
     if (conditions.length > 0) {
       const [existing] = await db.query(
-        `SELECT id, name, email, phone, role_id FROM customers WHERE ${conditions.join(' OR ')} LIMIT 1`,
+        `SELECT id, name, email, phone, role_id FROM users WHERE ${conditions.join(' OR ')} LIMIT 1`,
         params,
       );
 
       if (existing.length > 0) {
         const found = existing[0];
-        console.log(`[Auth] register: cliente encontrado id=${found.id} name="${found.name}"`);
+        console.log(`[Auth] register: utilizador encontrado id=${found.id} name="${found.name}"`);
 
         const [hasAuth] = await db.query(
-          'SELECT id FROM auth_accounts WHERE customer_id = ?', [found.id]
+          'SELECT id FROM auth_accounts WHERE user_id = ?', [found.id]
         );
         if (hasAuth.length > 0)
           return res.status(409).json({ message: 'Já existe uma conta para este utilizador. Usa o login.' });
 
-        customerId = found.id;
+        userId = found.id;
         linked = true;
 
         await db.query(
-          `UPDATE customers SET
+          `UPDATE users SET
              name  = COALESCE(?, name),
              email = COALESCE(email, ?),
              phone = COALESCE(phone, ?)
            WHERE id = ?`,
-          [nameTrim, emailTrim, phoneTrim, customerId]
+          [nameTrim, emailTrim, phoneTrim, userId]
         );
       }
     }
 
-    if (!customerId) {
-      console.log(`[Auth] register: novo cliente "${nameTrim}"`);
+    if (!userId) {
+      console.log(`[Auth] register: novo utilizador "${nameTrim}"`);
       const [insertResult] = await db.query(
-        `INSERT INTO customers (name, email, phone, role_id) VALUES (?, ?, ?, 2)`,
+        `INSERT INTO users (name, email, phone, role_id) VALUES (?, ?, ?, 2)`,
         [nameTrim, emailTrim, phoneTrim]
       );
-      customerId = getInsertId(insertResult);
+      userId = getInsertId(insertResult);
     }
 
-    if (!customerId)
-      return res.status(500).json({ message: 'Erro interno ao criar cliente.' });
+    if (!userId)
+      return res.status(500).json({ message: 'Erro interno ao criar utilizador.' });
 
-    console.log(`[Auth] register: a criar auth_account para customerId=${customerId}`);
+    console.log(`[Auth] register: a criar auth_account para userId=${userId}`);
     await db.query(
-      'INSERT INTO auth_accounts (customer_id, username, password_hash) VALUES (?, ?, ?)',
-      [customerId, userTrim, password_hash]
+      'INSERT INTO auth_accounts (user_id, username, password_hash) VALUES (?, ?, ?)',
+      [userId, userTrim, password_hash]
     );
 
-    await db.query('UPDATE customers SET active = TRUE WHERE id = ?', [customerId]);
+    await db.query('UPDATE users SET active = TRUE WHERE id = ?', [userId]);
 
     const [rows] = await db.query(
-      `SELECT c.id, c.name, c.email, c.phone, c.role_id, c.created_at, a.username
-       FROM customers c
-       JOIN auth_accounts a ON a.customer_id = c.id
-       WHERE c.id = ?`,
-      [customerId]
+      `SELECT u.id, u.name, u.email, u.phone, u.role_id, u.created_at, a.username
+       FROM users u
+       JOIN auth_accounts a ON a.user_id = u.id
+       WHERE u.id = ?`,
+      [userId]
     );
 
     if (!rows.length)
       return res.status(500).json({ message: 'Erro ao recuperar utilizador após registo.' });
 
-    console.log(`[Auth] register: sucesso id=${customerId} linked=${linked}`);
+    console.log(`[Auth] register: sucesso id=${userId} linked=${linked}`);
     const user  = rows[0];
     const token = signToken(user);
     return res.status(linked ? 200 : 201).json({ token, user, linked });
@@ -146,10 +145,10 @@ export async function login(req, res) {
 
   try {
     const [rows] = await db.query(
-      `SELECT c.id, c.name, c.email, c.phone, c.role_id,
+      `SELECT u.id, u.name, u.email, u.phone, u.role_id,
               a.username, a.password_hash
        FROM auth_accounts a
-       JOIN customers c ON c.id = a.customer_id
+       JOIN users u ON u.id = a.user_id
        WHERE a.username = ?`,
       [identifier.trim()],
     );
@@ -163,7 +162,7 @@ export async function login(req, res) {
     if (!isValid)
       return res.status(401).json({ message: 'Credenciais inválidas.' });
 
-    await db.query('UPDATE customers SET active = TRUE WHERE id = ?', [user.id]);
+    await db.query('UPDATE users SET active = TRUE WHERE id = ?', [user.id]);
 
     const { password_hash: _, ...safeUser } = user;
     const token = signToken(user);
@@ -178,7 +177,7 @@ export async function login(req, res) {
 // POST /auth/logout  (requer verifyToken)
 export async function logout(req, res) {
   try {
-    await db.query('UPDATE customers SET active = FALSE WHERE id = ?', [req.user.id]);
+    await db.query('UPDATE users SET active = FALSE WHERE id = ?', [req.user.id]);
     return res.json({ success: true });
   } catch (err) {
     console.error('[Auth] logout:', err.message);
@@ -190,17 +189,17 @@ export async function logout(req, res) {
 export async function requestDelete(req, res) {
   try {
     const [admins] = await db.query(
-      `SELECT c.id FROM customers c
-       JOIN auth_accounts a ON a.customer_id = c.id
-       WHERE c.role_id = 1 AND c.active = TRUE`
+      `SELECT u.id FROM users u
+       JOIN auth_accounts a ON a.user_id = u.id
+       WHERE u.role_id = 1 AND u.active = TRUE`
     );
 
     if (admins.length > 0) {
       const [user] = await db.query(
-        `SELECT c.name, a.username, c.email
-         FROM customers c
-         LEFT JOIN auth_accounts a ON a.customer_id = c.id
-         WHERE c.id = ?`,
+        `SELECT u.name, a.username, u.email
+         FROM users u
+         LEFT JOIN auth_accounts a ON a.user_id = u.id
+         WHERE u.id = ?`,
         [req.user.id]
       );
       const u = user[0];
@@ -208,7 +207,7 @@ export async function requestDelete(req, res) {
 
       await Promise.all(admins.map(admin =>
         db.query(
-          `INSERT INTO notification (customer_id, title, message) VALUES (?, ?, ?)`,
+          `INSERT INTO notification (user_id, title, message) VALUES (?, ?, ?)`,
           [
             admin.id,
             '🗑️ Pedido de remoção de conta',
@@ -237,7 +236,7 @@ export async function changePassword(req, res) {
 
   try {
     const [rows] = await db.query(
-      'SELECT password_hash FROM auth_accounts WHERE customer_id = ?',
+      'SELECT password_hash FROM auth_accounts WHERE user_id = ?',
       [req.user.id]
     );
 
@@ -250,7 +249,7 @@ export async function changePassword(req, res) {
 
     const newHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
     await db.query(
-      'UPDATE auth_accounts SET password_hash = ? WHERE customer_id = ?',
+      'UPDATE auth_accounts SET password_hash = ? WHERE user_id = ?',
       [newHash, req.user.id]
     );
 
@@ -265,11 +264,11 @@ export async function changePassword(req, res) {
 export async function me(req, res) {
   try {
     const queryResult = await db.query(
-      `SELECT c.id, c.name, c.email, c.phone, c.role_id, c.created_at,
+      `SELECT u.id, u.name, u.email, u.phone, u.role_id, u.created_at,
               a.username
-       FROM customers c
-       LEFT JOIN auth_accounts a ON a.customer_id = c.id
-       WHERE c.id = ?`,
+       FROM users u
+       LEFT JOIN auth_accounts a ON a.user_id = u.id
+       WHERE u.id = ?`,
       [req.user.id],
     );
     const rows = getQueryRows(queryResult);

@@ -15,18 +15,18 @@ export const getConversationById = async (id) => {
   return r[0] ? mapConversationDTOResponse(r[0]) : null;
 };
 
-// Cria uma nova conversa; customer_id pode ser null (utilizador não autenticado/ainda desconhecido)
+// Cria uma nova conversa; user_id pode ser null (utilizador não autenticado/ainda desconhecido)
 export const createConversation = async (data) => {
-  const customerId = data.customer_id ? Number(data.customer_id) : null;
+  const customerId = data.user_id ? Number(data.user_id) : null;
   const [result] = await db.query(
-    "INSERT INTO conversations (customer_id, title) VALUES (?, ?)",
+    "INSERT INTO conversations (user_id, title) VALUES (?, ?)",
     [customerId, data.title],
   );
 
   const id = result.insertId ?? null;
   return mapConversationDTOResponse({
     id,
-    customer_id: customerId,
+    user_id: customerId,
     title: data.title,
     created_at: new Date(),
   });

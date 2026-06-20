@@ -20,20 +20,20 @@ describe('notificationService', () => {
     expect(r).toHaveProperty('title', 'Pedido pronto')
   })
 
-  it('getByCustomer chama GET /notifications/customer/:customerId', async () => {
+  it('getByUser chama GET /notifications/user/:userId', async () => {
     api.get.mockResolvedValue([{ id: 1 }])
-    await notificationService.getByCustomer(5)
-    expect(api.get).toHaveBeenCalledWith('/notifications/customer/5')
+    await notificationService.getByUser(5)
+    expect(api.get).toHaveBeenCalledWith('/notifications/user/5')
   })
 
-  it('getUnread chama GET /notifications/customer/:customerId/unread', async () => {
+  it('getUnread chama GET /notifications/user/:userId/unread', async () => {
     api.get.mockResolvedValue([])
     await notificationService.getUnread(5)
-    expect(api.get).toHaveBeenCalledWith('/notifications/customer/5/unread')
+    expect(api.get).toHaveBeenCalledWith('/notifications/user/5/unread')
   })
 
   it('create chama POST /notifications com os dados corretos', async () => {
-    const data = { customer_id: 1, title: 'Aviso', message: 'Pedido pronto' }
+    const data = { user_id: 1, title: 'Aviso', message: 'Pedido pronto' }
     api.post.mockResolvedValue({ id: 10, ...data })
     const r = await notificationService.create(data)
     expect(api.post).toHaveBeenCalledWith('/notifications', data)

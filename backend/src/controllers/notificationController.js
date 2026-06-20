@@ -31,20 +31,20 @@ export const getById = async (req, res) => {
   }
 };
 
-// GET /notifications/customer/:customerId
-export const getByCustomerId = async (req, res) => {
+// GET /notifications/user/:userId
+export const getByUserId = async (req, res) => {
   try {
-    const notifications = await getNotificationsByUser(req.params.customerId);
+    const notifications = await getNotificationsByUser(req.params.userId);
     res.json(notifications);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-// GET /notifications/customer/:customerId/unread
+// GET /notifications/user/:userId/unread
 export const getUnread = async (req, res) => {
   try {
-    const notifications = await getUnreadNotifications(req.params.customerId);
+    const notifications = await getUnreadNotifications(req.params.userId);
     res.json(notifications);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -54,11 +54,11 @@ export const getUnread = async (req, res) => {
 // POST /notifications
 export const create = async (req, res) => {
   try {
-    const { customer_id, title, message } = req.body;
-    if (!customer_id || !message)
-      return res.status(400).json({ error: "customer_id e message são obrigatórios" });
+    const { user_id, title, message } = req.body;
+    if (!user_id || !message)
+      return res.status(400).json({ error: "user_id e message são obrigatórios" });
 
-    const notification = await createNotification({ customer_id, title, message });
+    const notification = await createNotification({ user_id, title, message });
     res.status(201).json(notification);
   } catch (err) {
     res.status(500).json({ error: err.message });

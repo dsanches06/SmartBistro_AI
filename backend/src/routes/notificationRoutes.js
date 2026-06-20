@@ -4,8 +4,8 @@ import { notificationController } from "../controllers/index.js";
 const router = Router();
 
 router.get("/", notificationController.getAll);
-router.get("/customer/:customerId", notificationController.getByCustomerId);
-router.get("/customer/:customerId/unread", notificationController.getUnread);
+router.get("/user/:userId", notificationController.getByUserId);
+router.get("/user/:userId/unread", notificationController.getUnread);
 router.get("/:id", notificationController.getById);
 router.post("/", notificationController.create);
 router.put("/:id", notificationController.update);

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 
 vi.mock('../src/db.js', () => ({
@@ -25,7 +25,7 @@ vi.mock('../src/services/index.js', () => ({
   invoiceExistsForOrder: vi.fn(),
   createNotification:    vi.fn(),
   // middlewares de existência
-  getCustomerById:       vi.fn(),
+  getUserById:       vi.fn(),
   getTableById:          vi.fn(),
   getItemById:           vi.fn(),
   getIngredientById:     vi.fn(),
@@ -177,7 +177,7 @@ describe('PATCH /orders/:id/status', () => {
   })
 
   it('actualiza o status com sucesso', async () => {
-    services.getOrderById.mockResolvedValue({ id: 1, customer_id: null, kitchen_sequence_json: null })
+    services.getOrderById.mockResolvedValue({ id: 1, user_id: null, kitchen_sequence_json: null })
     services.updateOrderStatus.mockResolvedValue(1)
     const res = await request(app)
       .patch('/orders/1/status')
@@ -188,7 +188,7 @@ describe('PATCH /orders/:id/status', () => {
 
   it('cria fatura automaticamente quando status muda para Ready', async () => {
     services.getOrderById.mockResolvedValue({
-      id: 1, customer_id: null, service_type: 'Table', kitchen_sequence_json: null,
+      id: 1, user_id: null, service_type: 'Table', kitchen_sequence_json: null,
     })
     services.updateOrderStatus.mockResolvedValue(1)
     services.invoiceExistsForOrder.mockResolvedValue(false)
@@ -202,7 +202,7 @@ describe('PATCH /orders/:id/status', () => {
   })
 
   it('não cria fatura duplicada se já existe para o pedido', async () => {
-    services.getOrderById.mockResolvedValue({ id: 1, customer_id: null, kitchen_sequence_json: null })
+    services.getOrderById.mockResolvedValue({ id: 1, user_id: null, kitchen_sequence_json: null })
     services.updateOrderStatus.mockResolvedValue(1)
     services.invoiceExistsForOrder.mockResolvedValue(true)
 

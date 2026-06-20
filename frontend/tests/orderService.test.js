@@ -33,10 +33,10 @@ describe('orderService', () => {
     expect(result).toHaveProperty('id', 5)
   })
 
-  it('getByCustomer chama GET /orders/customer/:customerId', async () => {
+  it('getByUser chama GET /orders/user/:userId', async () => {
     api.get.mockResolvedValue([])
-    await orderService.getByCustomer(3)
-    expect(api.get).toHaveBeenCalledWith('/orders/customer/3')
+    await orderService.getByUser(3)
+    expect(api.get).toHaveBeenCalledWith('/orders/user/3')
   })
 
   it('create chama POST /orders com os dados corretos', async () => {

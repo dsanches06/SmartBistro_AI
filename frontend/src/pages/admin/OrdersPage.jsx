@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageSection, Pagination, ListCard } from "@/components";
-import { orderService, tableService, customerService, itemService, orderItemService, invoiceService } from "@/services";
+import { SortTh } from "@/components/ui/shared/SortTh.jsx";
+import { orderService, tableService, userService, itemService, orderItemService, invoiceService } from "@/services";
 import {
   formatTime,
   ORDER_PAGE_SIZE,
@@ -21,7 +22,7 @@ function NovoPedidoModal({ onClose, onCreated }) {
   const [tables,        setTables]        = useState([]);
   const [customers,     setCustomers]     = useState([]);
   const [menuItems,     setMenuItems]     = useState([]);
-  const [form,          setForm]          = useState({ service_type: "Table", table_id: "", customer_id: "" });
+  const [form,          setForm]          = useState({ service_type: "Table", table_id: "", user_id: "" });
   const [selectedItems, setSelectedItems] = useState([]);
   const [itemSearch,    setItemSearch]    = useState("");
   const [saving,        setSaving]        = useState(false);
@@ -30,7 +31,7 @@ function NovoPedidoModal({ onClose, onCreated }) {
   useEffect(() => {
     Promise.all([
       tableService.getAll().catch(() => []),
-      customerService.getAll().catch(() => []),
+      userService.getAll().catch(() => []),
       itemService.getActive().catch(() => []),
     ]).then(([t, c, m]) => {
       setTables(Array.isArray(t) ? t : []);
@@ -68,7 +69,7 @@ function NovoPedidoModal({ onClose, onCreated }) {
         kitchen_sequence_json,
         order_status: "Pending",
         ...(form.table_id    ? { table_id:    parseInt(form.table_id)    } : {}),
-        ...(form.customer_id ? { customer_id: parseInt(form.customer_id) } : {}),
+        ...(form.user_id ? { user_id: parseInt(form.user_id) } : {}),
       };
       const order = await orderService.create(orderData);
       await orderItemService.createBulk({
@@ -139,7 +140,7 @@ function NovoPedidoModal({ onClose, onCreated }) {
             {/* Cliente */}
             <div>
               <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Cliente (opcional)</label>
-              <select value={form.customer_id} onChange={e => set("customer_id", e.target.value)}
+              <select value={form.user_id} onChange={e => set("user_id", e.target.value)}
                 className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle}>
                 <option value="">Sem cliente</option>
                 {customers.filter(c => c.active).map(c => (
@@ -288,6 +289,12 @@ export default function OrdersPage() {
   const [showSearch,  setShowSearch]  = useState(false);
   const [page,        setPage]        = useState(1);
   const [showCreate,  setShowCreate]  = useState(false);
+  const [sortCol, setSortCol] = useState(null);
+  const [sortDir, setSortDir] = useState("asc");
+  const handleSort = (col) => {
+    if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortCol(col); setSortDir("asc"); }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -318,7 +325,23 @@ export default function OrdersPage() {
   useEffect(() => { setPage(1); }, [tab, search]);
 
   const counts   = useMemo(() => countOrdersByStatus(orders), [orders]);
-  const filtered = useMemo(() => filterOrders(orders, { tab, search }), [orders, tab, search]);
+  const filtered = useMemo(() => {
+    const base = filterOrders(orders, { tab, search });
+    if (!sortCol) return base;
+    return [...base].sort((a, b) => {
+      let va, vb;
+      if (sortCol === "id")     { va = a.id;                       vb = b.id; }
+      if (sortCol === "mesa")   { va = a.table_id ?? 0;            vb = b.table_id ?? 0; }
+      if (sortCol === "client") { va = (a.user_name ?? "").toLowerCase(); vb = (b.user_name ?? "").toLowerCase(); }
+      if (sortCol === "status") { va = a.order_status ?? "";       vb = b.order_status ?? ""; }
+      if (sortCol === "items")  { va = getOrderItemCount(a);       vb = getOrderItemCount(b); }
+      if (sortCol === "valor")  { va = Number(invoiceMap[a.id]?.total_amount ?? 0); vb = Number(invoiceMap[b.id]?.total_amount ?? 0); }
+      if (sortCol === "hora")   { va = new Date(a.created_at).getTime(); vb = new Date(b.created_at).getTime(); }
+      if (va < vb) return sortDir === "asc" ? -1 : 1;
+      if (va > vb) return sortDir === "asc" ?  1 : -1;
+      return 0;
+    });
+  }, [orders, tab, search, sortCol, sortDir, invoiceMap]);
   const pageData = filtered.slice((page - 1) * ORDER_PAGE_SIZE, page * ORDER_PAGE_SIZE);
 
   return (
@@ -333,12 +356,13 @@ export default function OrdersPage() {
         )}
 
         {/* ── Header ── */}
-        <div className="flex items-center justify-between gap-2 mb-5">
+        <div className="mb-4">
           <h2 className="text-xl sm:text-2xl font-bold" style={{ color: "var(--text)" }}>Pedidos</h2>
+          <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>Todos os pedidos activos e histórico.</p>
         </div>
 
         {/* ── Status Tabs ── */}
-        <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-1.5 mb-4 pt-2">
+        <div className="flex items-center justify-center gap-2 sm:gap-1.5 mb-4">
           {ORDER_TABS.map(({ key, label, icon }) => {
             const active = tab === key;
             const count  = counts[key] ?? 0;
@@ -374,31 +398,27 @@ export default function OrdersPage() {
           })}
         </div>
 
-        {/* ── Search ── */}
-        <div className="flex items-center gap-2 mb-5 justify-end">
+        {/* ── Search — estilo ClientesPage ── */}
+        <div className="flex items-center gap-2 mb-5">
           {showSearch && (
-            <input
-              autoFocus
-              type="text"
-              placeholder="Pesquisar..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="h-9 flex-1 sm:w-56 sm:flex-none rounded-xl px-3 text-sm outline-none transition-all"
+            <input autoFocus type="text" placeholder="Pesquisar..."
+              value={search} onChange={e => setSearch(e.target.value)}
+              className="flex-1 h-9 rounded-xl px-3 text-sm outline-none"
               style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }}
             />
           )}
-          <button
-            onClick={() => { setShowSearch(s => !s); setSearch(""); }}
-            className="w-9 h-9 rounded-xl border flex items-center justify-center cursor-pointer transition-colors"
-            style={{
-              background: showSearch ? "var(--primary)" : "var(--surface-2)",
-              borderColor: showSearch ? "var(--primary)" : "var(--border)",
-              color: showSearch ? "#fff" : "var(--text-muted)",
-            }}
-            title={showSearch ? "Fechar pesquisa" : "Pesquisar"}
-          >
-            <i className={`fa-solid ${showSearch ? "fa-xmark" : "fa-magnifying-glass"} text-xs`} />
-          </button>
+          <div className="ml-auto flex items-center gap-2">
+            <span className="hidden sm:inline-flex text-xs px-3 py-1 rounded-full border"
+              style={{ color: "var(--text-muted)", borderColor: "var(--border)", background: "var(--surface-2)" }}>
+              Filtro: {ORDER_TABS.find(t => t.key === tab)?.label ?? "Todos"}
+            </span>
+            <button onClick={() => { setShowSearch(s => !s); setSearch(""); }}
+              className="w-8 h-8 rounded-lg border flex items-center justify-center cursor-pointer transition-colors"
+              style={{ background: showSearch ? "var(--primary)" : "var(--surface)", borderColor: showSearch ? "var(--primary)" : "var(--border)", color: showSearch ? "#fff" : "var(--text-muted)" }}
+              title={showSearch ? "Fechar pesquisa" : "Pesquisar"}>
+              <i className={`fa-solid ${showSearch ? "fa-xmark" : "fa-magnifying-glass"} text-xs`} />
+            </button>
+          </div>
         </div>
 
         {/* ── Content ── */}
@@ -423,12 +443,13 @@ export default function OrdersPage() {
               <table className="w-full text-left">
                 <thead>
                   <tr style={{ borderBottom: "1px solid var(--border)", background: "var(--surface-2)" }}>
-                    {ORDER_TABLE_HEADERS.map(h => (
-                      <th key={h} className="py-3 px-4 text-xs font-semibold uppercase tracking-wider"
-                        style={{ color: "var(--text-secondary)" }}>
-                        {h}
-                      </th>
-                    ))}
+                    <SortTh col="id"     sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>ID</SortTh>
+                    <SortTh col="mesa"   sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Mesa</SortTh>
+                    <SortTh col="client" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Cliente</SortTh>
+                    <SortTh col="status" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Estado</SortTh>
+                    <SortTh col="items"  sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Itens</SortTh>
+                    <SortTh col="valor"  sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Valor</SortTh>
+                    <SortTh col="hora"   sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Hora</SortTh>
                   </tr>
                 </thead>
                 <tbody>

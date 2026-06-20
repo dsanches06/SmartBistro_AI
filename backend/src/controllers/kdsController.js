@@ -121,7 +121,7 @@ export async function chefStartOrder(req, res) {
 
     // 3. Constrói o input para o Chef
     const validated = {
-      customer_name: order.customer_name ?? 'Cliente',
+      customer_name: order.user_name ?? order.customer_name ?? 'Cliente',
       table_id:      order.table_id,
       service_type:  order.service_type ?? 'Table',
       items:         itemsWithDetails,

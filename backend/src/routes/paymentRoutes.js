@@ -6,7 +6,7 @@ const router = Router();
 
 router.get("/",                       paymentController.getAll);
 router.get("/invoice/:invoiceId",     paymentController.getByInvoiceId);
-router.get("/customer/:customerId",   paymentController.getByCustomerId);
+router.get("/user/:userId",           paymentController.getByUserId);
 router.post("/",                      paymentController.create);
 
 router.get("/:id",          checkPaymentExists, paymentController.getById);

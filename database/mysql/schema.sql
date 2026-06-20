@@ -6,46 +6,54 @@ USE smartbistro;
    1. TABELAS DE UTILIZADORES, CHAT E INFRAESTRUTURA
    ========================================================================= */
 
+-- 1. Funções do Sistema
 CREATE TABLE roles (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(20) NOT NULL,
+    name VARCHAR(20) NOT NULL UNIQUE,
     flow_order INT
 );
 
--- Clientes
-CREATE TABLE customers (
+-- 2. Tabela Geral de Utilizadores (substitui 'customers')
+CREATE TABLE users (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(200) NOT NULL,
     email VARCHAR(150) NULL UNIQUE,
     phone VARCHAR(20) NULL UNIQUE,
     active BOOLEAN DEFAULT FALSE,
-    role_id INT DEFAULT 2,
+    role_id INT NOT NULL DEFAULT 2,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (role_id) REFERENCES roles (id)
 );
 
--- Credenciais de autenticação (separado dos dados do cliente)
+-- 3. Staff (subtipo de users com dados específicos de funcionário)
+CREATE TABLE staff (
+    user_id INT NOT NULL,
+    employee_number VARCHAR(20) GENERATED ALWAYS AS (CONCAT('EMP-', user_id)) VIRTUAL,
+    hire_date DATE DEFAULT (CURRENT_DATE()),
+    PRIMARY KEY (user_id),
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+-- 4. Credenciais de Autenticação (serve para qualquer user)
 CREATE TABLE auth_accounts (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    customer_id INT NOT NULL UNIQUE,
+    user_id INT NOT NULL UNIQUE,
     username VARCHAR(100) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
--- Sessões de Chat
+-- 5. Sessões de Chat
 CREATE TABLE conversations (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    customer_id INT NULL,
+    user_id INT NULL,
     title VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (customer_id)
-        REFERENCES customers (id)
-        ON DELETE SET NULL
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
 );
 
--- Histórico de Mensagens
+-- 6. Histórico de Mensagens
 CREATE TABLE chat_history (
     id INT PRIMARY KEY AUTO_INCREMENT,
     conversation_id INT NOT NULL,
@@ -56,18 +64,18 @@ CREATE TABLE chat_history (
     FOREIGN KEY (role_id) REFERENCES roles (id)
 );
 
--- Notificações
+-- 7. Notificações
 CREATE TABLE notification (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    customer_id INT NOT NULL,
+    user_id INT NOT NULL,
     title VARCHAR(200) NOT NULL,
     message TEXT NOT NULL,
     is_read BOOLEAN DEFAULT FALSE,
     sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
--- Mesas
+-- 8. Mesas
 CREATE TABLE tables (
     id INT AUTO_INCREMENT PRIMARY KEY,
     table_number VARCHAR(50) NOT NULL UNIQUE,
@@ -75,10 +83,10 @@ CREATE TABLE tables (
     status ENUM('Available', 'Occupied', 'Reserved') DEFAULT 'Available'
 );
 
--- Reservas
+-- 9. Reservas
 CREATE TABLE reservations (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    customer_id INT NULL,
+    user_id INT NULL,
     table_id INT NULL,
     reservation_date DATETIME NOT NULL,
     party_size INT DEFAULT 1,
@@ -87,7 +95,7 @@ CREATE TABLE reservations (
     notes TEXT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (table_id) REFERENCES tables(id) ON DELETE SET NULL
 );
 
@@ -138,7 +146,7 @@ CREATE TABLE recipe_items (
 -- Pedidos (Orders - KDS)
 CREATE TABLE orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    customer_id INT NULL,
+    user_id INT NULL,
     table_id INT NULL,
     service_type ENUM('Table', 'Takeaway') NOT NULL,
     allergy_restrictions TEXT,
@@ -146,7 +154,7 @@ CREATE TABLE orders (
     order_status ENUM('Pending','In Preparation','Ready','Done','Delivered','Cancelled') DEFAULT 'Pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (table_id) REFERENCES tables(id) ON DELETE SET NULL
 );
 
@@ -176,13 +184,13 @@ CREATE TABLE invoices (
 CREATE TABLE payments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     invoice_id INT NOT NULL UNIQUE,
-    customer_id INT NULL,
+    user_id INT NULL,
     amount DECIMAL(10,2) NOT NULL,
     payment_method ENUM('MB Way', 'Multibanco', 'Credit Card', 'Cash') DEFAULT 'MB Way',
     payment_status ENUM('Pending', 'Completed', 'Failed') DEFAULT 'Pending',
     processed_at DATETIME NULL DEFAULT NULL,
     FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
-    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- Logs (Pipeline de Agentes)

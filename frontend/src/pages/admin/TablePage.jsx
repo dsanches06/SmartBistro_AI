@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "@/context/ThemeContext";
 import { useTableRefresh } from "@/context/TableRefreshContext";
-import { reservationService, tableService, orderService, customerService, invoiceService, itemService, orderItemService } from "@/services";
+import { reservationService, tableService, orderService, userService, invoiceService, itemService, orderItemService } from "@/services";
 import { STATUS_CONFIG } from "@/utils/tablePageUtils";
 import { getItemEmoji, formatMenuPrice } from "@/utils";
+import { MENU_CATEGORY_META } from "@/utils/menuUtils";
 import { PageSection, StatCard, TableCard, PaymentModal } from "@/components";
 
 const formatTableLabel = (number) => `T${String(number).padStart(2, "0")}`;
@@ -96,41 +97,59 @@ function FazerPedidoModal({ order, onClose, onPlaced }) {
           ) : err && !menuItems.length ? (
             <p className="text-xs text-center py-8" style={{ color: "#ef4444" }}>{err}</p>
           ) : (
-            <div className="flex flex-col gap-2">
-              {menuItems.map(item => {
-                const qty = cart[item.id]?.qty || 0;
+            <div className="flex flex-col gap-4">
+              {Object.entries(MENU_CATEGORY_META).map(([catKey, catMeta]) => {
+                const catItems = menuItems.filter(i => i.category === catKey);
+                if (!catItems.length) return null;
                 return (
-                  <div key={item.id}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors"
-                    style={{
-                      background: qty > 0 ? "rgba(99,102,241,0.08)" : "var(--surface-2)",
-                      border: qty > 0 ? "1.5px solid var(--primary)" : "1px solid var(--border)",
-                    }}>
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span style={{ fontSize: 20 }}>{getItemEmoji(item.name)}</span>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold truncate" style={{ color: "var(--text)" }}>{item.name}</p>
-                        <p className="text-xs font-semibold" style={{ color: "var(--primary)" }}>
-                          {formatMenuPrice(item.price)}
-                        </p>
-                      </div>
+                  <div key={catKey}>
+                    {/* Cabeçalho de categoria */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span>{catMeta.emoji}</span>
+                      <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
+                        {catMeta.label}
+                      </span>
+                      <div className="flex-1 h-px ml-1" style={{ background: "var(--border)" }} />
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {qty > 0 && (
-                        <>
-                          <button onClick={() => removeItem(item.id)}
-                            className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm"
-                            style={{ background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)" }}>
-                            −
-                          </button>
-                          <span className="text-sm font-bold w-5 text-center" style={{ color: "var(--primary)" }}>{qty}</span>
-                        </>
-                      )}
-                      <button onClick={() => addItem(item)}
-                        className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm text-white"
-                        style={{ background: "var(--primary)" }}>
-                        +
-                      </button>
+                    <div className="flex flex-col gap-2">
+                      {catItems.map(item => {
+                        const qty = cart[item.id]?.qty || 0;
+                        return (
+                          <div key={item.id}
+                            className="flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors"
+                            style={{
+                              background: qty > 0 ? "rgba(99,102,241,0.08)" : "var(--surface-2)",
+                              border: qty > 0 ? "1.5px solid var(--primary)" : "1px solid var(--border)",
+                            }}>
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span style={{ fontSize: 20 }}>{getItemEmoji(item.name)}</span>
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold truncate" style={{ color: "var(--text)" }}>{item.name}</p>
+                                <p className="text-xs font-semibold" style={{ color: "var(--primary)" }}>
+                                  {formatMenuPrice(item.price)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              {qty > 0 && (
+                                <>
+                                  <button onClick={() => removeItem(item.id)}
+                                    className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm"
+                                    style={{ background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)" }}>
+                                    −
+                                  </button>
+                                  <span className="text-sm font-bold w-5 text-center" style={{ color: "var(--primary)" }}>{qty}</span>
+                                </>
+                              )}
+                              <button onClick={() => addItem(item)}
+                                className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm text-white"
+                                style={{ background: "var(--primary)" }}>
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -295,49 +314,78 @@ function CustomerCombobox({ customers, loading, err, onSelect, placeholder = "Pe
 
 /* ── AtribuirMesaModal ── */
 function AtribuirMesaModal({ table, onClose, onAssigned }) {
-  const [customers, setCustomers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [assigning, setAssigning] = useState(false);
-  const [err, setErr] = useState("");
+  const [step, setStep]               = useState(1);      // 1=cliente, 2=nº pessoas
+  const [customers, setCustomers]     = useState([]);
+  const [allTables, setAllTables]     = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [assigning, setAssigning]     = useState(false);
+  const [err, setErr]                 = useState("");
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [partySize, setPartySize]     = useState("");
 
   useEffect(() => {
     (async () => {
       try {
-        const [allCustomers, allOrders] = await Promise.all([
-          customerService.getAll(),
+        const [allUsers, allOrders, tables] = await Promise.all([
+          userService.getAll(),
           orderService.getAll(),
+          tableService.getAll(),
         ]);
         const seatedIds = new Set(
           (Array.isArray(allOrders) ? allOrders : [])
             .filter(o => o.table_id && !["Cancelled", "Delivered", "Done"].includes(o.order_status))
-            .map(o => o.customer_id)
+            .map(o => o.user_id)
             .filter(Boolean),
         );
         setCustomers(
-          (Array.isArray(allCustomers) ? allCustomers : []).filter(
+          (Array.isArray(allUsers) ? allUsers : []).filter(
             c => c.active && c.role_id !== 1 && !seatedIds.has(c.id),
           ),
         );
+        setAllTables(Array.isArray(tables) ? tables : []);
       } catch {
-        setErr("Erro ao carregar clientes.");
+        setErr("Erro ao carregar dados.");
       } finally {
         setLoading(false);
       }
     })();
   }, []);
 
-  const handleAssign = async (customer) => {
+  const handleSelectUser = (user) => {
+    setSelectedUser(user);
+    setPartySize("");
+    setErr("");
+    setStep(2);
+  };
+
+  // Encontra a melhor mesa disponível para o nº de pessoas
+  const findBestTable = (size) => {
+    const available = allTables.filter(t => t.status === "Available" && t.capacity >= size);
+    if (!available.length) return null;
+    // Melhor encaixe: mesa disponível com menor capacidade que ainda caiba o grupo
+    return available.sort((a, b) => a.capacity - b.capacity)[0];
+  };
+
+  const handleConfirm = async () => {
+    const size = parseInt(partySize);
+    if (!size || size < 1) return setErr("Indica o número de pessoas.");
+
+    const assignTable = findBestTable(size);
+    if (!assignTable) {
+      return setErr(`Não há mesa disponível para ${size} ${size === 1 ? "pessoa" : "pessoas"}. Liberta uma mesa com capacidade suficiente.`);
+    }
+
     setAssigning(true); setErr("");
     try {
       await orderService.create({
-        customer_id: customer.id,
-        table_id: table.id,
+        user_id: selectedUser.id,
+        table_id: assignTable.id,
         service_type: "Table",
         order_status: "Pending",
         kitchen_sequence_json: [],
         allergy_restrictions: "",
       });
-      await tableService.updateStatus(table.id, "Occupied");
+      await tableService.updateStatus(assignTable.id, "Occupied");
       onAssigned();
       onClose();
     } catch {
@@ -346,25 +394,118 @@ function AtribuirMesaModal({ table, onClose, onAssigned }) {
     }
   };
 
+  // Preview da mesa que vai ser atribuída
+  const previewTable = partySize && parseInt(partySize) >= 1 ? findBestTable(parseInt(partySize)) : null;
+  const sizeOk = previewTable?.id === table.id;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.5)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="rounded-[24px] p-6 w-full max-w-sm shadow-2xl flex flex-col gap-4"
         style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+
+        {/* Header */}
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>Atribuir Mesa</h2>
+          <div className="flex items-center gap-2">
+            {step === 2 && (
+              <button onClick={() => { setStep(1); setSelectedUser(null); setErr(""); }}
+                className="w-7 h-7 flex items-center justify-center rounded-lg"
+                style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
+                <i className="fa-solid fa-arrow-left text-xs" />
+              </button>
+            )}
+            <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>Atribuir Mesa</h2>
+          </div>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl"
             style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
             <i className="fa-solid fa-xmark text-sm" />
           </button>
         </div>
+
+        {/* Progress */}
+        <div className="flex gap-2">
+          {[1, 2].map(s => (
+            <div key={s} className="h-1 flex-1 rounded-full transition-colors"
+              style={{ background: s <= step ? "var(--primary)" : "var(--border)" }} />
+          ))}
+        </div>
+
         {assigning ? (
-          <p className="text-center text-sm py-4" style={{ color: "var(--text-muted)" }}>
+          <p className="text-center text-sm py-6" style={{ color: "var(--text-muted)" }}>
             <i className="fa-solid fa-spinner fa-spin mr-2" />A atribuir mesa...
           </p>
+        ) : step === 1 ? (
+          /* Passo 1 — Escolher cliente */
+          <CustomerCombobox customers={customers} loading={loading} err={err} onSelect={handleSelectUser} />
         ) : (
-          <CustomerCombobox customers={customers} loading={loading} err={err} onSelect={handleAssign} />
+          /* Passo 2 — Nº de pessoas */
+          <div className="flex flex-col gap-4">
+            {/* Cliente seleccionado */}
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+              style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+              <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                style={{ background: "var(--primary)", color: "#fff" }}>
+                {selectedUser.name[0].toUpperCase()}
+              </div>
+              <div>
+                <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{selectedUser.name}</p>
+                {selectedUser.phone && <p className="text-xs" style={{ color: "var(--text-muted)" }}>{selectedUser.phone}</p>}
+              </div>
+            </div>
+
+            {/* Nº de pessoas */}
+            <div>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>
+                Quantas pessoas?
+              </label>
+              <input
+                type="number" min="1" max="20"
+                value={partySize}
+                onChange={e => { setPartySize(e.target.value); setErr(""); }}
+                placeholder="Ex: 2"
+                className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+                style={{ background: "var(--surface-2)", border: "1.5px solid var(--border)", color: "var(--text)" }}
+                autoFocus
+              />
+            </div>
+
+            {/* Preview da mesa atribuída */}
+            {previewTable && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
+                style={{
+                  background: sizeOk ? "rgba(34,197,94,0.08)" : "rgba(245,158,11,0.08)",
+                  border: `1px solid ${sizeOk ? "rgba(34,197,94,0.3)" : "rgba(245,158,11,0.3)"}`,
+                  color: sizeOk ? "#22c55e" : "#f59e0b",
+                }}>
+                <i className={`fa-solid ${sizeOk ? "fa-circle-check" : "fa-triangle-exclamation"} text-sm`} />
+                {sizeOk
+                  ? `Mesa ${table.table_number} tem capacidade (${table.capacity} lugares) ✓`
+                  : `Mesa ${table.table_number} só tem ${table.capacity} lugares. Será atribuída a mesa ${previewTable.table_number} (${previewTable.capacity} lugares).`
+                }
+              </div>
+            )}
+
+            {/* Sem mesa disponível */}
+            {partySize && parseInt(partySize) >= 1 && !previewTable && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
+                style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444" }}>
+                <i className="fa-solid fa-circle-xmark text-sm" />
+                Sem mesa disponível para {partySize} {parseInt(partySize) === 1 ? "pessoa" : "pessoas"}.
+              </div>
+            )}
+
+            {err && <p className="text-xs" style={{ color: "#ef4444" }}>{err}</p>}
+
+            <button
+              onClick={handleConfirm}
+              disabled={!partySize || parseInt(partySize) < 1 || !previewTable}
+              className="w-full py-3 rounded-2xl text-sm font-bold text-white disabled:opacity-40 transition-opacity"
+              style={{ background: "var(--primary)" }}>
+              <i className="fa-solid fa-chair mr-2" />
+              Confirmar Atribuição
+            </button>
+          </div>
         )}
       </div>
     </div>
@@ -384,7 +525,7 @@ function ReservarModal({ table, onClose, onReserved }) {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   useEffect(() => {
-    customerService.getAll()
+    userService.getAll()
       .then(data => setCustomers(Array.isArray(data) ? data.filter(c => c.active && c.role_id !== 1) : []))
       .catch(() => setErr("Erro ao carregar clientes."))
       .finally(() => setLoading(false));
@@ -404,7 +545,7 @@ function ReservarModal({ table, onClose, onReserved }) {
     setSaving(true); setErr("");
     try {
       await reservationService.create({
-        customer_id: selectedCustomer.id,
+        user_id: selectedCustomer.id,
         table_id: table.id,
         reservation_date: `${form.date}T${form.time}:00`,
         party_size: parseInt(form.party_size) || 2,
@@ -534,6 +675,7 @@ export default function TablePage() {
   const [showReservar, setShowReservar] = useState(false);
   const [showFazerPedido, setShowFazerPedido] = useState(false);
   const [fecharMesaData, setFecharMesaData] = useState(null);
+  const [statusFilter, setStatusFilter] = useState(null); // null=todos | "Occupied" | "Available" | "Reserved"
   const { tableRefreshCount, ordersRefreshCount } = useTableRefresh();
   const selectedTableIdRef = useRef(selectedTableId);
   useEffect(() => { selectedTableIdRef.current = selectedTableId; }, [selectedTableId]);
@@ -578,8 +720,8 @@ export default function TablePage() {
 
         if (!map[order.table_id]) map[order.table_id] = { emojis: [], customerName: null };
 
-        if (!map[order.table_id].customerName && order.customer_name) {
-          map[order.table_id].customerName = order.customer_name;
+        if (!map[order.table_id].customerName && order.user_name) {
+          map[order.table_id].customerName = order.user_name;
         }
 
         const items = (() => {
@@ -599,8 +741,8 @@ export default function TablePage() {
         if (!res.table_id) continue;
         if (['Cancelled', 'Completed'].includes(res.status)) continue;
         if (!map[res.table_id]) map[res.table_id] = { emojis: [], customerName: null };
-        if (!map[res.table_id].customerName && res.customer_name) {
-          map[res.table_id].customerName = res.customer_name;
+        if (!map[res.table_id].customerName && res.user_name) {
+          map[res.table_id].customerName = res.user_name;
         }
       }
 
@@ -660,7 +802,7 @@ export default function TablePage() {
     setActionLoading(true); setDetailsError(null);
     try {
       const subtotal = parseFloat(Number(activeOrder.total_amount ?? 0).toFixed(2));
-      const tax      = parseFloat((subtotal * 0.23).toFixed(2));
+      const tax      = parseFloat((subtotal * 0.13).toFixed(2)); // IVA 13% taxa intermédia restauração
       const total    = parseFloat((subtotal + tax).toFixed(2));
       const profit_margin = parseFloat((subtotal * 0.30).toFixed(2));
 
@@ -672,7 +814,7 @@ export default function TablePage() {
           invoice = await invoiceService.getByOrder(activeOrder.id);
         } else throw e;
       }
-      setFecharMesaData({ invoice, customerId: activeOrder.customer_id ?? null });
+      setFecharMesaData({ invoice, userId: activeOrder.user_id ?? null });
     } catch (err) {
       setDetailsError(err.message || "Erro ao fechar mesa.");
     } finally {
@@ -688,6 +830,22 @@ export default function TablePage() {
       setSelectedTableId(null);
     } catch { /* silently ignore */ }
     setFecharMesaData(null);
+  };
+
+  // Liberta a mesa sem pagamento (apenas mesas ≤ 2 lugares, sem pedido)
+  const handleLiberarMesa = async () => {
+    if (!activeOrder?.id) return;
+    setActionLoading(true); setDetailsError(null);
+    try {
+      await orderService.updateStatus(activeOrder.id, "Cancelled");
+      await tableService.updateStatus(selectedTableId, "Available");
+      await Promise.all([fetchMesas({ silent: true }), fetchOccupancy()]);
+      setSelectedTableId(null);
+    } catch (err) {
+      setDetailsError(err.message || "Erro ao libertar mesa.");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const selectedTable = useMemo(
@@ -707,6 +865,11 @@ export default function TablePage() {
       { total: 0, livre: 0, ocupada: 0, reservada: 0 },
     );
   }, [mesas]);
+
+  const mesasFiltradas = useMemo(
+    () => statusFilter ? mesas.filter(m => m.status === statusFilter) : mesas,
+    [mesas, statusFilter],
+  );
 
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -784,14 +947,17 @@ export default function TablePage() {
       {fecharMesaData && (
         <PaymentModal
           unpaidInvoices={[{ inv: fecharMesaData.invoice }]}
-          customerId={fecharMesaData.customerId}
+          userId={fecharMesaData.userId}
           onClose={() => setFecharMesaData(null)}
           onPaid={handleFecharMesaPaid}
         />
       )}
 
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-2xl sm:text-3xl font-bold text-[var(--text)]">Mesas</h2>
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-[var(--text)]">Mesas</h2>
+          <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>Gestão de mesas e ocupação do restaurante.</p>
+        </div>
         <button
           onClick={() => setShowCreateMesa(true)}
           className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white flex-shrink-0 whitespace-nowrap"
@@ -802,32 +968,40 @@ export default function TablePage() {
         </button>
       </div>
 
-      {/* Mobile: ícones compactos 2x2 com badge; Desktop: StatCards */}
-      <div className="grid grid-cols-4 gap-2 sm:hidden">
+      {/* Stats — pills clicáveis para filtrar mesas */}
+      <div className="flex items-center justify-center gap-2 mt-2">
         {[
-          { label: "Total",     value: totals.total,    icon: "fa-solid fa-table-cells",    color: "#3b82f6" },
-          { label: "Ocupadas",  value: totals.ocupada,  icon: "fa-solid fa-chair",           color: "#f59e0b" },
-          { label: "Livres",    value: totals.livre,    icon: "fa-solid fa-check-circle",    color: "#22c55e" },
-          { label: "Reservadas",value: totals.reservada,icon: "fa-solid fa-calendar-check",  color: "#8b5cf6" },
-        ].map(({ label, value, icon, color }) => (
-          <div key={label} className="relative flex flex-col items-center justify-center gap-1 rounded-2xl py-3"
-            style={{ background: "var(--surface)" }}>
-            <i className={`${icon} text-xl`} style={{ color }} />
-            <span className="text-[10px] font-medium text-center leading-tight" style={{ color: "var(--text-muted)" }}>{label}</span>
-            <span
-              className="absolute -top-1.5 -right-1.5 w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold"
-              style={{ background: color, color: "#fff" }}
-            >
-              {value}
-            </span>
-          </div>
-        ))}
-      </div>
-      <div className="hidden sm:grid gap-4 sm:grid-cols-2 md:grid-cols-4">
-        <StatCard label="Total Mesas"  value={totals.total}     icon="fa-solid fa-table-cells"    borderColor="#3b82f6" className="bg-surface" />
-        <StatCard label="Ocupadas"     value={totals.ocupada}   icon="fa-solid fa-chair"           borderColor="#f59e0b" className="bg-surface" />
-        <StatCard label="Livres"       value={totals.livre}     icon="fa-solid fa-check-circle"    borderColor="#22c55e" className="bg-surface" />
-        <StatCard label="Reservadas"   value={totals.reservada} icon="fa-solid fa-calendar-check"  borderColor="#8b5cf6" className="bg-surface" />
+          { label: "Total Mesas", value: totals.total,    icon: "fa-solid fa-table-cells",   color: "#3b82f6", filter: null         },
+          { label: "Ocupadas",    value: totals.ocupada,  icon: "fa-solid fa-chair",          color: "#f59e0b", filter: "Occupied"   },
+          { label: "Livres",      value: totals.livre,    icon: "fa-solid fa-check-circle",   color: "#22c55e", filter: "Available"  },
+          { label: "Reservadas",  value: totals.reservada,icon: "fa-solid fa-calendar-check", color: "#8b5cf6", filter: "Reserved"   },
+        ].map(({ label, value, icon, color, filter }) => {
+          const active = statusFilter === filter;
+          return (
+            <button key={label}
+              type="button"
+              title={label}
+              onClick={() => setStatusFilter(active ? null : filter)}
+              className="relative flex-1 sm:flex-shrink-0 sm:flex-initial flex items-center justify-center gap-1 sm:gap-1.5 rounded-full px-2 sm:px-3 py-2 sm:py-1.5 text-xs sm:text-sm font-semibold transition-all active:scale-95"
+              style={{
+                background: active ? "var(--primary)" : "var(--surface-2)",
+                color: active ? "#fff" : "var(--text-secondary)",
+              }}>
+              <i className={`${icon} text-xs sm:text-sm`} style={{ color: active ? "#fff" : color }} />
+              <span className="hidden sm:inline text-sm font-semibold whitespace-nowrap">{label}</span>
+              {/* Mobile: badge absoluto */}
+              <span className="sm:hidden absolute -top-1.5 -right-1 w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold"
+                style={{ background: active ? "rgba(255,255,255,0.9)" : color, color: active ? "var(--primary)" : "#fff" }}>
+                {value}
+              </span>
+              {/* Desktop: badge inline */}
+              <span className="hidden sm:inline rounded-full px-1.5 py-0.5 text-[10px] font-bold"
+                style={{ background: active ? "rgba(255,255,255,0.3)" : color, color: "#fff" }}>
+                {value}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {loading && (
@@ -848,12 +1022,12 @@ export default function TablePage() {
         >
           <div className="rounded-[32px] bg-surface p-6 shadow-sm">
             <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 xl:grid-rows-4 justify-items-center">
-              {mesas.length === 0 ? (
+              {mesasFiltradas.length === 0 ? (
                 <div className="col-span-full text-center py-16 text-[var(--text-secondary)]">
-                  Nenhuma mesa encontrada.
+                  {statusFilter ? `Nenhuma mesa ${statusFilter === "Occupied" ? "ocupada" : statusFilter === "Available" ? "livre" : "reservada"}.` : "Nenhuma mesa encontrada."}
                 </div>
               ) : (
-                mesas.map((mesa) => (
+                mesasFiltradas.map((mesa) => (
                   <TableCard
                     key={mesa.id}
                     mesa={mesa}
@@ -915,7 +1089,7 @@ export default function TablePage() {
                         Cliente
                       </p>
                       <p className="mt-2 text-base font-semibold text-[var(--text)]">
-                        {detailsLoading ? "A carregar..." : (activeReservation?.customer_name ?? "Sem cliente")}
+                        {detailsLoading ? "A carregar..." : (activeReservation?.user_name ?? "Sem cliente")}
                       </p>
                     </div>
                     <div className="rounded-3xl bg-surface-2 p-4">
@@ -996,7 +1170,7 @@ export default function TablePage() {
                         Cliente em fila
                       </p>
                       <p className="mt-2 text-base font-semibold text-[var(--text)]">
-                        {detailsLoading ? "A carregar..." : (activeOrder?.customer_name ?? "Sem cliente")}
+                        {detailsLoading ? "A carregar..." : (activeOrder?.user_name ?? "Sem cliente")}
                       </p>
                     </div>
                     <div className="rounded-3xl bg-surface-2 p-4">
@@ -1075,14 +1249,38 @@ export default function TablePage() {
                           </button>
                         </>
                       ) : (
-                        <button
-                          onClick={() => setShowFazerPedido(true)}
-                          className="w-full rounded-full px-4 py-3 text-sm font-semibold text-white transition"
-                          style={{ background: "var(--primary)" }}
-                        >
-                          <i className="fa-solid fa-utensils mr-2 text-xs" />
-                          Fazer Pedido
-                        </button>
+                        <div className="flex flex-col gap-3 sm:flex-row">
+                          <button
+                            onClick={() => setShowFazerPedido(true)}
+                            className="flex-1 rounded-full px-4 py-3 text-sm font-semibold text-white transition"
+                            style={{ background: "var(--primary)" }}
+                          >
+                            <i className="fa-solid fa-utensils mr-2 text-xs" />
+                            Fazer Pedido
+                          </button>
+                          {(selectedTable?.capacity ?? 3) <= 2 ? (
+                            // Mesa pequena (≤2 lug.) — consumo opcional
+                            <button
+                              onClick={handleLiberarMesa}
+                              disabled={actionLoading}
+                              className="flex-1 rounded-full px-4 py-3 text-sm font-semibold transition disabled:opacity-60"
+                              style={{ background: "var(--surface-2)", color: "var(--text)", border: "1px solid var(--border)" }}
+                            >
+                              <i className="fa-solid fa-door-open mr-2 text-xs" />
+                              {actionLoading ? "A libertar..." : "Fechar Mesa"}
+                            </button>
+                          ) : (
+                            // Mesa grande (>2 lug.) — consumo obrigatório
+                            <button
+                              onClick={() => setDetailsError("Consumo obrigatório para mesas com mais de 2 lugares. Regista um pedido primeiro.")}
+                              className="flex-1 rounded-full px-4 py-3 text-sm font-semibold transition opacity-50 cursor-not-allowed"
+                              style={{ background: "var(--surface-2)", color: "var(--text-muted)", border: "1px solid var(--border)" }}
+                            >
+                              <i className="fa-solid fa-door-open mr-2 text-xs" />
+                              Fechar Mesa
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}

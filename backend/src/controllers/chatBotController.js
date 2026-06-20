@@ -4,7 +4,7 @@ import { processChatStream } from '../genai/orchestrations/index.js';
 
 // ── Envia mensagem ao bot com resposta em stream SSE ─────────────────────────
 export async function sendMessageToBotStream(req, res) {
-  const { message, conversationId, customer_id = null, customer_name = null } = req.body;
+  const { message, conversationId, user_id = null, customer_name = null } = req.body;
 
   if (!message?.trim())
     return res.status(400).json({ error: 'message is required' });
@@ -19,7 +19,7 @@ export async function sendMessageToBotStream(req, res) {
   try {
     let convId = conversationId;
     if (!convId) {
-      const conv = await createConversation({ customer_id, title: message.slice(0, 50) });
+      const conv = await createConversation({ user_id, title: message.slice(0, 50) });
       convId = conv.id;
     }
 

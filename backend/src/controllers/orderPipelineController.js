@@ -23,7 +23,7 @@
 
 import { runOrderPipeline } from '../genai/orchestrations/index.js';
 import {
-  findOrCreateCustomer,
+  findOrCreateUser,
   createOrder,
   createOrderItem,
   createInvoice,
@@ -61,7 +61,7 @@ export async function processOrderPipeline(req, res) {
 
     // ── Encontrar ou criar cliente (garante unicidade de nome e telefone) ─────
     const fullName = [customerName, customerSurname].filter(Boolean).join(' ');
-    const customer = await findOrCreateCustomer(fullName, customerPhone);
+    const customer = await findOrCreateUser(fullName, customerPhone);
     console.log(`[Pipeline] Cliente: "${customer.name}" (id=${customer.id}, novo=${!customer.created_at || Date.now() - new Date(customer.created_at).getTime() < 5000})`);
     const kitchenSeq = sequenced.kitchen_sequence ?? sequenced.kitchenSequence ?? [];
 
@@ -168,8 +168,8 @@ export async function processOrderPipeline(req, res) {
 
     // ── 1. Criar pedido ───────────────────────────────────────────────────────
     const order = await createOrder({
-      customer_id:           customer.id,
-      customer_name:         customer.name,
+      user_id:           customer.id,
+      user_name:             customer.name,
       table_id:              tableId ? Number(tableId) : null,
       service_type:          serviceType,
       allergy_restrictions:  validated.allergy_restrictions ?? orderData.allergy_restrictions ?? null,
@@ -209,7 +209,7 @@ export async function processOrderPipeline(req, res) {
 
     const payment = await createPayment({
       invoice_id:     invoice.id,
-      customer_id:    customer.id,
+      user_id:    customer.id,
       amount:         financials.total,
       payment_method: paymentMethod,
       payment_status: 'Pending',
@@ -226,7 +226,7 @@ export async function processOrderPipeline(req, res) {
     res.status(201).json({
       success:      true,
       order_id:     order.id,
-      customer_id:  customer.id,
+      user_id:  customer.id,
       customer:     { id: customer.id, name: customer.name, phone: customer.phone ?? null },
       order,
       invoice,

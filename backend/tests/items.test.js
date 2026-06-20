@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 
 vi.mock('../src/db.js', () => ({ db: { query: vi.fn() }, pgPool: {}, mysqlDb: {} }))
@@ -7,7 +7,7 @@ vi.mock('../src/services/index.js', () => ({
   getAllItems: vi.fn(), getActiveItems: vi.fn(), getItemById: vi.fn(),
   itemNameExists: vi.fn(), createItem: vi.fn(), updateItem: vi.fn(),
   toggleItemActive: vi.fn(), deleteItem: vi.fn(),
-  getOrderById: vi.fn(), getCustomerById: vi.fn(), getTableById: vi.fn(),
+  getOrderById: vi.fn(), getUserById: vi.fn(), getTableById: vi.fn(),
   getIngredientById: vi.fn(), getStockById: vi.fn(), getOrderItemById: vi.fn(),
   getInvoiceById: vi.fn(), getPaymentById: vi.fn(), getReservationById: vi.fn(),
   getNotificationById: vi.fn(),

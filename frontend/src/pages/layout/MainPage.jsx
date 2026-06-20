@@ -9,7 +9,7 @@ import { MENU_CATEGORIES, MENU_CATEGORY_META, formatMenuPrice, getItemEmoji, ALL
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { ThemeToggle, Modal, LoginModal, RegisterModal } from "@/components/ui";
-import { getInitials, getPalette } from "@/components/customers/CustomerCard.jsx";
+import { getInitials, getPalette } from "@/components/users/UserCard.jsx";
 import { useClickOutside } from "@/components/ui/shared/useClickOutside.jsx";
 import { NotificationBell } from "@/components/ui/layout/Header.jsx";
 
@@ -144,7 +144,7 @@ function UserMenuCompact({ user, onLogout }) {
    MainPage
 ══════════════════════════════════════════ */
 // Página principal que junta menu, carrinho, autenticação e navegação.
-export default function MainPage() {
+export default function MainPage({ onNavChange }) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const payingRef = useRef(false);
@@ -159,6 +159,8 @@ export default function MainPage() {
   const [showRegister, setShowRegister] = useState(false);
   const [showRegisterSuccess, setShowRegisterSuccess] = useState(false);
   const [navOpen, setNavOpen]           = useState(false);
+
+  useEffect(() => { onNavChange?.(navOpen); }, [navOpen, onNavChange]);
   const [cart, setCart]                 = useState({});
   const [showCart, setShowCart]               = useState(false);
   const [showAllergyModal, setShowAllergyModal] = useState(false);
@@ -217,7 +219,7 @@ export default function MainPage() {
     setCheckoutError("");
     try {
       const order = await orderService.create({
-        customer_id: user.id,
+        user_id: user.id,
         service_type: "Takeaway",
         allergy_restrictions: checkoutAllergies || null,
         kitchen_sequence_json: JSON.stringify(cartItems.map(c => ({
@@ -236,7 +238,7 @@ export default function MainPage() {
       }).catch(() => {});
 
       const total    = Number(cartTotal.toFixed(2));
-      const subtotal = Number((total / 1.23).toFixed(2));
+      const subtotal = Number((total / 1.13).toFixed(2)); // IVA 13% taxa intermédia restauração
       const tax      = Number((total - subtotal).toFixed(2));
 
       // Idempotente: se fatura já existe para este pedido, reutiliza-a
@@ -260,7 +262,7 @@ export default function MainPage() {
       try {
         await paymentService.create({
           invoice_id:     inv.id,
-          customer_id:    user.id,
+          user_id:        user.id,
           amount:         total,
           payment_method: "Cash",
           payment_status: "Completed",
@@ -398,21 +400,21 @@ export default function MainPage() {
               <button
                 onClick={() => setShowLogin(true)}
                 title="Entrar"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:border-[var(--primary)] hover:text-[var(--primary)]"
                 style={headerBtnStyle}
               >
                 <IconLogin />
-                <span className="hidden sm:inline">Entrar</span>
+                <span>Entrar</span>
               </button>
 
               <button
                 onClick={() => setShowRegister(true)}
                 title="Registar"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
                 style={{ background: "var(--primary)", color: "#fff", border: "1.5px solid var(--primary)" }}
               >
                 <IconRegister />
-                <span className="hidden sm:inline">Registar</span>
+                <span>Registar</span>
               </button>
             </>
           )}
@@ -813,22 +815,30 @@ export default function MainPage() {
                 })}
               </div>
             ) : (
-              <>
+              <div className="grid grid-cols-2 gap-2 w-full pt-4">
                 <button
                   onClick={() => { setNavOpen(false); setShowLogin(true); }}
-                  className="flex flex-col items-center gap-1"
+                  className="group flex flex-col items-center justify-center gap-1 rounded-2xl py-3 min-h-[5rem] text-[10px] font-semibold uppercase text-center select-none transition-colors duration-200 text-[var(--text-muted)] hover:text-[var(--primary)]"
+                  style={{
+                    background: "var(--surface)",
+                    border: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.12)"}`,
+                  }}
                 >
-                  <i className="fa-solid fa-right-to-bracket text-xl" style={{ color: "var(--text-secondary)" }} />
-                  <span className="text-[11px] font-semibold" style={{ color: "var(--text)" }}>Entrar</span>
+                  <i className="fa-solid fa-right-to-bracket text-2xl transition-transform duration-200 group-hover:scale-110" />
+                  <span className="leading-none">Entrar</span>
                 </button>
                 <button
                   onClick={() => { setNavOpen(false); setShowRegister(true); }}
-                  className="flex flex-col items-center gap-1"
+                  className="group flex flex-col items-center justify-center gap-1 rounded-2xl py-3 min-h-[5rem] text-[10px] font-semibold uppercase text-center select-none transition-colors duration-200 text-[var(--text-muted)] hover:text-[var(--primary)]"
+                  style={{
+                    background: "var(--surface)",
+                    border: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.12)"}`,
+                  }}
                 >
-                  <i className="fa-solid fa-user-plus text-xl" style={{ color: "var(--text-secondary)" }} />
-                  <span className="text-[11px] font-semibold" style={{ color: "var(--text)" }}>Registar</span>
+                  <i className="fa-solid fa-user-plus text-2xl transition-transform duration-200 group-hover:scale-110" />
+                  <span className="leading-none">Registar</span>
                 </button>
-              </>
+              </div>
             )}
           </nav>
         )}

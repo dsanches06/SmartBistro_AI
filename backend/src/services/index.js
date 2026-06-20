@@ -1,5 +1,9 @@
-export * from "./customerService.js";
-export { getById as getCustomerById } from "./customerService.js";
+// User e Staff (phoneExists exportado directamente — sem conflitos)
+export {
+  getAllUsers, getUserById, createUser, findOrCreateUser,
+  updateUser, toggleUserActive, phoneExists, emailExists, deleteUser,
+} from "./userService.js";
+export * from "./staffService.js";
 export * from "./roleService.js";
 export * from "./tableService.js";
 export * from "./itemService.js";

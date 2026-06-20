@@ -548,11 +548,11 @@ router.<span class="fn">get</span>(<span class="str">'/invoices'</span>,    veri
 
 <span class="cm">// Uso — gerado uma vez, reutilizado em qualquer rota</span>
 <span class="kw">const</span> orderExists    = <span class="fn">createExistsMiddleware</span>(getOrderById,    <span class="str">'Order'</span>);
-<span class="kw">const</span> customerExists = <span class="fn">createExistsMiddleware</span>(getCustomerById, <span class="str">'Customer'</span>);
+<span class="kw">const</span> userExists = <span class="fn">createExistsMiddleware</span>(getuserById, <span class="str">'user'</span>);
 <span class="kw">const</span> itemExists     = <span class="fn">createExistsMiddleware</span>(getItemById,     <span class="str">'Item'</span>);
 
 router.<span class="fn">put</span>   (<span class="str">'/orders/:id'</span>,    orderExists,    updateOrder);
-router.<span class="fn">delete</span>(<span class="str">'/customers/:id'</span>, customerExists, deleteCustomer);
+router.<span class="fn">delete</span>(<span class="str">'/users/:id'</span>, userExists, deleteuser);
 router.<span class="fn">patch</span> (<span class="str">'/items/:id'</span>,     itemExists,     updateItem);</code></pre>
       </div>
       <div class="slide-footer">Middleware — createExistsMiddleware</div>

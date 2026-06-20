@@ -3,8 +3,8 @@ import { Link, useLocation, useNavigate } from "react-router";
 import { ThemeToggle } from "@/components/ui";
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
-import { getInitials, getPalette, formatDate } from "@/components/customers/CustomerCard.jsx";
-import { customerService } from "@/services/customerService";
+import { getInitials, getPalette, formatDate } from "@/components/users/UserCard.jsx";
+import { userService } from "@/services/userService";
 import { useClickOutside } from "@/components/ui/shared/useClickOutside.jsx";
 
 const navLinks = [
@@ -69,16 +69,14 @@ function UserMenu({ user, onLogout }) {
             </p>
           </div>
 
-          {user.role_id !== 1 && (
-            <button
-              onClick={() => { setOpen(false); navigate("/perfil"); }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors hover:bg-[var(--surface-2)]"
-              style={{ color: "var(--text)" }}
-            >
-              <i className="fa-solid fa-user w-4 text-center" />
-              Meu Perfil
-            </button>
-          )}
+          <button
+            onClick={() => { setOpen(false); navigate("/perfil"); }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors hover:bg-[var(--surface-2)]"
+            style={{ color: "var(--text)" }}
+          >
+            <i className="fa-solid fa-user w-4 text-center" />
+            Meu Perfil
+          </button>
           <button
             onClick={() => { setOpen(false); onLogout(); navigate("/"); }}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors hover:bg-[var(--surface-2)]"
@@ -108,7 +106,7 @@ export function NotificationBell({ user }) {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const list = await customerService.getNotifications(user.id);
+      const list = await userService.getNotifications(user.id);
       setNotifications(Array.isArray(list) ? list : []);
     } catch { /* silent */ }
     finally { setLoading(false); }
@@ -125,7 +123,7 @@ export function NotificationBell({ user }) {
   const handleMarkRead = async (n) => {
     if (n.is_read) return;
     try {
-      await customerService.markNotificationRead(user.id, n.id);
+      await userService.markNotificationRead(user.id, n.id);
       setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, is_read: true } : x));
     } catch { /* silent */ }
   };

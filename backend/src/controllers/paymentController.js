@@ -47,10 +47,10 @@ export const getByInvoiceId = async (req, res) => {
   }
 };
 
-// GET /payments/customer/:customerId
-export const getByCustomerId = async (req, res) => {
+// GET /payments/user/:userId
+export const getByUserId = async (req, res) => {
   try {
-    res.json(await getPaymentsByCustomerId(req.params.customerId));
+    res.json(await getPaymentsByCustomerId(req.params.userId));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -59,7 +59,7 @@ export const getByCustomerId = async (req, res) => {
 // POST /payments
 export const create = async (req, res) => {
   try {
-    const { invoice_id, customer_id, amount, payment_method, payment_status } = req.body;
+    const { invoice_id, user_id, amount, payment_method, payment_status } = req.body;
     if (!invoice_id || amount === undefined)
       return res.status(400).json({ error: "invoice_id e amount são obrigatórios" });
 
@@ -77,7 +77,7 @@ export const create = async (req, res) => {
 
     const payment = await createPayment({
       invoice_id,
-      customer_id: customer_id ?? null,
+      user_id: user_id ?? null,
       amount,
       payment_method,
       payment_status,

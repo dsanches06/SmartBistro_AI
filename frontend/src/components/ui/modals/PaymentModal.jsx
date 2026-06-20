@@ -3,7 +3,7 @@ import Modal from "./Modal.jsx";
 import { paymentService } from "@/services/paymentService";
 import { PAYMENT_METHODS } from "@/utils";
 
-export function PaymentModal({ onClose, unpaidInvoices, onPaid, customerId }) {
+export function PaymentModal({ onClose, unpaidInvoices, onPaid, userId }) {
   const [method, setMethod]   = useState(PAYMENT_METHODS[0].value);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -20,7 +20,7 @@ export function PaymentModal({ onClose, unpaidInvoices, onPaid, customerId }) {
         unpaidInvoices.map(({ inv }) =>
           paymentService.create({
             invoice_id:     inv.id,
-            customer_id:    customerId ?? null,
+            user_id:        userId ?? null,
             amount:         Number(inv.total_amount),
             payment_method: method,
             payment_status: "Completed",

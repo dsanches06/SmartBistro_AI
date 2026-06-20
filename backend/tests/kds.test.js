@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 
 const mockSendMessage = vi.hoisted(() => vi.fn().mockResolvedValue(JSON.stringify({
@@ -35,7 +35,7 @@ vi.mock('../src/genai/helpers/index.js', () => ({
 vi.mock('../src/services/index.js', () => ({
   getOrderById: vi.fn(), updateOrder: vi.fn(), getItemsByOrderId: vi.fn(),
   getItemById: vi.fn(), getActiveItems: vi.fn(),
-  getCustomerById: vi.fn(), getTableById: vi.fn(),
+  getUserById: vi.fn(), getTableById: vi.fn(),
   getItemByName: vi.fn(), getIngredientById: vi.fn(), getStockById: vi.fn(),
   getOrderItemById: vi.fn(), getInvoiceById: vi.fn(), getPaymentById: vi.fn(),
   getReservationById: vi.fn(), getNotificationById: vi.fn(),

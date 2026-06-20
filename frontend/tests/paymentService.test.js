@@ -26,10 +26,10 @@ describe('paymentService', () => {
     expect(api.get).toHaveBeenCalledWith('/payments/invoice/5')
   })
 
-  it('getByCustomer chama GET /payments/customer/:customerId', async () => {
+  it('getByUser chama GET /payments/user/:userId', async () => {
     api.get.mockResolvedValue([])
-    await paymentService.getByCustomer(3)
-    expect(api.get).toHaveBeenCalledWith('/payments/customer/3')
+    await paymentService.getByUser(3)
+    expect(api.get).toHaveBeenCalledWith('/payments/user/3')
   })
 
   it('create chama POST /payments com os dados corretos', async () => {

@@ -76,10 +76,10 @@ export const getById = async (req, res) => {
   }
 };
 
-// GET /orders/customer/:customerId
-export const getByCustomerId = async (req, res) => {
+// GET /orders/user/:userId
+export const getByUserId = async (req, res) => {
   try {
-    res.json(await getOrdersByCustomerId(req.params.customerId));
+    res.json(await getOrdersByCustomerId(req.params.userId));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -88,7 +88,7 @@ export const getByCustomerId = async (req, res) => {
 // POST /orders
 export const create = async (req, res) => {
   try {
-    const { customer_id, table_id, service_type, allergy_restrictions, kitchen_sequence_json, order_status } = req.body;
+    const { user_id, table_id, service_type, allergy_restrictions, kitchen_sequence_json, order_status } = req.body;
     if (!service_type || !kitchen_sequence_json)
       return res.status(400).json({ error: "service_type e kitchen_sequence_json são obrigatórios" });
     if (!SERVICE_TYPE_OPTIONS.includes(service_type))
@@ -97,11 +97,11 @@ export const create = async (req, res) => {
       return res.status(400).json({ error: "order_status deve ser uma string" });
 
     const order = await createOrder({
-      customer_id, table_id, service_type, allergy_restrictions, kitchen_sequence_json, order_status,
+      user_id, table_id, service_type, allergy_restrictions, kitchen_sequence_json, order_status,
     });
 
     // Takeaway Pending: verificar stock, criar fatura e notificar cliente
-    if (service_type === 'Takeaway' && (order_status === 'Pending' || !order_status) && customer_id) {
+    if (service_type === 'Takeaway' && (order_status === 'Pending' || !order_status) && user_id) {
       try {
         let items = [];
         try {
@@ -116,7 +116,7 @@ export const create = async (req, res) => {
           // Itens indisponíveis — notificar e cancelar o pedido
           await updateOrderStatus(order.id, 'Cancelled').catch(() => {});
           await createNotification({
-            customer_id,
+            user_id,
             title:   'Pedido cancelado — item indisponível',
             message: `Lamentamos, mas o(s) prato(s) "${unavailable.join(', ')}" não estão disponíveis para confecção neste momento. Por favor faz um novo pedido ou pede ajuda ao nosso assistente para sugerir alternativas.`,
           }).catch(e => console.error('Stock notif error:', e.message));
@@ -135,13 +135,13 @@ export const create = async (req, res) => {
           }
           // Notificação 1 — pagamento (enviada primeiro = fica em baixo)
           await createNotification({
-            customer_id,
+            user_id,
             title:   'Pagamento pendente',
             message: `O teu pedido #${order.id} (Takeaway) aguarda pagamento. Total: ${total.toFixed(2)} €.`,
           }).catch(e => console.error('Takeaway notif 1 error:', e.message));
           // Notificação 2 — confirmado (enviada por último = aparece no topo)
           await createNotification({
-            customer_id,
+            user_id,
             title:   'Pedido confirmado',
             message: `O teu pedido #${order.id} (Takeaway) foi confirmado. Efectua o pagamento para iniciar a preparação.`,
           }).catch(e => console.error('Takeaway notif 2 error:', e.message));
@@ -189,9 +189,9 @@ export const updateStatus = async (req, res) => {
     if (order_status === 'In Preparation') {
       try {
         const order = await getOrderById(req.params.id);
-        if (order?.service_type === 'Takeaway' && order?.customer_id) {
+        if (order?.service_type === 'Takeaway' && order?.user_id) {
           await createNotification({
-            customer_id: order.customer_id,
+            user_id: order.user_id,
             title:       'Pagamento confirmado',
             message:     `O pagamento do teu pedido #${req.params.id} (Takeaway) foi confirmado. O teu pedido está a ser preparado!`,
           }).catch(e => console.error('Payment confirmed notif error:', e.message));
@@ -228,18 +228,18 @@ export const updateStatus = async (req, res) => {
             profit_margin:   total,
           });
 
-          if (order?.customer_id) {
+          if (order?.user_id) {
             const title   = isTakeaway ? 'Pedido pronto para entregar' : 'Pedido pronto — pagamento pendente';
             const message = isTakeaway
               ? `O teu pedido #${req.params.id} (Takeaway) está pronto. Podes vir levantar.`
               : `O teu pedido #${req.params.id} está pronto. Total a pagar: ${total.toFixed(2)} €.`;
-            await createNotification({ customer_id: order.customer_id, title, message })
+            await createNotification({ user_id: order.user_id, title, message })
               .catch(e => console.error('Auto-notif error:', e.message));
           }
-        } else if (isTakeaway && order?.customer_id) {
+        } else if (isTakeaway && order?.user_id) {
           // Takeaway já tem fatura (pago) — notifica que está pronto e agenda entrega
           await createNotification({
-            customer_id: order.customer_id,
+            user_id: order.user_id,
             title:       'Pedido pronto para entregar',
             message:     `O teu pedido #${req.params.id} (Takeaway) está pronto. A preparar entrega...`,
           }).catch(e => console.error('Auto-notif error:', e.message));
@@ -252,9 +252,9 @@ export const updateStatus = async (req, res) => {
             try {
               await updateOrderStatus(orderId, 'Delivered');
               const o = await getOrderById(orderId);
-              if (o?.customer_id) {
+              if (o?.user_id) {
                 await createNotification({
-                  customer_id: o.customer_id,
+                  user_id: o.user_id,
                   title:       'Pedido entregue',
                   message:     `O teu pedido #${orderId} (Takeaway) foi entregue. Obrigado pela tua preferência!`,
                 }).catch(() => {});
@@ -271,9 +271,9 @@ export const updateStatus = async (req, res) => {
     if (order_status === 'Delivered') {
       try {
         const order = await getOrderById(req.params.id);
-        if (order?.customer_id) {
+        if (order?.user_id) {
           await createNotification({
-            customer_id: order.customer_id,
+            user_id: order.user_id,
             title:       'Pedido entregue',
             message:     `O teu pedido #${req.params.id} (${order.service_type ?? 'Takeaway'}) foi entregue. Obrigado pela tua preferência!`,
           }).catch(e => console.error('Delivered notif error:', e.message));

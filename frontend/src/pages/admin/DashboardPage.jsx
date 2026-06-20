@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   Chart as ChartJS,
@@ -45,6 +46,7 @@ function StatusBadge({ status }) {
 export default function DashboardPage() {
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const navigate = useNavigate();
   const [ordersPage, setOrdersPage] = useState(1);
   const [alertsPage, setAlertsPage] = useState(1);
 
@@ -193,6 +195,7 @@ export default function DashboardPage() {
           pct={pctChange(kpis.ordersNow, kpis.ordersPrev)}
           up={kpis.ordersNow >= kpis.ordersPrev}
           sub={null}
+          onClick={() => navigate("/orders")}
         />
         <KpiCard
           faIcon="fa-solid fa-credit-card"
@@ -203,6 +206,7 @@ export default function DashboardPage() {
           pct={pctChange(kpis.billingNow, kpis.billingPrev)}
           up={kpis.billingNow >= kpis.billingPrev}
           sub={null}
+          onClick={() => navigate("/faturacao")}
         />
         <KpiCard
           faIcon="fa-solid fa-utensils"
@@ -215,6 +219,7 @@ export default function DashboardPage() {
           sub={kpis.totalTables > 0
             ? `${Math.round((kpis.occupied / kpis.totalTables) * 100)}% de ocupação`
             : "sem mesas"}
+          onClick={() => navigate("/table")}
         />
         <KpiCard
           faIcon="fa-regular fa-clock"
@@ -225,6 +230,7 @@ export default function DashboardPage() {
           pct={null}
           up={null}
           sub="por pedido"
+          onClick={() => navigate("/kds")}
         />
       </div>
 

@@ -5,10 +5,10 @@ import { PipelineError } from "../../utils/pipelineError.js";
 
 // ── Declarações das ferramentas ────────────────────────────────────────────────
 import {
-  createCustomerFunctionDeclaration,
-  getCustomerFunctionDeclaration,
-  findOrCreateCustomerFunctionDeclaration,
-} from "../functions/customers/index.js";
+  createUserFunctionDeclaration,
+  getUserFunctionDeclaration,
+  findOrCreateUserFunctionDeclaration,
+} from "../functions/users/index.js";
 import {
   getTableFunctionDeclaration,
   updateTableStatusFunctionDeclaration,
@@ -46,10 +46,10 @@ import {
 // ── Services (operações reais na BD) ──────────────────────────────────────────
 import { getChatHistoryByConversationId } from "../../services/index.js";
 import {
-  getCustomerById,
-  getAllCustomers,
-  createCustomer,
-  findOrCreateCustomer,
+  getUserById,
+  getAllUsers,
+  createUser,
+  findOrCreateUser,
   getTableById,
   getAllTables,
   updateTableStatus,
@@ -68,7 +68,7 @@ import {
   createNotification,
   createLog,
   getReservationById,
-  getActiveReservationByCustomerId,
+  getActiveReservationByCustomerId, // alias do reservationService (recebe userId)
   getReservationsByTableId,
   createReservation,
   cancelReservation,
@@ -76,8 +76,8 @@ import {
 
 // ── Todas as declarações de ferramentas do pipeline ───────────────────────────
 const ALL_DECLARATIONS = [
-  findOrCreateCustomerFunctionDeclaration,
-  getCustomerFunctionDeclaration,
+  findOrCreateUserFunctionDeclaration,
+  getUserFunctionDeclaration,
   getTableFunctionDeclaration,
   updateTableStatusFunctionDeclaration,
   getItemFunctionDeclaration,
@@ -101,25 +101,25 @@ const ALL_DECLARATIONS = [
 
 // ── Handlers: recebem os args do Groq e executam operações na BD ──────────────
 export const FUNCTION_HANDLERS = {
-  find_or_create_customer: async (args) => {
+  find_or_create_user: async (args) => {
     // Alguns modelos passam name como objecto em vez de string — coagir defensivamente
     let name = args.name;
     if (typeof name === 'object' && name !== null) {
       name = name.name ?? name.full_name ?? name.value ?? Object.values(name).filter(Boolean).join(' ');
     }
-    return findOrCreateCustomer(String(name ?? '').trim(), args.phone ?? null);
+    return findOrCreateUser(String(name ?? '').trim(), args.phone ?? null);
   },
 
-  get_customer: async (args) => {
-    if (args.customer_id) return getCustomerById(args.customer_id);
+  get_user: async (args) => {
+    if (args.user_id) return getUserById(args.user_id);
     const term = args.name || args.phone;
     if (term) {
-      const list = await getAllCustomers(term);
+      const list = await getAllUsers(term);
       return list[0] ?? null;
     }
     return null;
   },
-  create_customer: async (args) => createCustomer(args),
+  create_user: async (args) => createUser(args),
   get_table: async (args) => {
     if (args.table_id) return getTableById(args.table_id);
     const tables = await getAllTables();
@@ -205,7 +205,7 @@ export const FUNCTION_HANDLERS = {
 
   get_reservation: async (args) => {
     if (args.reservation_id) return getReservationById(args.reservation_id);
-    if (args.customer_id)    return getActiveReservationByCustomerId(args.customer_id);
+    if (args.user_id)        return getActiveReservationByCustomerId(args.user_id);
     if (args.table_id)       return getReservationsByTableId(args.table_id);
     return null;
   },
@@ -228,7 +228,7 @@ export const FUNCTION_HANDLERS = {
 
 // ── SmartBistroChatProcessor ───────────────────────────────────────────────────
 class SmartBistroChatProcessor extends BaseChatProcessor {
-  constructor(customerName = null) {
+  constructor(customerName = null) { // customerName mantido por retrocompat com chatBotController
     super({
       toolConfig: ALL_DECLARATIONS,
       functionHandlers: FUNCTION_HANDLERS,

@@ -98,7 +98,7 @@ O token guarda apenas `id` e `role_id` — nunca passwords nem dados sensíveis.
 
 #### Lógica de registo (detalhe importante para a defesa)
 
-O registo tem uma lógica de **ligação inteligente**: se já existir um cliente (`customers`) com o mesmo nome, email ou telefone mas sem conta (`auth_accounts`), a nova conta é ligada a esse cliente em vez de criar um duplicado. Isto garante que clientes criados pelo Maître AI ficam ligados à conta que criam depois.
+O registo tem uma lógica de **ligação inteligente**: se já existir um cliente (`users`) com o mesmo nome, email ou telefone mas sem conta (`auth_accounts`), a nova conta é ligada a esse cliente em vez de criar um duplicado. Isto garante que clientes criados pelo Maître AI ficam ligados à conta que criam depois.
 
 ```
 Registo recebido
@@ -111,7 +111,7 @@ Procura cliente por phone OR email OR name
       │                    │
    encontrou           não encontrou
       │                    │
-Tem auth_account?      Cria novo customer
+Tem auth_account?      Cria novo user
    │          │               │
   sim        não              ▼
    │          ▼         Cria auth_account
@@ -138,7 +138,7 @@ Serve de ponte entre o cliente React e o motor de chatbot em `genai/`. Usa **SSE
 #### Fluxo do streaming SSE
 
 ```
-Cliente envia POST { message, conversationId?, customer_id }
+Cliente envia POST { message, conversationId?, user_id }
                 │
                 ▼
     Abre conexão SSE (Content-Type: text/event-stream)
@@ -187,8 +187,8 @@ O controller mais complexo do sistema. Recebe um **pedido em linguagem natural**
 
 ```json
 {
-  "customer_name": "João",
-  "customer_surname": "Silva",
+  "user_name": "João",
+  "user_surname": "Silva",
   "phone": "912345678",
   "message": "eu e a minha esposa queremos jantar, esparguete e hamburguer",
   "payment_method": "MB Way",
@@ -201,13 +201,13 @@ O controller mais complexo do sistema. Recebe um **pedido em linguagem natural**
 #### Fluxo sequencial (o que acontece dentro do controller)
 
 ```
-1. Validação dos campos obrigatórios (customer_name + message)
+1. Validação dos campos obrigatórios (user_name + message)
         │
         ▼
 2. runOrderPipeline(orderData)  ◀── GenAI: 3 agentes em sequência
         │   devolve: { validated, sequenced, financials, final }
         ▼
-3. findOrCreateCustomer(nome, telefone)  ◀── BD: upsert de cliente
+3. findOrCreateuser(nome, telefone)  ◀── BD: upsert de cliente
         │
         ▼
 4. Verificar itens indisponíveis (stock_status do Chefe)
@@ -318,9 +318,9 @@ if (order_status === 'Ready') {
     await createInvoice({ order_id, subtotal_amount, tax_amount, total_amount, profit_margin: total });
 
     // Notifica o cliente para efectuar o pagamento
-    if (order.customer_id) {
+    if (order.user_id) {
       await createNotification({
-        customer_id: order.customer_id,
+        user_id: order.user_id,
         title: 'Pedido pronto — pagamento pendente',
         message: `O teu pedido #${orderId} está pronto. Total a pagar: ${total.toFixed(2)} €.`,
       });
@@ -403,7 +403,7 @@ Este é o coração da funcionalidade principal do SmartBistro. Coordena os 3 ag
 #### Diagrama completo do pipeline
 
 ```
-Input: { customer_name, message, tax_rate, discount, ... }
+Input: { user_name, message, tax_rate, discount, ... }
            │
            ▼
   [BD] getAllTables("Available") + getActiveItems()
@@ -515,7 +515,7 @@ O chatbot pode chamar estas funções durante a conversa:
 
 | Categoria | Funções |
 |-----------|---------|
-| Clientes | `get_customer`, `create_customer`, `find_or_create_customer` |
+| Clientes | `get_user`, `create_user`, `find_or_create_user` |
 | Mesas | `get_tables`, `update_table_status` |
 | Menu | `get_items`, `get_active_items` |
 | Pedidos | `create_order`, `update_order_status` |
@@ -631,17 +631,17 @@ export const createReservationDeclaration = {
   parameters: {
     type: "object",
     properties: {
-      customer_id: { type: "number" },
+      user_id: { type: "number" },
       table_id:    { type: "number" },
       date:        { type: "string", description: "ISO 8601" },
       guests:      { type: "number" },
     },
-    required: ["customer_id", "table_id", "date", "guests"]
+    required: ["user_id", "table_id", "date", "guests"]
   }
 };
 
 // implementations.js
-export async function createReservation({ customer_id, table_id, date, guests }) {
+export async function createReservation({ user_id, table_id, date, guests }) {
   return db.query("INSERT INTO reservations ...", [...]);
 }
 ```
@@ -945,7 +945,7 @@ Transforma erros técnicos do Groq em mensagens compreensíveis em português:
 ### Fluxo B — Pedido via Pipeline (linguagem natural → BD)
 
 ```
-[React] POST /orders/pipeline { customer_name:"João", message:"2 hambúrgueres e uma água" }
+[React] POST /orders/pipeline { user_name:"João", message:"2 hambúrgueres e uma água" }
     │
     ▼
 [OrderPipelineController] valida campos obrigatórios
@@ -961,7 +961,7 @@ Transforma erros técnicos do Groq em mensagens compreensíveis em português:
     │
     ▼
 [OrderPipelineController]
-    ├── findOrCreateCustomer("João")
+    ├── findOrCreateuser("João")
     ├── createOrder(...)
     ├── createOrderItem(×3 em paralelo)
     ├── createInvoice({ total: 28.82 })
@@ -989,7 +989,7 @@ Transforma erros técnicos do Groq em mensagens compreensíveis em português:
     ├── invoiceExistsForOrder() → falso
     ├── calculateInvoiceTotals({ items }) → { subtotal, taxAmount, total }
     ├── createInvoice({ order_id, total_amount, tax_amount, ... })
-    └── createNotification({ customer_id, title: "Pedido pronto — pagamento pendente", message: "...X€" })
+    └── createNotification({ user_id, title: "Pedido pronto — pagamento pendente", message: "...X€" })
     │
     ▼
 [Cliente] bell com badge → clica → vê notificação → clica "Pagar" → /perfil

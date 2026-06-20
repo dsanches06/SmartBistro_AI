@@ -13,7 +13,7 @@ class CreatePaymentFunction extends BaseFunction {
           type: Type.INTEGER,
           description: 'ID da fatura a pagar',
         },
-        customer_id: {
+        user_id: {
           type: Type.INTEGER,
           description: 'ID do cliente que efectua o pagamento',
         },
@@ -37,7 +37,7 @@ class CreatePaymentFunction extends BaseFunction {
   mapValues(args = {}) {
     return {
       invoice_id:     this.parseNumber(args.invoice_id, 0),
-      customer_id:    args.customer_id != null ? this.parseNumber(args.customer_id, 0) : null,
+      user_id:    args.user_id != null ? this.parseNumber(args.user_id, 0) : null,
       amount:         this.parseNumber(args.amount, 0),
       payment_method: this.parseString(args.payment_method, 'MB Way'),
       payment_status: this.parseString(args.payment_status, 'Paid'),

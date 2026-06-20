@@ -1,46 +1,72 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageSection, Pagination, ListCard } from "@/components";
+import { SortTh } from "@/components/ui/shared/SortTh.jsx";
 import { itemService } from "@/services";
 import { MENU_CATEGORIES, MENU_CATEGORY_META, formatMenuPrice, getItemEmoji, MENU_PAGE_SIZE } from "@/utils";
 
-/* ── PriceEditor (gestão inline) ── */
-function PriceEditor({ item, onSave, onCancel, saving }) {
-  const [val, setVal] = useState(String(item.price));
-  const ref = useRef(null);
-  useEffect(() => { ref.current?.focus(); ref.current?.select(); }, []);
-  const confirm = () => {
-    const n = parseFloat(val.replace(",", "."));
+/* ── Modal para editar preço ── */
+function EditarPrecoModal({ item, onClose, onSave, saving }) {
+  const [price, setPrice] = useState(String(item.price));
+  const meta = MENU_CATEGORY_META[item.category] ?? {};
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const n = parseFloat(price.replace(",", "."));
     if (!isNaN(n) && n > 0) onSave(n);
   };
+
   return (
-    <div className="flex items-center gap-1.5">
-      <input
-        ref={ref} type="number" min="0.01" step="0.01"
-        value={val}
-        onChange={e => setVal(e.target.value)}
-        onKeyDown={e => { if (e.key === "Enter") confirm(); if (e.key === "Escape") onCancel(); }}
-        className="w-20 rounded-lg px-2 py-1 text-sm font-semibold text-right outline-none"
-        style={{ border: "1.5px solid var(--primary)", background: "var(--surface)", color: "var(--text)" }}
-      />
-      <button onClick={confirm} disabled={saving}
-        className="w-7 h-7 inline-flex items-center justify-center rounded-lg disabled:opacity-50"
-        style={{ background: "#22c55e", color: "#fff" }}>
-        {saving ? <i className="fa-solid fa-spinner fa-spin text-xs" /> : <i className="fa-solid fa-check text-xs" />}
-      </button>
-      <button onClick={onCancel} disabled={saving}
-        className="w-7 h-7 inline-flex items-center justify-center rounded-lg disabled:opacity-50"
-        style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
-        <i className="fa-solid fa-xmark text-xs" />
-      </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.5)" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="rounded-[24px] p-6 w-full max-w-sm shadow-2xl"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2.5">
+            <span style={{ fontSize: 24 }}>{getItemEmoji(item.name)}</span>
+            <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>Editar Preço</h2>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl"
+            style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
+            <i className="fa-solid fa-xmark text-sm" />
+          </button>
+        </div>
+        <p className="text-sm font-semibold mb-0.5" style={{ color: "var(--text)" }}>{item.name}</p>
+        <p className="text-xs mb-4" style={{ color: meta.accent }}>{meta.emoji} {meta.label}</p>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>
+              Preço (€)
+            </label>
+            <input
+              autoFocus type="number" min="0.01" step="0.01"
+              value={price}
+              onChange={e => setPrice(e.target.value)}
+              className="w-full rounded-xl px-3 py-2.5 text-sm font-bold text-right outline-none"
+              style={{ background: "var(--surface-2)", border: "1.5px solid var(--primary)", color: "var(--text)" }}
+            />
+          </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
+              style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
+              Cancelar
+            </button>
+            <button type="submit" disabled={saving}
+              className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-60"
+              style={{ background: "var(--primary)" }}>
+              {saving ? <i className="fa-solid fa-spinner fa-spin" /> : "Guardar"}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
 
 /* ── GestãoRow ── */
-function GestaoRow({ item, editingId, savingId, togglingId, onEdit, onSave, onCancel, onToggle }) {
+function GestaoRow({ item, togglingId, onEdit, onToggle }) {
   const meta       = MENU_CATEGORY_META[item.category] ?? {};
-  const isEditing  = editingId  === item.id;
-  const isSaving   = savingId   === item.id;
   const isToggling = togglingId === item.id;
   return (
     <tr
@@ -60,10 +86,7 @@ function GestaoRow({ item, editingId, savingId, togglingId, onEdit, onSave, onCa
         </span>
       </td>
       <td className="py-3 px-4">
-        {isEditing
-          ? <PriceEditor item={item} onSave={onSave} onCancel={onCancel} saving={isSaving} />
-          : <span className="text-sm font-bold" style={{ color: meta.accent }}>{formatMenuPrice(item.price)}</span>
-        }
+        <span className="text-sm font-bold" style={{ color: meta.accent }}>{formatMenuPrice(item.price)}</span>
       </td>
       <td className="py-3 px-4">
         <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
@@ -73,12 +96,11 @@ function GestaoRow({ item, editingId, savingId, togglingId, onEdit, onSave, onCa
       </td>
       <td className="py-3 px-4">
         <div className="flex items-center gap-2">
-          {!isEditing && (
-            <button onClick={() => onEdit(item)}
-              className="text-xs px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-[var(--primary)] hover:text-white"
-              style={{ color: "var(--primary)", borderColor: "var(--border)", background: "var(--surface-2)" }}
-            >
-              <i className="fa-solid fa-pen text-xs mr-1" />Preço
+          <button onClick={() => onEdit(item)}
+            className="text-xs px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-[var(--primary)] hover:text-white"
+            style={{ color: "var(--primary)", borderColor: "var(--border)", background: "var(--surface-2)" }}
+          >
+            <i className="fa-solid fa-pen text-xs mr-1" />Preço
             </button>
           )}
           <button onClick={() => onToggle(item)} disabled={isToggling}
@@ -100,14 +122,11 @@ function GestaoRow({ item, editingId, savingId, togglingId, onEdit, onSave, onCa
 }
 
 /* ── GestaoCard (mobile) ── */
-function GestaoCard({ item, editingId, savingId, togglingId, onEdit, onSave, onCancel, onToggle }) {
+function GestaoCard({ item, togglingId, onEdit, onToggle }) {
   const meta       = MENU_CATEGORY_META[item.category] ?? {};
-  const isEditing  = editingId  === item.id;
-  const isSaving   = savingId   === item.id;
   const isToggling = togglingId === item.id;
   return (
     <ListCard style={{ opacity: item.is_active ? 1 : 0.7 }}>
-      {/* Nome + emoji */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <span style={{ fontSize: 20, flexShrink: 0 }}>{getItemEmoji(item.name)}</span>
@@ -118,35 +137,25 @@ function GestaoCard({ item, editingId, savingId, togglingId, onEdit, onSave, onC
           {item.is_active ? "Ativo" : "Inativo"}
         </span>
       </div>
-      {/* Categoria + preço */}
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
           style={{ background: `${meta.accent}18`, color: meta.accent }}>
           {meta.emoji} {meta.label}
         </span>
-        {isEditing
-          ? <PriceEditor item={item} onSave={onSave} onCancel={onCancel} saving={isSaving} />
-          : <span className="text-base font-bold" style={{ color: meta.accent }}>{formatMenuPrice(item.price)}</span>
-        }
+        <span className="text-base font-bold" style={{ color: meta.accent }}>{formatMenuPrice(item.price)}</span>
       </div>
-      {/* Ações */}
-      {!isEditing && (
-        <div className="flex gap-2 pt-0.5">
-          <button onClick={() => onEdit(item)}
-            className="flex-1 text-xs py-1.5 rounded-lg border font-semibold transition-colors hover:bg-[var(--primary)] hover:text-white"
-            style={{ color: "var(--primary)", borderColor: "var(--border)", background: "var(--surface-2)" }}>
-            <i className="fa-solid fa-pen text-xs mr-1" />Editar Preço
-          </button>
-          <button onClick={() => onToggle(item)} disabled={isToggling}
-            className="flex-1 text-xs py-1.5 rounded-lg border font-semibold transition-colors disabled:opacity-50"
-            style={{
-              color:       item.is_active ? "#991b1b" : "#166534",
-              borderColor: item.is_active ? "#fecaca" : "#bbf7d0",
-              background:  item.is_active ? "#fef2f2" : "#f0fdf4",
-            }}>
-            {isToggling ? <i className="fa-solid fa-spinner fa-spin text-xs" /> : item.is_active ? "Desativar" : "Ativar"}
-          </button>
-        </div>
+      <div className="flex gap-2 pt-0.5">
+        <button onClick={() => onEdit(item)}
+          className="flex-1 text-xs py-1.5 rounded-lg border font-semibold transition-colors hover:bg-[var(--primary)] hover:text-white"
+          style={{ color: "var(--primary)", borderColor: "var(--border)", background: "var(--surface-2)" }}>
+          <i className="fa-solid fa-pen text-xs mr-1" />Editar Preço
+        </button>
+        <button onClick={() => onToggle(item)} disabled={isToggling}
+          className="flex-1 text-xs py-1.5 rounded-lg border font-semibold transition-colors disabled:opacity-50"
+          style={{ color: item.is_active ? "#991b1b" : "#166534", borderColor: item.is_active ? "#fecaca" : "#bbf7d0", background: item.is_active ? "#fef2f2" : "#f0fdf4" }}>
+          {isToggling ? <i className="fa-solid fa-spinner fa-spin text-xs" /> : item.is_active ? "Desativar" : "Ativar"}
+        </button>
+      </div>
       )}
     </ListCard>
   );
@@ -245,10 +254,16 @@ export default function MenuPage() {
   const [search,      setSearch]     = useState("");
   const [showSearch,  setShowSearch]  = useState(false);
   const [page,       setPage]       = useState(1);
-  const [editingId,  setEditingId]  = useState(null);
-  const [savingId,   setSavingId]   = useState(null);
+  const [priceModalItem, setPriceModalItem] = useState(null);   // item aberto no modal de preço
+  const [priceModalSaving, setPriceModalSaving] = useState(false);
   const [togglingId, setTogglingId] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [sortCol, setSortCol] = useState(null);
+  const [sortDir, setSortDir] = useState("asc");
+  const handleSort = (col) => {
+    if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortCol(col); setSortDir("asc"); }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -270,30 +285,39 @@ export default function MenuPage() {
     return () => clearInterval(id);
   }, [load]);
 
-  const filtered = items.filter(i => {
-    const matchCat    = catFilter === "all" || i.category === catFilter;
-    const matchSearch = !search.trim() || i.name.toLowerCase().includes(search.trim().toLowerCase());
-    return matchCat && matchSearch;
-  });
+  const filtered = useMemo(() => {
+    const base = items.filter(i => {
+      const matchCat    = catFilter === "all" || i.category === catFilter;
+      const matchSearch = !search.trim() || i.name.toLowerCase().includes(search.trim().toLowerCase());
+      return matchCat && matchSearch;
+    });
+    if (!sortCol) return base;
+    return [...base].sort((a, b) => {
+      let va, vb;
+      if (sortCol === "name")     { va = a.name?.toLowerCase() ?? "";     vb = b.name?.toLowerCase() ?? ""; }
+      if (sortCol === "category") { va = a.category?.toLowerCase() ?? ""; vb = b.category?.toLowerCase() ?? ""; }
+      if (sortCol === "price")    { va = Number(a.price);                  vb = Number(b.price); }
+      if (sortCol === "status")   { va = a.is_active ? 1 : 0;             vb = b.is_active ? 1 : 0; }
+      if (va < vb) return sortDir === "asc" ? -1 : 1;
+      if (va > vb) return sortDir === "asc" ?  1 : -1;
+      return 0;
+    });
+  }, [items, catFilter, search, sortCol, sortDir]);
 
   const pageData = filtered.slice((page - 1) * MENU_PAGE_SIZE, page * MENU_PAGE_SIZE);
 
   const handleCatFilter = (cat) => { setCatFilter(cat); setPage(1); };
   const handleSearch    = (v)   => { setSearch(v);     setPage(1); };
 
-  const handleEdit      = item => setEditingId(item.id);
-  const handleCancel    = ()   => setEditingId(null);
-
   const handleSavePrice = async (newPrice) => {
-    const item = items.find(i => i.id === editingId);
-    if (!item) return;
-    setSavingId(editingId);
+    if (!priceModalItem) return;
+    setPriceModalSaving(true);
     try {
-      await itemService.update(item.id, { name: item.name, category: item.category, price: newPrice });
-      setItems(prev => prev.map(i => i.id === item.id ? { ...i, price: newPrice } : i));
-      setEditingId(null);
+      await itemService.update(priceModalItem.id, { name: priceModalItem.name, category: priceModalItem.category, price: newPrice });
+      setItems(prev => prev.map(i => i.id === priceModalItem.id ? { ...i, price: newPrice } : i));
+      setPriceModalItem(null);
     } catch (err) { console.error(err); }
-    finally { setSavingId(null); }
+    finally { setPriceModalSaving(false); }
   };
 
   const handleToggle = async (item) => {
@@ -314,11 +338,24 @@ export default function MenuPage() {
       {showCreate && (
         <CreateItemModal onClose={() => setShowCreate(false)} onCreate={handleCreated} />
       )}
+
+      {priceModalItem && (
+        <EditarPrecoModal
+          item={priceModalItem}
+          onClose={() => setPriceModalItem(null)}
+          onSave={handleSavePrice}
+          saving={priceModalSaving}
+        />
+      )}
+
       <div className="rounded-[32px] bg-surface p-6 shadow-sm">
 
         {/* Header */}
-        <div className="flex items-center justify-between gap-2 mb-5">
-          <h2 className="text-xl sm:text-2xl font-bold" style={{ color: "var(--text)" }}>Menu</h2>
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold" style={{ color: "var(--text)" }}>Menu</h2>
+            <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>Itens do cardápio, preços e categorias.</p>
+          </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <button onClick={() => setShowCreate(true)}
               className="flex items-center gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white whitespace-nowrap"
@@ -329,35 +366,8 @@ export default function MenuPage() {
           </div>
         </div>
 
-        {/* Search toggle */}
-        <div className="flex items-center gap-2 mb-3 justify-end">
-          {showSearch && (
-            <input
-              autoFocus
-              type="text"
-              placeholder="Pesquisar item…"
-              value={search}
-              onChange={e => handleSearch(e.target.value)}
-              className="h-9 flex-1 sm:w-56 sm:flex-none rounded-xl px-3 text-sm outline-none"
-              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }}
-            />
-          )}
-          <button
-            onClick={() => { setShowSearch(s => !s); handleSearch(""); }}
-            className="w-9 h-9 rounded-xl border flex items-center justify-center cursor-pointer transition-colors"
-            style={{
-              background: showSearch ? "var(--primary)" : "var(--surface-2)",
-              borderColor: showSearch ? "var(--primary)" : "var(--border)",
-              color: showSearch ? "#fff" : "var(--text-muted)",
-            }}
-            title={showSearch ? "Fechar pesquisa" : "Pesquisar"}
-          >
-            <i className={`fa-solid ${showSearch ? "fa-xmark" : "fa-magnifying-glass"} text-xs`} />
-          </button>
-        </div>
-
-        {/* Category filters */}
-        <div className="flex gap-2 mb-5 justify-between sm:justify-start sm:gap-1.5 pt-1">
+        {/* Category filters — centrados */}
+        <div className="flex gap-2 mb-3 justify-center sm:justify-start sm:gap-1.5">
           <button onClick={() => handleCatFilter("all")}
             className="relative flex-1 sm:flex-shrink-0 sm:flex-initial px-3 py-2 sm:py-1.5 rounded-full text-xs font-semibold transition-all text-center"
             style={{ background: catFilter === "all" ? "var(--primary)" : "var(--surface-2)", color: catFilter === "all" ? "#fff" : "var(--text-secondary)" }}>
@@ -390,7 +400,28 @@ export default function MenuPage() {
           })}
         </div>
 
-
+        {/* Search — estilo ClientesPage, após pills */}
+        <div className="flex items-center gap-2 mb-4">
+          {showSearch && (
+            <input autoFocus type="text" placeholder="Pesquisar item…"
+              value={search} onChange={e => handleSearch(e.target.value)}
+              className="flex-1 h-9 rounded-xl px-3 text-sm outline-none"
+              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }}
+            />
+          )}
+          <div className="ml-auto flex items-center gap-2">
+            <span className="hidden sm:inline-flex text-xs px-3 py-1 rounded-full border"
+              style={{ color: "var(--text-muted)", borderColor: "var(--border)", background: "var(--surface-2)" }}>
+              Filtro: {catFilter === "all" ? "Todos" : (MENU_CATEGORY_META[catFilter]?.label ?? catFilter)}
+            </span>
+            <button onClick={() => { setShowSearch(s => !s); handleSearch(""); }}
+              className="w-8 h-8 rounded-lg border flex items-center justify-center cursor-pointer transition-colors"
+              style={{ background: showSearch ? "var(--primary)" : "var(--surface)", borderColor: showSearch ? "var(--primary)" : "var(--border)", color: showSearch ? "#fff" : "var(--text-muted)" }}
+              title={showSearch ? "Fechar pesquisa" : "Pesquisar"}>
+              <i className={`fa-solid ${showSearch ? "fa-xmark" : "fa-magnifying-glass"} text-xs`} />
+            </button>
+          </div>
+        </div>
 
         {/* Content */}
         {loading ? (
@@ -408,10 +439,11 @@ export default function MenuPage() {
               <table className="w-full text-left">
                 <thead>
                   <tr style={{ borderBottom: "1px solid var(--border)", background: "var(--surface-2)" }}>
-                    {["Item", "Categoria", "Preço", "Estado", "Ações"].map(h => (
-                      <th key={h} className="py-3 px-4 text-xs font-semibold uppercase tracking-wider"
-                        style={{ color: "var(--text-secondary)" }}>{h}</th>
-                    ))}
+                    <SortTh col="name"     sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Item</SortTh>
+                    <SortTh col="category" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Categoria</SortTh>
+                    <SortTh col="price"    sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Preço</SortTh>
+                    <SortTh col="status"   sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Estado</SortTh>
+                    <th className="py-3 px-4 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -419,8 +451,8 @@ export default function MenuPage() {
                     ? <tr><td colSpan={5} className="py-10 text-center text-sm" style={{ color: "var(--text-muted)" }}>Nenhum item encontrado.</td></tr>
                     : pageData.map(item => (
                       <GestaoRow key={item.id} item={item}
-                        editingId={editingId} savingId={savingId} togglingId={togglingId}
-                        onEdit={handleEdit} onSave={handleSavePrice} onCancel={handleCancel} onToggle={handleToggle}
+                        togglingId={togglingId}
+                        onEdit={setPriceModalItem} onToggle={handleToggle}
                       />
                     ))
                   }
@@ -434,8 +466,8 @@ export default function MenuPage() {
                 ? <p className="py-10 text-center text-sm" style={{ color: "var(--text-muted)" }}>Nenhum item encontrado.</p>
                 : pageData.map(item => (
                   <GestaoCard key={item.id} item={item}
-                    editingId={editingId} savingId={savingId} togglingId={togglingId}
-                    onEdit={handleEdit} onSave={handleSavePrice} onCancel={handleCancel} onToggle={handleToggle}
+                    togglingId={togglingId}
+                    onEdit={setPriceModalItem} onToggle={handleToggle}
                   />
                 ))
               }

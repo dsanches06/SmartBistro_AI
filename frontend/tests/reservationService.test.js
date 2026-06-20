@@ -20,14 +20,14 @@ describe('reservationService', () => {
     expect(r).toHaveProperty('party_size', 4)
   })
 
-  it('getByCustomer chama GET /reservations/customer/:customerId', async () => {
+  it('getByUser chama GET /reservations/user/:userId', async () => {
     api.get.mockResolvedValue([])
-    await reservationService.getByCustomer(2)
-    expect(api.get).toHaveBeenCalledWith('/reservations/customer/2')
+    await reservationService.getByUser(2)
+    expect(api.get).toHaveBeenCalledWith('/reservations/user/2')
   })
 
   it('create chama POST /reservations com os dados corretos', async () => {
-    const data = { customer_id: 1, table_id: 3, reservation_date: '2026-07-01T20:00:00', party_size: 2 }
+    const data = { user_id: 1, table_id: 3, reservation_date: '2026-07-01T20:00:00', party_size: 2 }
     api.post.mockResolvedValue({ id: 5, ...data })
     const r = await reservationService.create(data)
     expect(api.post).toHaveBeenCalledWith('/reservations', data)

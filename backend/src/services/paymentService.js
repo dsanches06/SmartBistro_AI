@@ -40,7 +40,7 @@ export const getPaymentByInvoiceId = async (invoiceId) => {
 // Devolve todos os pagamentos de um cliente
 export const getPaymentsByCustomerId = async (customerId) => {
   const [r] = await db.query(
-    "SELECT * FROM payments WHERE customer_id = ? ORDER BY processed_at DESC",
+    "SELECT * FROM payments WHERE user_id = ? ORDER BY processed_at DESC",
     [customerId],
   );
   return r.map(mapPaymentDTOResponse);
@@ -50,11 +50,11 @@ export const getPaymentsByCustomerId = async (customerId) => {
 export const createPayment = async (data) => {
   const [result] = await db.query(
     `INSERT INTO payments
-      (invoice_id, customer_id, amount, payment_method, payment_status, processed_at)
+      (invoice_id, user_id, amount, payment_method, payment_status, processed_at)
      VALUES (?, ?, ?, ?, ?, ?)`,
     [
       data.invoice_id,
-      data.customer_id ?? null,
+      data.user_id ?? null,
       data.amount ?? 0,
       data.payment_method ?? "MB Way",
       data.payment_status ?? "Pending",
@@ -64,7 +64,7 @@ export const createPayment = async (data) => {
   return mapPaymentDTOResponse({
     id: result.insertId,
     invoice_id: data.invoice_id,
-    customer_id: data.customer_id ?? null,
+    user_id: data.user_id ?? null,
     amount: data.amount,
     payment_method: data.payment_method ?? "MB Way",
     payment_status: data.payment_status ?? "Pending",

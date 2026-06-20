@@ -22,7 +22,7 @@
   <text x="20" y="180" fill="#a6e3a1"> ✓ tests/notificationService.test.js  <tspan fill="#6c7086"> (9 tests)  30ms</tspan></text>
   <text x="20" y="198" fill="#a6e3a1"> ✓ tests/api.test.js                  <tspan fill="#6c7086"> (8 tests)  47ms</tspan></text>
   <text x="20" y="216" fill="#a6e3a1"> ✓ tests/invoiceService.test.js       <tspan fill="#6c7086"> (6 tests)  26ms</tspan></text>
-  <text x="20" y="234" fill="#a6e3a1"> ✓ tests/customerService.test.js      <tspan fill="#6c7086">(10 tests)  36ms</tspan></text>
+  <text x="20" y="234" fill="#a6e3a1"> ✓ tests/userService.test.js      <tspan fill="#6c7086">(10 tests)  36ms</tspan></text>
   <text x="20" y="252" fill="#a6e3a1"> ✓ tests/orderItemService.test.js     <tspan fill="#6c7086"> (8 tests)  28ms</tspan></text>
   <text x="20" y="270" fill="#a6e3a1"> ✓ tests/reservationService.test.js   <tspan fill="#6c7086"> (8 tests)  29ms</tspan></text>
   <text x="20" y="288" fill="#a6e3a1"> ✓ tests/stockService.test.js         <tspan fill="#6c7086"> (7 tests)  29ms</tspan></text>

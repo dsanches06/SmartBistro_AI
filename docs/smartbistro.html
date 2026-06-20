@@ -378,7 +378,7 @@
 ├── kdsController.js           <span class="cm">← Kitchen Display</span>
 ├── orderController.js         <span class="cm">← CRUD + updateStatus</span>
 ├── orderItemController.js     <span class="cm">← itens do pedido</span>
-├── customerController.js      <span class="cm">← gestão clientes</span>
+├── userController.js      <span class="cm">← gestão clientes</span>
 ├── itemController.js          <span class="cm">← gestão menu</span>
 ├── invoiceController.js       <span class="cm">← faturas</span>
 ├── paymentController.js       <span class="cm">← pagamentos</span>
@@ -401,7 +401,7 @@
 ├── chatRoutes.js          <span class="cm">← /chatbot/*</span>
 ├── chatHistoryRoutes.js   <span class="cm">← /chat-history/*</span>
 ├── conversationRoutes.js  <span class="cm">← /conversations/*</span>
-├── customerRoutes.js      <span class="cm">← /customers/*</span>
+├── userRoutes.js      <span class="cm">← /users/*</span>
 ├── ingredientRoutes.js    <span class="cm">← /ingredients/*</span>
 ├── invoiceRoutes.js       <span class="cm">← /invoices/*</span>
 ├── itemRoutes.js          <span class="cm">← /items/*</span>
@@ -418,7 +418,7 @@
           <p style="font-size:0.62rem;font-weight:700;color:var(--primary);margin-bottom:0.15rem;">services/ <span style="font-weight:400;color:#94a3b8;">(17)</span></p>
           <pre style="font-size:0.68rem;line-height:1.38;margin:0;"><code>├── orderService.js        <span class="cm">← queries pedidos</span>
 ├── orderItemService.js    <span class="cm">← queries itens pedido</span>
-├── customerService.js     <span class="cm">← queries clientes</span>
+├── userService.js     <span class="cm">← queries clientes</span>
 ├── itemService.js         <span class="cm">← queries menu</span>
 ├── invoiceService.js      <span class="cm">← queries faturas</span>
 ├── paymentService.js      <span class="cm">← queries pagamentos</span>
@@ -471,7 +471,7 @@
 ├── kds.test.js               <span class="cm">← Chef AI, sequências cozinha</span>
 ├── orders.test.js            <span class="cm">← CRUD + status + auto-fatura</span>
 ├── tables.test.js            <span class="cm">← CRUD + ocupação + detalhes</span>
-├── customers.test.js         <span class="cm">← CRUD + duplicados</span>
+├── users.test.js         <span class="cm">← CRUD + duplicados</span>
 ├── items.test.js             <span class="cm">← CRUD + activo/inactivo</span>
 ├── ingredients.test.js       <span class="cm">← CRUD + nome único</span>
 ├── invoices.test.js          <span class="cm">← CRUD + validação pedido</span>
@@ -532,7 +532,7 @@
         <!-- COLUNA DIREITA: functions (19 funções, 12 categorias) -->
         <div class="card" style="flex:1;padding:0.6rem;">
           <p style="font-size:0.62rem;font-weight:700;color:var(--primary);margin-bottom:0.15rem;">functions/ <span style="font-weight:400;color:#94a3b8;">(19 funções, 12 categorias)</span></p>
-          <pre style="font-size:0.68rem;line-height:1.38;margin:0;"><code>├── customers/
+          <pre style="font-size:0.68rem;line-height:1.38;margin:0;"><code>├── users/
 │   ├── get.js           <span class="cm">← buscar cliente</span>
 │   ├── create.js        <span class="cm">← criar cliente</span>
 │   └── findOrCreate.js  <span class="cm">← upsert cliente</span>
@@ -583,7 +583,7 @@
     <div class="slide slide-image">
       <h2 class="center">AuthController — Registo Inteligente</h2>
       <p style="font-size:0.88rem;margin-bottom:0.4rem;text-align:center;color:#64748b;">Responsável pelo registo e autenticação de utilizadores, com ligação automática a clientes existentes e emissão de JWT com duração de 8 horas</p>
-      <p style="font-size:0.82rem;margin:0 auto 0.5rem;max-width:75%;text-align:center;color:#475569;"><strong>Nota:</strong> se já existir um cliente <code>customers</code> com o mesmo nome, email ou telefone mas sem conta <code>auth_accounts</code>, a nova conta é ligada a esse cliente em vez de criar um duplicado — garante que clientes criados pelo Maître AI ficam ligados à conta que criam depois.</p>
+      <p style="font-size:0.82rem;margin:0 auto 0.5rem;max-width:75%;text-align:center;color:#475569;"><strong>Nota:</strong> se já existir um cliente <code>users</code> com o mesmo nome, email ou telefone mas sem conta <code>auth_accounts</code>, a nova conta é ligada a esse cliente em vez de criar um duplicado — garante que clientes criados pelo Maître AI ficam ligados à conta que criam depois.</p>
       <div class="img-centered" style="flex:1;">
         <img src="assets/02-registo.png" alt="Fluxo de registo do AuthController" class="img-full" loading="lazy" />
       </div>
@@ -845,11 +845,11 @@ router.<span class="fn">get</span>(<span class="str">'/invoices'</span>,    veri
 
 <span class="cm">// Uso — gerado uma vez, reutilizado em qualquer rota</span>
 <span class="kw">const</span> orderExists    = <span class="fn">createExistsMiddleware</span>(getOrderById,    <span class="str">'Order'</span>);
-<span class="kw">const</span> customerExists = <span class="fn">createExistsMiddleware</span>(getCustomerById, <span class="str">'Customer'</span>);
+<span class="kw">const</span> userExists = <span class="fn">createExistsMiddleware</span>(getuserById, <span class="str">'user'</span>);
 <span class="kw">const</span> itemExists     = <span class="fn">createExistsMiddleware</span>(getItemById,     <span class="str">'Item'</span>);
 
 router.<span class="fn">put</span>   (<span class="str">'/orders/:id'</span>,    orderExists,    updateOrder);
-router.<span class="fn">delete</span>(<span class="str">'/customers/:id'</span>, customerExists, deleteCustomer);
+router.<span class="fn">delete</span>(<span class="str">'/users/:id'</span>, userExists, deleteuser);
 router.<span class="fn">patch</span> (<span class="str">'/items/:id'</span>,     itemExists,     updateItem);</code></pre>
       </div>
       <div class="slide-footer">Middleware — createExistsMiddleware</div>
@@ -1047,7 +1047,7 @@ router.<span class="fn">patch</span> (<span class="str">'/items/:id'</span>,    
 <span class="fn">reservationService.js</span> <span class="cm">← Reservas</span>
 <span class="fn">notificationService.js</span><span class="cm">← Notificações</span>
 <span class="fn">chatService.js</span>        <span class="cm">← SSE streaming chatbot</span>
-<span class="fn">customerService.js</span>    <span class="cm">← Clientes</span>
+<span class="fn">userService.js</span>    <span class="cm">← Clientes</span>
 <span class="fn">ingredientService.js</span>  <span class="cm">← Ingredientes</span>
 <span class="fn">reportService.js</span>      <span class="cm">← Relatórios</span></code></pre>
           <p style="font-size:0.62rem;font-weight:700;color:var(--primary);margin-bottom:0.15rem;">utils/</p>
@@ -1070,7 +1070,7 @@ router.<span class="fn">patch</span> (<span class="str">'/items/:id'</span>,    
 ├── authService.test.js       <span class="cm">← login, register, logout, me</span>
 ├── BaseService.test.js       <span class="cm">← fetchData, sendMessage, SSE helpers</span>
 ├── orderService.test.js      <span class="cm">← CRUD pedidos + updateStatus</span>
-├── customerService.test.js   <span class="cm">← CRUD clientes</span>
+├── userService.test.js   <span class="cm">← CRUD clientes</span>
 ├── tableService.test.js      <span class="cm">← CRUD mesas</span>
 ├── itemService.test.js       <span class="cm">← CRUD itens do menu</span>
 ├── ingredientService.test.js <span class="cm">← CRUD ingredientes</span>
@@ -1235,7 +1235,7 @@ router.<span class="fn">patch</span> (<span class="str">'/items/:id'</span>,    
               <tr><td><code>orderService</code></td><td><code>/orders</code> · <code>/orders/:id</code> · <code>/orders/:id/status</code></td></tr>
               <tr><td><code>orderItemService</code></td><td><code>/order-items/bulk</code> · <code>getByOrder(id)</code></td></tr>
               <tr><td><code>itemService</code></td><td><code>/items</code> · <code>/items/:id</code> (create, update, toggle)</td></tr>
-              <tr><td><code>customerService</code></td><td><code>/customers</code> · <code>/customers/:id</code> · <code>markNotificationRead</code></td></tr>
+              <tr><td><code>userService</code></td><td><code>/users</code> · <code>/users/:id</code> · <code>markNotificationRead</code></td></tr>
               <tr><td><code>stockService</code></td><td><code>/stock</code> · <code>/stock/:id</code> · <code>adjustQuantity</code></td></tr>
             </tbody>
           </table>

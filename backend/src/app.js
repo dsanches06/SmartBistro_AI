@@ -4,7 +4,8 @@ import dotenv from "dotenv";
 import logger from "./middlewares/loggerMiddleware.js";
 import {
   authRoutes,
-  customerRoutes,
+  userRoutes,
+  staffRoutes,
   roleRoutes,
   tableRoutes,
   itemRoutes,
@@ -50,7 +51,8 @@ app.get("/", (req, res) => {
 
 /* Routes */
 app.use("/auth",      authRoutes);
-app.use("/customers", customerRoutes);
+app.use("/users",     userRoutes);
+app.use("/staff",     staffRoutes);
 app.use("/roles", roleRoutes);
 app.use("/tables", tableRoutes);
 app.use("/items", itemRoutes);

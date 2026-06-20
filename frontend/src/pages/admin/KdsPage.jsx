@@ -145,7 +145,7 @@ function OrderCard({ order, cardBorder, now, firstSeenAt, estimatedSecsMap }) {
         #{order.id} · {target}
       </p>
       <p style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>
-        {order.customer_name || `Cliente ${order.customer_id ?? "—"}`}
+        {order.user_name || `Utilizador ${order.user_id ?? "—"}`}
       </p>
       <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: 8 }}>
         {order.kitchenItems.slice(0, 4).map((item, i) => {

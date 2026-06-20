@@ -1,4 +1,4 @@
-﻿import { Type } from '../../config/types.js';
+import { Type } from '../../config/types.js';
 import { BaseFunction } from '../../models/BaseFunctions.js';
 
 class CreateNotificationFunction extends BaseFunction {
@@ -6,12 +6,12 @@ class CreateNotificationFunction extends BaseFunction {
     super({
       functionName: 'create_notification',
       description:
-        'Envia uma notificação para um cliente ou para a equipa do restaurante. ' +
+        'Envia uma notificação para um utilizador ou para a equipa do restaurante. ' +
         'O Chefe usa para alertar a cozinha sobre novos pedidos ou itens em falta.',
       properties: {
-        customer_id: {
+        user_id: {
           type: Type.INTEGER,
-          description: 'ID do cliente destinatário da notificação',
+          description: 'ID do utilizador destinatário da notificação',
         },
         title: {
           type: Type.STRING,
@@ -22,15 +22,15 @@ class CreateNotificationFunction extends BaseFunction {
           description: 'Corpo da mensagem da notificação',
         },
       },
-      required: ['customer_id', 'title', 'message'],
+      required: ['user_id', 'title', 'message'],
     });
   }
 
   mapValues(args = {}) {
     return {
-      customer_id: this.parseNumber(args.customer_id, 0),
-      title:       this.parseString(args.title),
-      message:     this.parseString(args.message),
+      user_id: this.parseNumber(args.user_id, 0),
+      title:   this.parseString(args.title),
+      message: this.parseString(args.message),
     };
   }
 }

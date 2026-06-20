@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PageSection, Pagination, ListCard } from "@/components";
+import { SortTh } from "@/components/ui/shared/SortTh.jsx";
 import { stockService, ingredientService } from "@/services";
 import {
   STOCK_PAGE_SIZE,
@@ -146,133 +147,113 @@ function StatusBadge({ status }) {
   );
 }
 
-/* ── Inline quantity editor ── */
-function QtyEditor({ item, onSave, onCancel, saving }) {
-  const [val, setVal] = useState(String(item.available_quantity));
-  const inputRef = useRef(null);
+/* ── Modal para actualizar stock ── */
+function AtualizarStockModal({ item, onClose, onSave, saving }) {
+  const [qty, setQty] = useState(String(item.available_quantity));
 
-  useEffect(() => { inputRef.current?.focus(); inputRef.current?.select(); }, []);
-
-  const confirm = () => {
-    const n = parseFloat(val.replace(",", "."));
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const n = parseFloat(qty.replace(",", "."));
     if (!isNaN(n) && n >= 0) onSave(n);
   };
 
   return (
-    <div className="flex items-center gap-1.5">
-      <input
-        ref={inputRef}
-        type="number"
-        min="0"
-        step="0.01"
-        value={val}
-        onChange={e => setVal(e.target.value)}
-        onKeyDown={e => { if (e.key === "Enter") confirm(); if (e.key === "Escape") onCancel(); }}
-        className="w-24 rounded-lg px-2 py-1 text-sm font-semibold text-right outline-none"
-        style={{ border: "1.5px solid var(--primary)", background: "var(--surface)", color: "var(--text)" }}
-      />
-      <button
-        onClick={confirm}
-        disabled={saving}
-        title="Guardar"
-        className="w-7 h-7 inline-flex items-center justify-center rounded-lg transition-colors disabled:opacity-50"
-        style={{ background: "#22c55e", color: "#fff" }}
-      >
-        {saving ? <i className="fa-solid fa-spinner fa-spin text-xs" /> : <i className="fa-solid fa-check text-xs" />}
-      </button>
-      <button
-        onClick={onCancel}
-        disabled={saving}
-        title="Cancelar"
-        className="w-7 h-7 inline-flex items-center justify-center rounded-lg transition-colors disabled:opacity-50"
-        style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}
-      >
-        <i className="fa-solid fa-xmark text-xs" />
-      </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.5)" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="rounded-[24px] p-6 w-full max-w-sm shadow-2xl"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2.5">
+            <ProductIcon name={item.name} />
+            <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>Atualizar Stock</h2>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl"
+            style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
+            <i className="fa-solid fa-xmark text-sm" />
+          </button>
+        </div>
+        <p className="text-sm mb-1 font-semibold" style={{ color: "var(--text)" }}>{item.name}</p>
+        <p className="text-xs mb-4" style={{ color: "var(--text-muted)" }}>Unidade: {item.unit}</p>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>
+              Quantidade ({item.unit})
+            </label>
+            <input
+              autoFocus
+              type="number" min="0" step="0.01"
+              value={qty}
+              onChange={e => setQty(e.target.value)}
+              className="w-full rounded-xl px-3 py-2.5 text-sm font-semibold text-right outline-none"
+              style={{ background: "var(--surface-2)", border: "1.5px solid var(--primary)", color: "var(--text)" }}
+            />
+          </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
+              style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
+              Cancelar
+            </button>
+            <button type="submit" disabled={saving}
+              className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-60"
+              style={{ background: "var(--primary)" }}>
+              {saving ? <i className="fa-solid fa-spinner fa-spin" /> : "Guardar"}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
 
 /* ── Desktop table row ── */
-function StockRow({ item, editingId, savingId, onEdit, onSave, onCancel }) {
-  const isEditing = editingId === item.id;
-  const isSaving  = savingId  === item.id;
-
+function StockRow({ item, onEdit }) {
   return (
-    <tr
-      className="border-b border-[var(--border)] transition-colors hover:bg-[var(--surface-2)]"
-    >
-      <td className="py-2 pl-4 pr-2 w-12">
-        <ProductIcon name={item.name} />
-      </td>
-      <td className="py-3 px-4 text-sm font-semibold" style={{ color: "var(--text)" }}>
-        {item.name}
-      </td>
+    <tr className="border-b border-[var(--border)] transition-colors hover:bg-[var(--surface-2)]">
+      <td className="py-2 pl-4 pr-2 w-12"><ProductIcon name={item.name} /></td>
+      <td className="py-3 px-4 text-sm font-semibold" style={{ color: "var(--text)" }}>{item.name}</td>
       <td className="py-3 px-4">
-        {isEditing ? (
-          <QtyEditor item={item} onSave={onSave} onCancel={onCancel} saving={isSaving} />
-        ) : (
-          <span className="text-sm font-semibold tabular-nums" style={{ color: "var(--text)" }}>
-            {formatQty(item.available_quantity)}
-          </span>
-        )}
+        <span className="text-sm font-semibold tabular-nums" style={{ color: "var(--text)" }}>
+          {formatQty(item.available_quantity)}
+        </span>
       </td>
       <td className="py-3 px-4 text-sm" style={{ color: "var(--text-secondary)" }}>{item.unit}</td>
       <td className="py-3 px-4"><StatusBadge status={item.status} /></td>
       <td className="py-3 px-4">
-        {!isEditing && (
-          <button
-            onClick={() => onEdit(item)}
-            title="Atualizar stock"
-            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold border transition-colors hover:bg-[var(--primary)] hover:text-white hover:border-[var(--primary)]"
-            style={{ background: "var(--surface-2)", color: "var(--primary)", borderColor: "var(--border)" }}
-          >
-            <i className="fa-solid fa-pen-to-square text-xs" />
-            Atualizar
-          </button>
-        )}
+        <button onClick={() => onEdit(item)} title="Atualizar stock"
+          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold border transition-colors hover:bg-[var(--primary)] hover:text-white hover:border-[var(--primary)]"
+          style={{ background: "var(--surface-2)", color: "var(--primary)", borderColor: "var(--border)" }}>
+          <i className="fa-solid fa-pen-to-square text-xs" />
+          Atualizar
+        </button>
       </td>
     </tr>
   );
 }
 
 /* ── Mobile stock card ── */
-function StockCard({ item, editingId, savingId, onEdit, onSave, onCancel }) {
-  const isEditing = editingId === item.id;
-  const isSaving  = savingId  === item.id;
-
+function StockCard({ item, onEdit }) {
   return (
     <ListCard>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           <ProductIcon name={item.name} size={36} />
-          <span className="text-sm font-bold leading-tight truncate" style={{ color: "var(--text)" }}>
-            {item.name}
-          </span>
+          <span className="text-sm font-bold leading-tight truncate" style={{ color: "var(--text)" }}>{item.name}</span>
         </div>
         <StatusBadge status={item.status} />
       </div>
       <div className="flex items-center justify-between">
-        {isEditing ? (
-          <QtyEditor item={item} onSave={onSave} onCancel={onCancel} saving={isSaving} />
-        ) : (
-          <>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-base font-bold tabular-nums" style={{ color: "var(--text)" }}>
-                {formatQty(item.available_quantity)}
-              </span>
-              <span className="text-xs" style={{ color: "var(--text-secondary)" }}>{item.unit}</span>
-            </div>
-            <button
-              onClick={() => onEdit(item)}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors"
-              style={{ background: "var(--primary)", color: "#fff" }}
-            >
-              <i className="fa-solid fa-pen-to-square text-xs" />
-              Atualizar
-            </button>
-          </>
-        )}
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-base font-bold tabular-nums" style={{ color: "var(--text)" }}>{formatQty(item.available_quantity)}</span>
+          <span className="text-xs" style={{ color: "var(--text-secondary)" }}>{item.unit}</span>
+        </div>
+        <button onClick={() => onEdit(item)}
+          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors"
+          style={{ background: "var(--primary)", color: "#fff" }}>
+          <i className="fa-solid fa-pen-to-square text-xs" />
+          Atualizar
+        </button>
       </div>
     </ListCard>
   );
@@ -286,14 +267,21 @@ export default function StockPage() {
   const [search,      setSearch]     = useState("");
   const [showSearch,  setShowSearch]  = useState(false);
   const [page,      setPage]      = useState(1);
-  const [editingId, setEditingId] = useState(null);
-  const [savingId,  setSavingId]  = useState(null);
+  const [modalItem, setModalItem] = useState(null);   // item aberto no modal Atualizar
+  const [saving,    setSaving]    = useState(false);
   const [showNovoProduto, setShowNovoProduto] = useState(false);
+  const [sortCol, setSortCol] = useState(null);   // "name"|"qty"|"unit"|"status"
+  const [sortDir, setSortDir] = useState("asc");  // "asc"|"desc"
+
+  const handleSort = (col) => {
+    if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortCol(col); setSortDir("asc"); }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    setEditingId(null);
+    setModalItem(null);
     try {
       const [stock, ingredients] = await Promise.all([
         stockService.getAll(),
@@ -318,29 +306,38 @@ export default function StockPage() {
   }, [load]);
   useEffect(() => { setPage(1); }, [search]);
 
-  const filtered = useMemo(() => filterStock(stockList, search), [stockList, search]);
+  const filtered = useMemo(() => {
+    const base = filterStock(stockList, search);
+    if (!sortCol) return base;
+    return [...base].sort((a, b) => {
+      let va, vb;
+      if (sortCol === "name")   { va = a.name?.toLowerCase() ?? ""; vb = b.name?.toLowerCase() ?? ""; }
+      if (sortCol === "qty")    { va = Number(a.available_quantity); vb = Number(b.available_quantity); }
+      if (sortCol === "unit")   { va = a.unit?.toLowerCase() ?? ""; vb = b.unit?.toLowerCase() ?? ""; }
+      if (sortCol === "status") { va = a.status ?? ""; vb = b.status ?? ""; }
+      if (va < vb) return sortDir === "asc" ? -1 : 1;
+      if (va > vb) return sortDir === "asc" ?  1 : -1;
+      return 0;
+    });
+  }, [stockList, search, sortCol, sortDir]);
   const pageData = filtered.slice((page - 1) * STOCK_PAGE_SIZE, page * STOCK_PAGE_SIZE);
 
-  const handleEdit   = (item) => setEditingId(item.id);
-  const handleCancel = ()     => setEditingId(null);
-
   const handleSave = async (newQty) => {
-    const item = stockList.find(s => s.id === editingId);
-    if (!item) return;
-    setSavingId(editingId);
+    if (!modalItem) return;
+    setSaving(true);
     try {
-      await stockService.update(item.id, { available_quantity: newQty, unit_cost: item.unit_cost });
+      await stockService.update(modalItem.id, { available_quantity: newQty, unit_cost: modalItem.unit_cost });
       setStockList(prev =>
-        prev.map(s => s.id === item.id
+        prev.map(s => s.id === modalItem.id
           ? { ...s, available_quantity: newQty, status: getStockStatus(newQty) }
           : s,
         ),
       );
-      setEditingId(null);
+      setModalItem(null);
     } catch (err) {
       console.error(err);
     } finally {
-      setSavingId(null);
+      setSaving(false);
     }
   };
 
@@ -353,6 +350,15 @@ export default function StockPage() {
         />
       )}
 
+      {modalItem && (
+        <AtualizarStockModal
+          item={modalItem}
+          onClose={() => setModalItem(null)}
+          onSave={handleSave}
+          saving={saving}
+        />
+      )}
+
       <div className="rounded-[32px] bg-surface p-6 shadow-sm">
 
         {/* ── Header ── */}
@@ -360,7 +366,10 @@ export default function StockPage() {
 
           {/* Linha 1 — título + acções */}
           <div className="flex items-center justify-between gap-2">
-            <h2 className="text-xl sm:text-2xl font-bold" style={{ color: "var(--text)" }}>Stock</h2>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold" style={{ color: "var(--text)" }}>Stock</h2>
+              <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>Controlo de ingredientes e inventário.</p>
+            </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 onClick={() => setShowNovoProduto(true)}
@@ -373,31 +382,27 @@ export default function StockPage() {
             </div>
           </div>
 
-          {/* Linha 2 — search toggle */}
-          <div className="flex items-center gap-2 justify-end">
+          {/* Linha 2 — filtros estilo ClientesPage */}
+          <div className="flex items-center gap-2">
             {showSearch && (
-              <input
-                autoFocus
-                type="text"
-                placeholder="Pesquisar produto…"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="h-9 flex-1 sm:w-56 sm:flex-none rounded-xl px-3 text-sm outline-none"
+              <input autoFocus type="text" placeholder="Pesquisar produto…"
+                value={search} onChange={e => setSearch(e.target.value)}
+                className="flex-1 h-9 rounded-xl px-3 text-sm outline-none"
                 style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }}
               />
             )}
-            <button
-              onClick={() => { setShowSearch(s => !s); setSearch(""); }}
-              className="w-9 h-9 rounded-xl border flex items-center justify-center cursor-pointer transition-colors"
-              style={{
-                background: showSearch ? "var(--primary)" : "var(--surface-2)",
-                borderColor: showSearch ? "var(--primary)" : "var(--border)",
-                color: showSearch ? "#fff" : "var(--text-muted)",
-              }}
-              title={showSearch ? "Fechar pesquisa" : "Pesquisar"}
-            >
-              <i className={`fa-solid ${showSearch ? "fa-xmark" : "fa-magnifying-glass"} text-xs`} />
-            </button>
+            <div className="ml-auto flex items-center gap-2">
+              <span className="hidden sm:inline-flex text-xs px-3 py-1 rounded-full border"
+                style={{ color: "var(--text-muted)", borderColor: "var(--border)", background: "var(--surface-2)" }}>
+                Filtro: Todos
+              </span>
+              <button onClick={() => { setShowSearch(s => !s); setSearch(""); }}
+                className="w-8 h-8 rounded-lg border flex items-center justify-center cursor-pointer transition-colors"
+                style={{ background: showSearch ? "var(--primary)" : "var(--surface)", borderColor: showSearch ? "var(--primary)" : "var(--border)", color: showSearch ? "#fff" : "var(--text-muted)" }}
+                title={showSearch ? "Fechar pesquisa" : "Pesquisar"}>
+                <i className={`fa-solid ${showSearch ? "fa-xmark" : "fa-magnifying-glass"} text-xs`} />
+              </button>
+            </div>
           </div>
 
         </div>
@@ -422,12 +427,12 @@ export default function StockPage() {
               <table className="w-full text-left">
                 <thead>
                   <tr style={{ borderBottom: "1px solid var(--border)", background: "var(--surface-2)" }}>
-                    {["", "Produto", "Stock Atual", "Unidade", "Estado", ""].map((h, i) => (
-                      <th key={i} className="py-3 px-4 text-xs font-semibold uppercase tracking-wider"
-                        style={{ color: "var(--text-secondary)" }}>
-                        {h}
-                      </th>
-                    ))}
+                    <th className="py-3 px-4 w-12" />
+                    <SortTh col="name"   sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Produto</SortTh>
+                    <SortTh col="qty"    sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Stock Atual</SortTh>
+                    <SortTh col="unit"   sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Unidade</SortTh>
+                    <SortTh col="status" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Estado</SortTh>
+                    <th className="py-3 px-4" />
                   </tr>
                 </thead>
                 <tbody>
@@ -440,8 +445,7 @@ export default function StockPage() {
                   ) : (
                     pageData.map(item => (
                       <StockRow key={item.id} item={item}
-                        editingId={editingId} savingId={savingId}
-                        onEdit={handleEdit} onSave={handleSave} onCancel={handleCancel} />
+                        onEdit={setModalItem} />
                     ))
                   )}
                 </tbody>
@@ -457,8 +461,7 @@ export default function StockPage() {
               ) : (
                 pageData.map(item => (
                   <StockCard key={item.id} item={item}
-                    editingId={editingId} savingId={savingId}
-                    onEdit={handleEdit} onSave={handleSave} onCancel={handleCancel} />
+                    onEdit={setModalItem} />
                 ))
               )}
             </div>

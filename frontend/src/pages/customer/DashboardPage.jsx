@@ -112,7 +112,7 @@ export default function CustomerDashboardPage() {
   const load = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const list = await orderService.getByCustomer(user.id).catch(() => []);
+      const list = await orderService.getByUser(user.id).catch(() => []);
       const rows = Array.isArray(list) ? list : [];
       setOrders(rows);
 

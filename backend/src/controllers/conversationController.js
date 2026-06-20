@@ -30,10 +30,10 @@ export const getById = async (req, res) => {
 // POST /conversations
 export const create = async (req, res) => {
   try {
-    const { customer_id, title } = req.body;
+    const { user_id, title } = req.body;
     if (!title) return res.status(400).json({ error: "title é obrigatório" });
 
-    const conversation = await createConversation({ customer_id, title });
+    const conversation = await createConversation({ user_id, title });
     res.status(201).json(conversation);
   } catch (err) {
     res.status(500).json({ error: err.message });

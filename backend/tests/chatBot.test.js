@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 
 vi.mock('../src/db.js', () => ({
@@ -33,7 +33,7 @@ vi.mock('../src/services/index.js', () => ({
   createChatHistory:   vi.fn(),
   // outros usados por middlewares/controllers
   getOrderById:        vi.fn(),
-  getCustomerById:     vi.fn(),
+  getUserById:     vi.fn(),
   getTableById:        vi.fn(),
   getItemById:         vi.fn(),
   getIngredientById:   vi.fn(),
@@ -43,7 +43,7 @@ vi.mock('../src/services/index.js', () => ({
   getPaymentById:      vi.fn(),
   getReservationById:  vi.fn(),
   getNotificationById: vi.fn(),
-  findOrCreateCustomer: vi.fn(),
+  findOrCreateUser: vi.fn(),
   createOrder:         vi.fn(),
   createOrderItem:     vi.fn(),
   createInvoice:       vi.fn(),

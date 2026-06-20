@@ -41,7 +41,7 @@ function OrderAutoAdvance() {
 
       // Fallback Chef AI: pedidos Pending há mais de 45s (chatbot ou chefStart falhado)
       try {
-        const orders = await orderService.getByCustomer(user.id).catch(() => []);
+        const orders = await orderService.getByUser(user.id).catch(() => []);
         const now = Date.now();
         (Array.isArray(orders) ? orders : [])
           .filter(o => {
@@ -68,6 +68,13 @@ function PageLoader() {
       <TrophySpin message="A carregar..." />
     </div>
   );
+}
+
+// Redireciona staff (role_id=1) para o dashboard; utilizadores normais ficam na página pública.
+function StaffGuard({ children }) {
+  const { user } = useAuth();
+  if (user?.role_id === 1) return <Navigate to="/dashboard" replace />;
+  return children;
 }
 
 // Componente principal que monta o router, os providers e o chat flutuante.
@@ -104,7 +111,7 @@ function AppContent() {
       <OrderAutoAdvance />
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route path="/" element={<MainPage />} />
+          <Route path="/" element={<StaffGuard><MainPage onNavChange={setBottomNavOpen} /></StaffGuard>} />
           <Route path="/menu" element={
             <MenuRoute
               bottomNavOpen={bottomNavOpen}
@@ -141,11 +148,13 @@ function AppContent() {
       {!showChat && (
         <button
           onClick={() => setShowChat(true)}
-          className="fixed right-4 z-50 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white flex items-center justify-center shadow-2xl transition-all active:scale-95"
+          className="fixed right-4 z-50 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white flex items-center justify-center shadow-2xl transition-all active:scale-95"
           style={{
             bottom: isMobile
               ? isPublicPage
-                ? '4.5rem'                            // acima do BottomNav do MainPage (~56px)
+                ? bottomNavOpen
+                  ? '7rem'                             // BottomNav MainPage aberto (~6.5rem + margem)
+                  : '4rem'                             // Apenas o tab handle visível
                 : bottomNavOpen
                   ? `calc(${NAV_OPEN_H} + 1rem)`
                   : '0.75rem'
@@ -153,7 +162,7 @@ function AppContent() {
           }}
           aria-label="Abrir chat IA"
         >
-          <span className="text-lg sm:text-xl">🤖</span>
+          <span className="text-sm sm:text-base">🤖</span>
         </button>
       )}
 
