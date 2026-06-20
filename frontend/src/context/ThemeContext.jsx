@@ -5,10 +5,10 @@ const ThemeContext = createContext();
 
 // Fornecedor de tema que envolve toda a aplicação.
 export function ThemeProvider({ children }) {
-  // Tema activo; "dark" por omissão
-  const [theme, setTheme] = useState("dark");
+  // Tema activo — lê do localStorage ou usa "dark" por omissão
+  const [theme, setTheme] = useState(() => localStorage.getItem("sb-theme") ?? "dark");
 
-  // Aplica classe CSS no elemento raiz quando o tema muda
+  // Aplica classe CSS no elemento raiz e persiste no localStorage
   useEffect(() => {
     const root = document.documentElement;
     if (theme === "dark") {
@@ -18,6 +18,7 @@ export function ThemeProvider({ children }) {
       root.classList.remove('dark-theme');
       root.classList.add('light-theme');
     }
+    localStorage.setItem("sb-theme", theme);
   }, [theme]);
 
   // Alterna entre dark e light
