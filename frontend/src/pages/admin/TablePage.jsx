@@ -314,17 +314,22 @@ function CustomerCombobox({ customers, loading, err, onSelect, placeholder = "Pe
 
 /* ── AtribuirMesaModal ── */
 function AtribuirMesaModal({ table, onClose, onAssigned }) {
-  const [customers, setCustomers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [assigning, setAssigning] = useState(false);
-  const [err, setErr] = useState("");
+  const [step, setStep]               = useState(1);      // 1=cliente, 2=nº pessoas
+  const [customers, setCustomers]     = useState([]);
+  const [allTables, setAllTables]     = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [assigning, setAssigning]     = useState(false);
+  const [err, setErr]                 = useState("");
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [partySize, setPartySize]     = useState("");
 
   useEffect(() => {
     (async () => {
       try {
-        const [allCustomers, allOrders] = await Promise.all([
+        const [allUsers, allOrders, tables] = await Promise.all([
           userService.getAll(),
           orderService.getAll(),
+          tableService.getAll(),
         ]);
         const seatedIds = new Set(
           (Array.isArray(allOrders) ? allOrders : [])
@@ -333,30 +338,56 @@ function AtribuirMesaModal({ table, onClose, onAssigned }) {
             .filter(Boolean),
         );
         setCustomers(
-          (Array.isArray(allCustomers) ? allCustomers : []).filter(
+          (Array.isArray(allUsers) ? allUsers : []).filter(
             c => c.active && c.role_id !== 1 && !seatedIds.has(c.id),
           ),
         );
+        setAllTables(Array.isArray(tables) ? tables : []);
       } catch {
-        setErr("Erro ao carregar clientes.");
+        setErr("Erro ao carregar dados.");
       } finally {
         setLoading(false);
       }
     })();
   }, []);
 
-  const handleAssign = async (customer) => {
+  const handleSelectUser = (user) => {
+    setSelectedUser(user);
+    setPartySize("");
+    setErr("");
+    setStep(2);
+  };
+
+  // Encontra a melhor mesa disponível para o nº de pessoas
+  const findBestTable = (size) => {
+    const available = allTables.filter(t => t.status === "Available" && t.capacity >= size);
+    if (!available.length) return null;
+    // Prefere a mesa original se tiver capacidade, senão a mais pequena com capacidade suficiente
+    const original = available.find(t => t.id === table.id);
+    if (original) return original;
+    return available.sort((a, b) => a.capacity - b.capacity)[0];
+  };
+
+  const handleConfirm = async () => {
+    const size = parseInt(partySize);
+    if (!size || size < 1) return setErr("Indica o número de pessoas.");
+
+    const assignTable = findBestTable(size);
+    if (!assignTable) {
+      return setErr(`Não há mesa disponível para ${size} ${size === 1 ? "pessoa" : "pessoas"}. Liberta uma mesa com capacidade suficiente.`);
+    }
+
     setAssigning(true); setErr("");
     try {
       await orderService.create({
-        user_id: customer.id,
-        table_id: table.id,
+        user_id: selectedUser.id,
+        table_id: assignTable.id,
         service_type: "Table",
         order_status: "Pending",
         kitchen_sequence_json: [],
         allergy_restrictions: "",
       });
-      await tableService.updateStatus(table.id, "Occupied");
+      await tableService.updateStatus(assignTable.id, "Occupied");
       onAssigned();
       onClose();
     } catch {
@@ -365,25 +396,118 @@ function AtribuirMesaModal({ table, onClose, onAssigned }) {
     }
   };
 
+  // Preview da mesa que vai ser atribuída
+  const previewTable = partySize && parseInt(partySize) >= 1 ? findBestTable(parseInt(partySize)) : null;
+  const sizeOk = previewTable?.id === table.id;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.5)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="rounded-[24px] p-6 w-full max-w-sm shadow-2xl flex flex-col gap-4"
         style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+
+        {/* Header */}
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>Atribuir Mesa</h2>
+          <div className="flex items-center gap-2">
+            {step === 2 && (
+              <button onClick={() => { setStep(1); setSelectedUser(null); setErr(""); }}
+                className="w-7 h-7 flex items-center justify-center rounded-lg"
+                style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
+                <i className="fa-solid fa-arrow-left text-xs" />
+              </button>
+            )}
+            <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>Atribuir Mesa</h2>
+          </div>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl"
             style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
             <i className="fa-solid fa-xmark text-sm" />
           </button>
         </div>
+
+        {/* Progress */}
+        <div className="flex gap-2">
+          {[1, 2].map(s => (
+            <div key={s} className="h-1 flex-1 rounded-full transition-colors"
+              style={{ background: s <= step ? "var(--primary)" : "var(--border)" }} />
+          ))}
+        </div>
+
         {assigning ? (
-          <p className="text-center text-sm py-4" style={{ color: "var(--text-muted)" }}>
+          <p className="text-center text-sm py-6" style={{ color: "var(--text-muted)" }}>
             <i className="fa-solid fa-spinner fa-spin mr-2" />A atribuir mesa...
           </p>
+        ) : step === 1 ? (
+          /* Passo 1 — Escolher cliente */
+          <CustomerCombobox customers={customers} loading={loading} err={err} onSelect={handleSelectUser} />
         ) : (
-          <CustomerCombobox customers={customers} loading={loading} err={err} onSelect={handleAssign} />
+          /* Passo 2 — Nº de pessoas */
+          <div className="flex flex-col gap-4">
+            {/* Cliente seleccionado */}
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+              style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+              <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                style={{ background: "var(--primary)", color: "#fff" }}>
+                {selectedUser.name[0].toUpperCase()}
+              </div>
+              <div>
+                <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{selectedUser.name}</p>
+                {selectedUser.phone && <p className="text-xs" style={{ color: "var(--text-muted)" }}>{selectedUser.phone}</p>}
+              </div>
+            </div>
+
+            {/* Nº de pessoas */}
+            <div>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>
+                Quantas pessoas?
+              </label>
+              <input
+                type="number" min="1" max="20"
+                value={partySize}
+                onChange={e => { setPartySize(e.target.value); setErr(""); }}
+                placeholder="Ex: 2"
+                className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+                style={{ background: "var(--surface-2)", border: "1.5px solid var(--border)", color: "var(--text)" }}
+                autoFocus
+              />
+            </div>
+
+            {/* Preview da mesa atribuída */}
+            {previewTable && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
+                style={{
+                  background: sizeOk ? "rgba(34,197,94,0.08)" : "rgba(245,158,11,0.08)",
+                  border: `1px solid ${sizeOk ? "rgba(34,197,94,0.3)" : "rgba(245,158,11,0.3)"}`,
+                  color: sizeOk ? "#22c55e" : "#f59e0b",
+                }}>
+                <i className={`fa-solid ${sizeOk ? "fa-circle-check" : "fa-triangle-exclamation"} text-sm`} />
+                {sizeOk
+                  ? `Mesa ${table.table_number} tem capacidade (${table.capacity} lugares) ✓`
+                  : `Mesa ${table.table_number} só tem ${table.capacity} lugares. Será atribuída a mesa ${previewTable.table_number} (${previewTable.capacity} lugares).`
+                }
+              </div>
+            )}
+
+            {/* Sem mesa disponível */}
+            {partySize && parseInt(partySize) >= 1 && !previewTable && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
+                style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444" }}>
+                <i className="fa-solid fa-circle-xmark text-sm" />
+                Sem mesa disponível para {partySize} {parseInt(partySize) === 1 ? "pessoa" : "pessoas"}.
+              </div>
+            )}
+
+            {err && <p className="text-xs" style={{ color: "#ef4444" }}>{err}</p>}
+
+            <button
+              onClick={handleConfirm}
+              disabled={!partySize || parseInt(partySize) < 1 || !previewTable}
+              className="w-full py-3 rounded-2xl text-sm font-bold text-white disabled:opacity-40 transition-opacity"
+              style={{ background: "var(--primary)" }}>
+              <i className="fa-solid fa-chair mr-2" />
+              Confirmar Atribuição
+            </button>
+          </div>
         )}
       </div>
     </div>
