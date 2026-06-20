@@ -70,6 +70,13 @@ function PageLoader() {
   );
 }
 
+// Redireciona staff (role_id=1) para o dashboard; utilizadores normais ficam na página pública.
+function StaffGuard({ children }) {
+  const { user } = useAuth();
+  if (user?.role_id === 1) return <Navigate to="/dashboard" replace />;
+  return children;
+}
+
 // Componente principal que monta o router, os providers e o chat flutuante.
 function MenuRoute({ bottomNavOpen, onBottomNavChange, isMobile }) {
   const { user } = useAuth();
@@ -104,7 +111,7 @@ function AppContent() {
       <OrderAutoAdvance />
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route path="/" element={<MainPage onNavChange={setBottomNavOpen} />} />
+          <Route path="/" element={<StaffGuard><MainPage onNavChange={setBottomNavOpen} /></StaffGuard>} />
           <Route path="/menu" element={
             <MenuRoute
               bottomNavOpen={bottomNavOpen}

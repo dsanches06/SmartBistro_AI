@@ -4,6 +4,7 @@ import { useTableRefresh } from "@/context/TableRefreshContext";
 import { reservationService, tableService, orderService, userService, invoiceService, itemService, orderItemService } from "@/services";
 import { STATUS_CONFIG } from "@/utils/tablePageUtils";
 import { getItemEmoji, formatMenuPrice } from "@/utils";
+import { MENU_CATEGORY_META } from "@/utils/menuUtils";
 import { PageSection, StatCard, TableCard, PaymentModal } from "@/components";
 
 const formatTableLabel = (number) => `T${String(number).padStart(2, "0")}`;
@@ -96,41 +97,59 @@ function FazerPedidoModal({ order, onClose, onPlaced }) {
           ) : err && !menuItems.length ? (
             <p className="text-xs text-center py-8" style={{ color: "#ef4444" }}>{err}</p>
           ) : (
-            <div className="flex flex-col gap-2">
-              {menuItems.map(item => {
-                const qty = cart[item.id]?.qty || 0;
+            <div className="flex flex-col gap-4">
+              {Object.entries(MENU_CATEGORY_META).map(([catKey, catMeta]) => {
+                const catItems = menuItems.filter(i => i.category === catKey);
+                if (!catItems.length) return null;
                 return (
-                  <div key={item.id}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors"
-                    style={{
-                      background: qty > 0 ? "rgba(99,102,241,0.08)" : "var(--surface-2)",
-                      border: qty > 0 ? "1.5px solid var(--primary)" : "1px solid var(--border)",
-                    }}>
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span style={{ fontSize: 20 }}>{getItemEmoji(item.name)}</span>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold truncate" style={{ color: "var(--text)" }}>{item.name}</p>
-                        <p className="text-xs font-semibold" style={{ color: "var(--primary)" }}>
-                          {formatMenuPrice(item.price)}
-                        </p>
-                      </div>
+                  <div key={catKey}>
+                    {/* Cabeçalho de categoria */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span>{catMeta.emoji}</span>
+                      <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
+                        {catMeta.label}
+                      </span>
+                      <div className="flex-1 h-px ml-1" style={{ background: "var(--border)" }} />
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {qty > 0 && (
-                        <>
-                          <button onClick={() => removeItem(item.id)}
-                            className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm"
-                            style={{ background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)" }}>
-                            −
-                          </button>
-                          <span className="text-sm font-bold w-5 text-center" style={{ color: "var(--primary)" }}>{qty}</span>
-                        </>
-                      )}
-                      <button onClick={() => addItem(item)}
-                        className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm text-white"
-                        style={{ background: "var(--primary)" }}>
-                        +
-                      </button>
+                    <div className="flex flex-col gap-2">
+                      {catItems.map(item => {
+                        const qty = cart[item.id]?.qty || 0;
+                        return (
+                          <div key={item.id}
+                            className="flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors"
+                            style={{
+                              background: qty > 0 ? "rgba(99,102,241,0.08)" : "var(--surface-2)",
+                              border: qty > 0 ? "1.5px solid var(--primary)" : "1px solid var(--border)",
+                            }}>
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span style={{ fontSize: 20 }}>{getItemEmoji(item.name)}</span>
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold truncate" style={{ color: "var(--text)" }}>{item.name}</p>
+                                <p className="text-xs font-semibold" style={{ color: "var(--primary)" }}>
+                                  {formatMenuPrice(item.price)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              {qty > 0 && (
+                                <>
+                                  <button onClick={() => removeItem(item.id)}
+                                    className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm"
+                                    style={{ background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)" }}>
+                                    −
+                                  </button>
+                                  <span className="text-sm font-bold w-5 text-center" style={{ color: "var(--primary)" }}>{qty}</span>
+                                </>
+                              )}
+                              <button onClick={() => addItem(item)}
+                                className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm text-white"
+                                style={{ background: "var(--primary)" }}>
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
