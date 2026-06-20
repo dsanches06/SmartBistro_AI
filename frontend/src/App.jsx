@@ -148,7 +148,7 @@ function AppContent() {
       {!showChat && (
         <button
           onClick={() => setShowChat(true)}
-          className="fixed right-4 z-50 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white flex items-center justify-center shadow-2xl transition-all active:scale-95"
+          className="fixed right-4 z-50 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white flex items-center justify-center shadow-2xl transition-all active:scale-95"
           style={{
             bottom: isMobile
               ? isPublicPage
@@ -162,7 +162,7 @@ function AppContent() {
           }}
           aria-label="Abrir chat IA"
         >
-          <span className="text-lg sm:text-xl">🤖</span>
+          <span className="text-sm sm:text-base">🤖</span>
         </button>
       )}
 
