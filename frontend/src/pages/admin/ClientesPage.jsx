@@ -23,19 +23,26 @@ function FilterStatCard({ label, value, icon, filter, currentFilter, onFilter })
     <button
       type="button"
       onClick={() => filter && onFilter(filter)}
-      className={[
-        "flex items-center gap-3 rounded-2xl sm:rounded-3xl p-2 text-left transition-all",
-        filter ? "cursor-pointer hover:bg-surface-2 active:scale-95" : "cursor-default",
-        isSelected ? "bg-surface-2 border border-surface" : "bg-surface",
-      ].join(" ")}
+      title={label}
+      className="relative flex-1 flex items-center justify-center gap-1.5 rounded-full px-2 sm:px-4 py-2 sm:py-2.5 transition-all"
+      style={{
+        background: isSelected ? "var(--primary)" : "var(--surface-2)",
+        color: isSelected ? "#fff" : "var(--text-secondary)",
+        cursor: filter ? "pointer" : "default",
+      }}
     >
-      <span className="w-8 h-8 rounded-full flex items-center justify-center text-base flex-shrink-0 bg-surface-2 text-[var(--primary)]">
-        <i className={icon} aria-hidden="true" />
+      <i className={`${icon} text-xs sm:text-sm`} />
+      <span className="hidden sm:inline text-xs sm:text-sm font-semibold whitespace-nowrap">{label}</span>
+      {/* Mobile: badge absoluto */}
+      <span className="sm:hidden absolute -top-1.5 -right-1 w-4 h-4 flex items-center justify-center rounded-full text-[9px] font-bold"
+        style={{ background: isSelected ? "rgba(255,255,255,0.9)" : "var(--primary)", color: isSelected ? "var(--primary)" : "#fff" }}>
+        {value}
       </span>
-      <div className="min-w-0">
-        <p className="text-[10px] text-muted uppercase tracking-[0.06em] leading-tight">{label}</p>
-        <p className="text-base font-semibold text-main">{value}</p>
-      </div>
+      {/* Desktop: badge inline */}
+      <span className="hidden sm:inline rounded-full px-1.5 py-0.5 text-[10px] font-bold"
+        style={{ background: isSelected ? "rgba(255,255,255,0.3)" : "var(--primary)", color: "#fff" }}>
+        {value}
+      </span>
     </button>
   );
 }
@@ -683,41 +690,8 @@ export default function ClientesPage() {
         {/* ── Toolbar ── */}
         <div className="flex flex-col gap-3">
 
-          {/* Mobile: ícones compactos com badge — igual às Mesas */}
-          <div className="sm:hidden grid grid-cols-5 gap-2">
-            {statCards.map(({ label, value, icon, filter }) => {
-              const isSelected = filter && statusFilter === filter;
-              const color = label === "Ativos" ? "#22c55e"
-                : label === "Inativos" ? "#ef4444"
-                : label === "Filtrados" ? "#3b82f6"
-                : label === "Ativos %" ? "#8b5cf6"
-                : "#64748b";
-              return (
-                <div
-                  key={label}
-                  onClick={() => filter && setStatusFilter(filter)}
-                  className="relative flex flex-col items-center justify-center gap-1 rounded-2xl py-3"
-                  style={{
-                    background: isSelected ? `${color}20` : "var(--surface)",
-                    border: isSelected ? `1.5px solid ${color}` : "1.5px solid transparent",
-                    cursor: filter ? "pointer" : "default",
-                  }}
-                >
-                  <i className={`${icon} text-lg`} style={{ color }} />
-                  <span className="text-[9px] font-medium text-center leading-tight" style={{ color: "var(--text-muted)" }}>{label}</span>
-                  <span
-                    className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[9px] font-bold px-1"
-                    style={{ background: color, color: "#fff" }}
-                  >
-                    {value}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Desktop: 5 in one row */}
-          <div className="hidden sm:grid sm:grid-cols-5 gap-2">
+          {/* Stats — estilo tabs Pedidos (unificado mobile + desktop) */}
+          <div className="flex items-center gap-2">
             {statCards.map((c) => (
               <FilterStatCard key={c.label} {...c} currentFilter={statusFilter} onFilter={setStatusFilter} />
             ))}
