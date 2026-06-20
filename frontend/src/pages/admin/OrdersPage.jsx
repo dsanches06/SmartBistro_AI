@@ -398,31 +398,27 @@ export default function OrdersPage() {
           })}
         </div>
 
-        {/* ── Search ── */}
-        <div className="flex items-center gap-2 mb-5 justify-end">
+        {/* ── Search — estilo ClientesPage ── */}
+        <div className="flex items-center gap-2 mb-5">
           {showSearch && (
-            <input
-              autoFocus
-              type="text"
-              placeholder="Pesquisar..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="h-9 flex-1 sm:w-56 sm:flex-none rounded-xl px-3 text-sm outline-none transition-all"
+            <input autoFocus type="text" placeholder="Pesquisar..."
+              value={search} onChange={e => setSearch(e.target.value)}
+              className="flex-1 h-9 rounded-xl px-3 text-sm outline-none"
               style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }}
             />
           )}
-          <button
-            onClick={() => { setShowSearch(s => !s); setSearch(""); }}
-            className="w-9 h-9 rounded-xl border flex items-center justify-center cursor-pointer transition-colors"
-            style={{
-              background: showSearch ? "var(--primary)" : "var(--surface-2)",
-              borderColor: showSearch ? "var(--primary)" : "var(--border)",
-              color: showSearch ? "#fff" : "var(--text-muted)",
-            }}
-            title={showSearch ? "Fechar pesquisa" : "Pesquisar"}
-          >
-            <i className={`fa-solid ${showSearch ? "fa-xmark" : "fa-magnifying-glass"} text-xs`} />
-          </button>
+          <div className="ml-auto flex items-center gap-2">
+            <span className="hidden sm:inline-flex text-xs px-3 py-1 rounded-full border"
+              style={{ color: "var(--text-muted)", borderColor: "var(--border)", background: "var(--surface-2)" }}>
+              Filtro: {ORDER_TABS.find(t => t.key === tab)?.label ?? "Todos"}
+            </span>
+            <button onClick={() => { setShowSearch(s => !s); setSearch(""); }}
+              className="w-8 h-8 rounded-lg border flex items-center justify-center cursor-pointer transition-colors"
+              style={{ background: showSearch ? "var(--primary)" : "var(--surface)", borderColor: showSearch ? "var(--primary)" : "var(--border)", color: showSearch ? "#fff" : "var(--text-muted)" }}
+              title={showSearch ? "Fechar pesquisa" : "Pesquisar"}>
+              <i className={`fa-solid ${showSearch ? "fa-xmark" : "fa-magnifying-glass"} text-xs`} />
+            </button>
+          </div>
         </div>
 
         {/* ── Content ── */}
