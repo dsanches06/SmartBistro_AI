@@ -831,6 +831,22 @@ export default function TablePage() {
     setFecharMesaData(null);
   };
 
+  // Liberta a mesa sem pagamento (apenas mesas ≤ 2 lugares, sem pedido)
+  const handleLiberarMesa = async () => {
+    if (!activeOrder?.id) return;
+    setActionLoading(true); setDetailsError(null);
+    try {
+      await orderService.updateStatus(activeOrder.id, "Cancelled");
+      await tableService.updateStatus(selectedTableId, "Available");
+      await Promise.all([fetchMesas({ silent: true }), fetchOccupancy()]);
+      setSelectedTableId(null);
+    } catch (err) {
+      setDetailsError(err.message || "Erro ao libertar mesa.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const selectedTable = useMemo(
     () => mesas.find((mesa) => mesa.id === selectedTableId),
     [mesas, selectedTableId],
@@ -1216,14 +1232,38 @@ export default function TablePage() {
                           </button>
                         </>
                       ) : (
-                        <button
-                          onClick={() => setShowFazerPedido(true)}
-                          className="w-full rounded-full px-4 py-3 text-sm font-semibold text-white transition"
-                          style={{ background: "var(--primary)" }}
-                        >
-                          <i className="fa-solid fa-utensils mr-2 text-xs" />
-                          Fazer Pedido
-                        </button>
+                        <div className="flex flex-col gap-3 sm:flex-row">
+                          <button
+                            onClick={() => setShowFazerPedido(true)}
+                            className="flex-1 rounded-full px-4 py-3 text-sm font-semibold text-white transition"
+                            style={{ background: "var(--primary)" }}
+                          >
+                            <i className="fa-solid fa-utensils mr-2 text-xs" />
+                            Fazer Pedido
+                          </button>
+                          {(selectedTable?.capacity ?? 3) <= 2 ? (
+                            // Mesa pequena (≤2 lug.) — consumo opcional
+                            <button
+                              onClick={handleLiberarMesa}
+                              disabled={actionLoading}
+                              className="flex-1 rounded-full px-4 py-3 text-sm font-semibold transition disabled:opacity-60"
+                              style={{ background: "var(--surface-2)", color: "var(--text)", border: "1px solid var(--border)" }}
+                            >
+                              <i className="fa-solid fa-door-open mr-2 text-xs" />
+                              {actionLoading ? "A libertar..." : "Fechar Mesa"}
+                            </button>
+                          ) : (
+                            // Mesa grande (>2 lug.) — consumo obrigatório
+                            <button
+                              onClick={() => setDetailsError("Consumo obrigatório para mesas com mais de 2 lugares. Regista um pedido primeiro.")}
+                              className="flex-1 rounded-full px-4 py-3 text-sm font-semibold transition opacity-50 cursor-not-allowed"
+                              style={{ background: "var(--surface-2)", color: "var(--text-muted)", border: "1px solid var(--border)" }}
+                            >
+                              <i className="fa-solid fa-door-open mr-2 text-xs" />
+                              Fechar Mesa
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}
