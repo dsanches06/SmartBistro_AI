@@ -802,7 +802,7 @@ export default function TablePage() {
     setActionLoading(true); setDetailsError(null);
     try {
       const subtotal = parseFloat(Number(activeOrder.total_amount ?? 0).toFixed(2));
-      const tax      = parseFloat((subtotal * 0.23).toFixed(2));
+      const tax      = parseFloat((subtotal * 0.13).toFixed(2)); // IVA 13% taxa intermédia restauração
       const total    = parseFloat((subtotal + tax).toFixed(2));
       const profit_margin = parseFloat((subtotal * 0.30).toFixed(2));
 

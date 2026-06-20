@@ -238,7 +238,7 @@ export default function MainPage({ onNavChange }) {
       }).catch(() => {});
 
       const total    = Number(cartTotal.toFixed(2));
-      const subtotal = Number((total / 1.23).toFixed(2));
+      const subtotal = Number((total / 1.13).toFixed(2)); // IVA 13% taxa intermédia restauração
       const tax      = Number((total - subtotal).toFixed(2));
 
       // Idempotente: se fatura já existe para este pedido, reutiliza-a

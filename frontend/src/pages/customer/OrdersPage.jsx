@@ -161,7 +161,7 @@ export default function CustomerOrdersPage() {
       }
 
       const total    = Number(repeatPayInfo.total.toFixed(2));
-      const subtotal = Number((total / 1.23).toFixed(2));
+      const subtotal = Number((total / 1.13).toFixed(2)); // IVA 13% taxa intermédia restauração
       const tax      = Number((total - subtotal).toFixed(2));
 
       let inv;

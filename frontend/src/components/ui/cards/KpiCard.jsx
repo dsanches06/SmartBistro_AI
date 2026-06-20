@@ -11,9 +11,14 @@
  *   up         — true = sobe, false = desce (null = sem seta)
  *   sub        — texto secundário abaixo do valor
  */
-export function KpiCard({ faIcon, iconColor, iconBg, label, value, pct = null, up = null, sub }) {
+export function KpiCard({ faIcon, iconColor, iconBg, label, value, pct = null, up = null, sub, onClick }) {
+  const Tag = onClick ? "button" : "div";
   return (
-    <div className="rounded-[20px] bg-[var(--surface)] p-4 sm:p-5 shadow-sm flex items-start gap-3">
+    <Tag
+      type={onClick ? "button" : undefined}
+      onClick={onClick}
+      className={`rounded-[20px] bg-[var(--surface)] p-4 sm:p-5 shadow-sm flex items-start gap-3 text-left w-full${onClick ? " hover:bg-[var(--surface-2)] transition-colors cursor-pointer active:scale-[0.98]" : ""}`}
+    >
       <div
         className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center"
         style={{ background: iconBg }}
@@ -39,6 +44,6 @@ export function KpiCard({ faIcon, iconColor, iconBg, label, value, pct = null, u
           </p>
         )}
       </div>
-    </div>
+    </Tag>
   );
 }
