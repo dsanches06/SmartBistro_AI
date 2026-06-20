@@ -108,7 +108,7 @@ function NovaFaturaModal({ orders, invoices, orderItems, menuItems, onClose, onC
               <option value="">Selecione um pedido…</option>
               {availableOrders.map(o => (
                 <option key={o.id} value={o.id}>
-                  #{o.id} — {o.customer_name || "Sem cliente"} ({o.table_id ? `Mesa ${o.table_id}` : "Takeaway"})
+                  #{o.id} — {o.user_name || "Sem cliente"} ({o.table_id ? `Mesa ${o.table_id}` : "Takeaway"})
                 </option>
               ))}
             </select>

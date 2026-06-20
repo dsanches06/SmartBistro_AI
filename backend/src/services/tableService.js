@@ -23,9 +23,9 @@ export const getTableById = async (id) => {
 export const getTableReservationById = async (id) => {
   const [rows] = await db.query(
     `SELECT r.id, r.reservation_date, r.party_size, r.status, r.phone, r.notes,
-            c.name AS customer_name
+            u.name AS user_name
      FROM reservations r
-     LEFT JOIN customers c ON c.id = r.user_id
+     LEFT JOIN users u ON u.id = r.user_id
      WHERE r.table_id = ? AND r.status IN ('Pending', 'Confirmed')
      ORDER BY r.reservation_date ASC
      LIMIT 1`,
@@ -42,9 +42,9 @@ export const getTableDetailsById = async (id) => {
 
   const [reservationRows] = await db.query(
     `SELECT r.id, r.reservation_date, r.party_size, r.status, r.phone, r.notes,
-            c.name AS customer_name
+            u.name AS user_name
      FROM reservations r
-     LEFT JOIN customers c ON c.id = r.user_id
+     LEFT JOIN users u ON u.id = r.user_id
      WHERE r.table_id = ? AND r.status IN ('Pending', 'Confirmed')
      ORDER BY r.reservation_date ASC
      LIMIT 1`,
@@ -52,9 +52,9 @@ export const getTableDetailsById = async (id) => {
   );
 
   const [orderRows] = await db.query(
-    `SELECT o.*, c.name AS customer_name
+    `SELECT o.*, u.name AS user_name
      FROM orders o
-     LEFT JOIN customers c ON c.id = o.user_id
+     LEFT JOIN users u ON u.id = o.user_id
      WHERE o.table_id = ? AND o.order_status NOT IN ('Done', 'Cancelled')
      ORDER BY o.created_at DESC
      LIMIT 1`,
@@ -64,7 +64,7 @@ export const getTableDetailsById = async (id) => {
   const activeReservation = reservationRows[0]
     ? {
         id: reservationRows[0].id,
-        customer_name: reservationRows[0].customer_name ?? "Cliente desconhecido",
+        user_name: reservationRows[0].user_name ?? "Utilizador desconhecido",
         reservation_date: reservationRows[0].reservation_date,
         party_size: reservationRows[0].party_size,
         status: reservationRows[0].status,
@@ -94,7 +94,7 @@ export const getTableDetailsById = async (id) => {
     activeOrder: {
       id: order.id,
       order_ref: `#${order.id}`,
-      customer_name: order.customer_name ?? "Cliente desconhecido",
+      user_name: order.user_name ?? "Utilizador desconhecido",
       items: summaryRows[0]?.items ?? 0,
       total_amount: Number(summaryRows[0]?.total_amount ?? 0),
       status: order.order_status,
