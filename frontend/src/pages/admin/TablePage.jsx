@@ -979,7 +979,7 @@ export default function TablePage() {
               type="button"
               title={label}
               onClick={() => setStatusFilter(active ? null : filter)}
-              className="relative flex-1 flex items-center justify-center gap-1.5 rounded-full px-2 sm:px-4 py-2 sm:py-2.5 transition-all active:scale-95"
+              className="relative flex-1 sm:flex-shrink-0 sm:flex-initial flex items-center justify-center gap-1 sm:gap-1.5 rounded-full px-2 sm:px-3 py-2 sm:py-1.5 text-xs sm:text-sm font-semibold transition-all active:scale-95"
               style={{
                 background: active ? "var(--primary)" : "var(--surface-2)",
                 color: active ? "#fff" : "var(--text-secondary)",

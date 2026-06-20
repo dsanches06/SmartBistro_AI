@@ -289,6 +289,13 @@ export default function StockPage() {
   const [editingId, setEditingId] = useState(null);
   const [savingId,  setSavingId]  = useState(null);
   const [showNovoProduto, setShowNovoProduto] = useState(false);
+  const [sortCol, setSortCol] = useState(null);   // "name"|"qty"|"unit"|"status"
+  const [sortDir, setSortDir] = useState("asc");  // "asc"|"desc"
+
+  const handleSort = (col) => {
+    if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortCol(col); setSortDir("asc"); }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -318,7 +325,20 @@ export default function StockPage() {
   }, [load]);
   useEffect(() => { setPage(1); }, [search]);
 
-  const filtered = useMemo(() => filterStock(stockList, search), [stockList, search]);
+  const filtered = useMemo(() => {
+    const base = filterStock(stockList, search);
+    if (!sortCol) return base;
+    return [...base].sort((a, b) => {
+      let va, vb;
+      if (sortCol === "name")   { va = a.name?.toLowerCase() ?? ""; vb = b.name?.toLowerCase() ?? ""; }
+      if (sortCol === "qty")    { va = Number(a.available_quantity); vb = Number(b.available_quantity); }
+      if (sortCol === "unit")   { va = a.unit?.toLowerCase() ?? ""; vb = b.unit?.toLowerCase() ?? ""; }
+      if (sortCol === "status") { va = a.status ?? ""; vb = b.status ?? ""; }
+      if (va < vb) return sortDir === "asc" ? -1 : 1;
+      if (va > vb) return sortDir === "asc" ?  1 : -1;
+      return 0;
+    });
+  }, [stockList, search, sortCol, sortDir]);
   const pageData = filtered.slice((page - 1) * STOCK_PAGE_SIZE, page * STOCK_PAGE_SIZE);
 
   const handleEdit   = (item) => setEditingId(item.id);
@@ -422,12 +442,28 @@ export default function StockPage() {
               <table className="w-full text-left">
                 <thead>
                   <tr style={{ borderBottom: "1px solid var(--border)", background: "var(--surface-2)" }}>
-                    {["", "Produto", "Stock Atual", "Unidade", "Estado", ""].map((h, i) => (
-                      <th key={i} className="py-3 px-4 text-xs font-semibold uppercase tracking-wider"
-                        style={{ color: "var(--text-secondary)" }}>
-                        {h}
+                    <th className="py-3 px-4 w-12" />
+                    {[
+                      { label: "Produto",     col: "name"   },
+                      { label: "Stock Atual", col: "qty"    },
+                      { label: "Unidade",     col: "unit"   },
+                      { label: "Estado",      col: "status" },
+                    ].map(({ label, col }) => (
+                      <th key={col}
+                        className="py-3 px-4 text-xs font-semibold uppercase tracking-wider select-none cursor-pointer hover:text-[var(--primary)] transition-colors"
+                        style={{ color: sortCol === col ? "var(--primary)" : "var(--text-secondary)" }}
+                        onClick={() => handleSort(col)}>
+                        <span className="flex items-center gap-1">
+                          {label}
+                          <i className={`fa-solid text-[10px] ${
+                            sortCol === col
+                              ? sortDir === "asc" ? "fa-arrow-up" : "fa-arrow-down"
+                              : "fa-arrows-up-down opacity-30"
+                          }`} />
+                        </span>
                       </th>
                     ))}
+                    <th className="py-3 px-4" />
                   </tr>
                 </thead>
                 <tbody>

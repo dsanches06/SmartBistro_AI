@@ -24,7 +24,7 @@ function FilterStatCard({ label, value, icon, filter, currentFilter, onFilter })
       type="button"
       onClick={() => filter && onFilter(filter)}
       title={label}
-      className="relative flex-1 flex items-center justify-center gap-1.5 rounded-full px-2 sm:px-4 py-2 sm:py-2.5 transition-all"
+      className="relative flex-1 sm:flex-shrink-0 sm:flex-initial flex items-center justify-center gap-1 sm:gap-1.5 rounded-full px-2 sm:px-3 py-2 sm:py-1.5 text-xs sm:text-sm font-semibold transition-all"
       style={{
         background: isSelected ? "var(--primary)" : "var(--surface-2)",
         color: isSelected ? "#fff" : "var(--text-secondary)",
