@@ -356,13 +356,13 @@ export default function OrdersPage() {
         )}
 
         {/* ── Header ── */}
-        <div className="flex items-center justify-between gap-2 mb-5">
+        <div className="mb-4">
           <h2 className="text-xl sm:text-2xl font-bold" style={{ color: "var(--text)" }}>Pedidos</h2>
           <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>Todos os pedidos activos e histórico.</p>
         </div>
 
         {/* ── Status Tabs ── */}
-        <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-1.5 mb-4 pt-2">
+        <div className="flex items-center justify-center gap-2 sm:gap-1.5 mb-4">
           {ORDER_TABS.map(({ key, label, icon }) => {
             const active = tab === key;
             const count  = counts[key] ?? 0;

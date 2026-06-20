@@ -969,7 +969,7 @@ export default function TablePage() {
       </div>
 
       {/* Stats — pills clicáveis para filtrar mesas */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-center gap-2 mt-2">
         {[
           { label: "Total Mesas", value: totals.total,    icon: "fa-solid fa-table-cells",   color: "#3b82f6", filter: null         },
           { label: "Ocupadas",    value: totals.ocupada,  icon: "fa-solid fa-chair",          color: "#f59e0b", filter: "Occupied"   },
