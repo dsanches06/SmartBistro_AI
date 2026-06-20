@@ -69,16 +69,14 @@ function UserMenu({ user, onLogout }) {
             </p>
           </div>
 
-          {user.role_id !== 1 && (
-            <button
-              onClick={() => { setOpen(false); navigate("/perfil"); }}
-              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors hover:bg-[var(--surface-2)]"
-              style={{ color: "var(--text)" }}
-            >
-              <i className="fa-solid fa-user w-4 text-center" />
-              Meu Perfil
-            </button>
-          )}
+          <button
+            onClick={() => { setOpen(false); navigate("/perfil"); }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors hover:bg-[var(--surface-2)]"
+            style={{ color: "var(--text)" }}
+          >
+            <i className="fa-solid fa-user w-4 text-center" />
+            Meu Perfil
+          </button>
           <button
             onClick={() => { setOpen(false); onLogout(); navigate("/"); }}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors hover:bg-[var(--surface-2)]"
