@@ -380,7 +380,10 @@ export default function StockPage() {
 
           {/* Linha 1 — título + acções */}
           <div className="flex items-center justify-between gap-2">
-            <h2 className="text-xl sm:text-2xl font-bold" style={{ color: "var(--text)" }}>Stock</h2>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold" style={{ color: "var(--text)" }}>Stock</h2>
+              <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>Controlo de ingredientes e inventário.</p>
+            </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 onClick={() => setShowNovoProduto(true)}

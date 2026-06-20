@@ -954,7 +954,10 @@ export default function TablePage() {
       )}
 
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-2xl sm:text-3xl font-bold text-[var(--text)]">Mesas</h2>
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-[var(--text)]">Mesas</h2>
+          <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>Gestão de mesas e ocupação do restaurante.</p>
+        </div>
         <button
           onClick={() => setShowCreateMesa(true)}
           className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white flex-shrink-0 whitespace-nowrap"

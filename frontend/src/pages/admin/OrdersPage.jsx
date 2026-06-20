@@ -335,6 +335,7 @@ export default function OrdersPage() {
         {/* ── Header ── */}
         <div className="flex items-center justify-between gap-2 mb-5">
           <h2 className="text-xl sm:text-2xl font-bold" style={{ color: "var(--text)" }}>Pedidos</h2>
+          <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>Todos os pedidos activos e histórico.</p>
         </div>
 
         {/* ── Status Tabs ── */}
