@@ -1,6 +1,5 @@
 import { createExistsMiddleware } from "./createExistsMiddleware.js";
 import {
-  getCustomerById,
   getUserById,
   getOrderById,
   getTableById,
@@ -14,7 +13,6 @@ import {
   getNotificationById,
 } from "../services/index.js";
 
-export const checkCustomerExists    = createExistsMiddleware(getCustomerById,    "Cliente",        "customer");
 export const checkUserExists        = createExistsMiddleware(getUserById,        "Utilizador",     "user");
 export const checkOrderExists       = createExistsMiddleware(getOrderById,       "Pedido",         "order");
 export const checkTableExists       = createExistsMiddleware(getTableById,       "Mesa",           "table");

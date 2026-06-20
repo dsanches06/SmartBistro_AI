@@ -37,7 +37,7 @@ import { validateAgentOutput, extractJSON } from "../helpers/index.js";
  * ANTES de chegar ao ManagerAgent — o agente nunca faz aritmética.
  *
  * @param {object} orderData
- * @param {number} orderData.customer_id     - ID do cliente (obrigatório)
+ * @param {number} orderData.user_id     - ID do cliente (obrigatório)
  * @param {string} orderData.message         - Pedido em linguagem natural
  * @param {string} [orderData.service_type]  - "Table" | "Takeaway" (default: "Table")
  * @param {number} [orderData.tax_rate]      - IVA (default da calculateInvoiceTotals)

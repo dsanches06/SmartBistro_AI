@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 
 vi.mock('../src/db.js', () => ({ db: { query: vi.fn() }, pgPool: {}, mysqlDb: {} }))
@@ -7,7 +7,7 @@ vi.mock('../src/services/index.js', () => ({
   getAllNotifications: vi.fn(), getNotificationById: vi.fn(), getNotificationsByUser: vi.fn(),
   getUnreadNotifications: vi.fn(), createNotification: vi.fn(), updateNotification: vi.fn(),
   markAsRead: vi.fn(), toggleReadStatus: vi.fn(), deleteNotification: vi.fn(),
-  getOrderById: vi.fn(), getCustomerById: vi.fn(), getTableById: vi.fn(),
+  getOrderById: vi.fn(), getUserById: vi.fn(), getTableById: vi.fn(),
   getItemById: vi.fn(), getIngredientById: vi.fn(), getStockById: vi.fn(),
   getOrderItemById: vi.fn(), getInvoiceById: vi.fn(), getPaymentById: vi.fn(),
   getReservationById: vi.fn(),
@@ -29,7 +29,7 @@ describe('GET /notifications', () => {
 
 describe('GET /notifications/customer/:customerId', () => {
   it('devolve notificações do cliente', async () => {
-    services.getNotificationsByUser.mockResolvedValue([{ id: 3, customer_id: 2 }])
+    services.getNotificationsByUser.mockResolvedValue([{ id: 3, user_id: 2 }])
     const res = await request(app).get('/notifications/customer/2')
     expect(res.status).toBe(200)
     expect(res.body).toHaveLength(1)
@@ -59,14 +59,14 @@ describe('GET /notifications/:id', () => {
 })
 
 describe('POST /notifications', () => {
-  it('devolve 400 se customer_id ou message estiverem em falta', async () => {
-    const res = await request(app).post('/notifications').send({ customer_id: 1 })
+  it('devolve 400 se user_id ou message estiverem em falta', async () => {
+    const res = await request(app).post('/notifications').send({ user_id: 1 })
     expect(res.status).toBe(400)
     expect(res.body.error).toMatch(/obrigatórios/)
   })
   it('cria notificação e devolve 201', async () => {
-    services.createNotification.mockResolvedValue({ id: 9, customer_id: 1, message: 'Olá' })
-    const res = await request(app).post('/notifications').send({ customer_id: 1, message: 'Olá' })
+    services.createNotification.mockResolvedValue({ id: 9, user_id: 1, message: 'Olá' })
+    const res = await request(app).post('/notifications').send({ user_id: 1, message: 'Olá' })
     expect(res.status).toBe(201)
     expect(res.body).toHaveProperty('id', 9)
   })

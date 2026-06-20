@@ -4,7 +4,7 @@ import { checkReservationExists } from "../middlewares/index.js";
 
 const router = Router();
 
-router.get("/customer/:customerId", reservationController.getByCustomer);
+router.get("/user/:userId", reservationController.getByUserId);
 router.get("/",                     reservationController.getAll);
 router.post("/",                    reservationController.create);
 

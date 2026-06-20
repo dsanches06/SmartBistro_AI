@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 
 vi.mock('../src/db.js', () => ({
@@ -28,7 +28,7 @@ vi.mock('../src/utils/index.js', () => ({
 }))
 
 vi.mock('../src/services/index.js', () => ({
-  findOrCreateCustomer: vi.fn(),
+  findOrCreateUser: vi.fn(),
   createOrder:          vi.fn(),
   createOrderItem:      vi.fn(),
   createInvoice:        vi.fn(),
@@ -38,7 +38,7 @@ vi.mock('../src/services/index.js', () => ({
   getAllOrders:          vi.fn(),
   getPendingOrders:      vi.fn(),
   getOrderById:          vi.fn(),
-  getCustomerById:       vi.fn(),
+  getUserById:       vi.fn(),
   getTableById:          vi.fn(),
   getItemById:           vi.fn(),
   getIngredientById:     vi.fn(),
@@ -126,8 +126,8 @@ describe('POST /orders/pipeline — validação', () => {
 describe('POST /orders/pipeline — sucesso', () => {
   it('cria pedido de mesa e devolve 201 com todas as entidades', async () => {
     orchestrations.runOrderPipeline.mockResolvedValue(validPipelineResult)
-    services.findOrCreateCustomer.mockResolvedValue({ id: 5, name: 'João Teste', phone: null, created_at: new Date(Date.now() - 10000) })
-    services.createOrder.mockResolvedValue({ id: 10, service_type: 'Table', customer_id: 5 })
+    services.findOrCreateUser.mockResolvedValue({ id: 5, name: 'João Teste', phone: null, created_at: new Date(Date.now() - 10000) })
+    services.createOrder.mockResolvedValue({ id: 10, service_type: 'Table', user_id: 5 })
     services.createOrderItem.mockResolvedValue({})
     services.createInvoice.mockResolvedValue({ id: 20, total_amount: 22.6 })
     services.createPayment.mockResolvedValue({ id: 30, payment_status: 'Pending' })
@@ -140,7 +140,7 @@ describe('POST /orders/pipeline — sucesso', () => {
     expect(res.status).toBe(201)
     expect(res.body.success).toBe(true)
     expect(res.body).toHaveProperty('order_id', 10)
-    expect(res.body).toHaveProperty('customer_id', 5)
+    expect(res.body).toHaveProperty('user_id', 5)
     expect(res.body).toHaveProperty('invoice')
     expect(res.body).toHaveProperty('payment')
     expect(res.body).toHaveProperty('financials')
@@ -148,7 +148,7 @@ describe('POST /orders/pipeline — sucesso', () => {
 
   it('marca a mesa como Occupied quando service_type é Table', async () => {
     orchestrations.runOrderPipeline.mockResolvedValue(validPipelineResult)
-    services.findOrCreateCustomer.mockResolvedValue({ id: 5, name: 'João', phone: null, created_at: new Date() })
+    services.findOrCreateUser.mockResolvedValue({ id: 5, name: 'João', phone: null, created_at: new Date() })
     services.createOrder.mockResolvedValue({ id: 11 })
     services.createOrderItem.mockResolvedValue({})
     services.createInvoice.mockResolvedValue({ id: 21 })
@@ -164,7 +164,7 @@ describe('POST /orders/pipeline — sucesso', () => {
 
   it('normaliza payment_method "Card" para "Credit Card"', async () => {
     orchestrations.runOrderPipeline.mockResolvedValue(validPipelineResult)
-    services.findOrCreateCustomer.mockResolvedValue({ id: 5, name: 'Maria', phone: null, created_at: new Date() })
+    services.findOrCreateUser.mockResolvedValue({ id: 5, name: 'Maria', phone: null, created_at: new Date() })
     services.createOrder.mockResolvedValue({ id: 12 })
     services.createOrderItem.mockResolvedValue({})
     services.createInvoice.mockResolvedValue({ id: 22 })
@@ -186,7 +186,7 @@ describe('POST /orders/pipeline — sucesso', () => {
       validated: { ...validPipelineResult.validated, service_type: 'Takeaway', table_id: null },
     }
     orchestrations.runOrderPipeline.mockResolvedValue(takeawayResult)
-    services.findOrCreateCustomer.mockResolvedValue({ id: 6, name: 'Ana', phone: null, created_at: new Date() })
+    services.findOrCreateUser.mockResolvedValue({ id: 6, name: 'Ana', phone: null, created_at: new Date() })
     services.createOrder.mockResolvedValue({ id: 13 })
     services.createOrderItem.mockResolvedValue({})
     services.createInvoice.mockResolvedValue({ id: 23 })

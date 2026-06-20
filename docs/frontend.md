@@ -175,7 +175,7 @@ Estado global de autenticação partilhado por toda a aplicação via Context AP
 const { user, token, loading, login, register, logout, updateUser } = useAuth();
 ```
 
-`updateUser(data)` — merge parcial do objecto `user` em memória sem invalidar sessão. Usado pelo `EditProfileModal` após guardar alterações de nome/email/telefone via `customerService.update()`.
+`updateUser(data)` — merge parcial do objecto `user` em memória sem invalidar sessão. Usado pelo `EditProfileModal` após guardar alterações de nome/email/telefone via `userService.update()`.
 
 ### Fluxo de autenticação
 
@@ -323,7 +323,7 @@ export const BACKEND_URL = getBackendUrl();      // calculado uma vez no arranqu
 | Service | Endpoints principais |
 |---------|---------------------|
 | `authService` | `/auth/login`, `/auth/register`, `/auth/me`, `/auth/logout` |
-| `customerService` | `/customers`, `/customers/:id` |
+| `userService` | `/users`, `/users/:id` |
 | `orderService` | `/orders`, `/orders/:id`, `/orders/:id/status` |
 | `orderItemService` | `/order-items` (bulk create) |
 | `itemService` | `/items`, `/items/:id` |
@@ -369,14 +369,14 @@ const [searchParams] = useSearchParams();
 
 useEffect(() => {
   const openId = Number(searchParams.get("open"));
-  if (openId && customers.length) {
-    const found = customers.find(c => c.id === openId);
-    if (found) setSelectedCustomer(found);
+  if (openId && users.length) {
+    const found = users.find(c => c.id === openId);
+    if (found) setSelecteduser(found);
   }
-}, [searchParams, customers]);
+}, [searchParams, users]);
 ```
 
-**Services usados:** `customerService`, `orderService`, `invoiceService`, `orderItemService`
+**Services usados:** `userService`, `orderService`, `invoiceService`, `orderItemService`
 
 ---
 
@@ -923,7 +923,7 @@ Acessível a todos os utilizadores autenticados (`/perfil`). Redireciona admins 
 - **Banner de faturas pendentes**: aparece automaticamente se há faturas por pagar — total consolidado + botão "Pagar"
 - **Histórico de pedidos**: tabela paginada com Data, Estado, Tipo, Total
 - **Gráficos**: Doughnut (gastos por categoria) + Line (valor por categoria) — calculados via `orderItemService.getByOrder()` com fallback para `kitchen_sequence_json`
-- **Editar dados**: botão no header → `EditProfileModal` com campos Nome, Username, Email, Telefone; guarda via `customerService.update()` e actualiza o `AuthContext` com `updateUser()`
+- **Editar dados**: botão no header → `EditProfileModal` com campos Nome, Username, Email, Telefone; guarda via `userService.update()` e actualiza o `AuthContext` com `updateUser()`
 - **Zona de perigo**: solicitar remoção de conta (envia notificação ao admin)
 
 ### PaymentModal — Pagar tudo de uma vez
@@ -935,7 +935,7 @@ O modal consolida **todas as faturas pendentes** num único pagamento:
 await Promise.all(
   unpaidInvoices.map(({ inv, orderId }) =>
     paymentService.create({
-      invoice_id: inv.id, customer_id, amount, payment_method, payment_status: "Completed"
+      invoice_id: inv.id, user_id, amount, payment_method, payment_status: "Completed"
     }).then(() => orderService.updateStatus(orderId, "Delivered"))
   )
 );
@@ -959,7 +959,7 @@ Bell icon no header para todos os utilizadores autenticados:
 
 - **Badge vermelho** (#FF3B30) com contagem de não lidas
 - **Dropdown** ao clicar: lista de notificações com borda esquerda vermelha (não lidas) / opacidade 65% (lidas)
-- Clicar numa notificação → marca como lida via `customerService.markNotificationRead()`
+- Clicar numa notificação → marca como lida via `userService.markNotificationRead()`
 - Notificações com palavras-chave de pagamento mostram botão **"Pagar"** que navega para `/perfil`
 - **Polling a cada 30 segundos** para actualizar o badge
 - **Mobile**: dropdown usa `position: fixed` com `left-4 right-4` e `top: 3.6rem`; desktop usa `position: absolute right-0`

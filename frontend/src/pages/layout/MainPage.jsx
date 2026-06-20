@@ -9,7 +9,7 @@ import { MENU_CATEGORIES, MENU_CATEGORY_META, formatMenuPrice, getItemEmoji, ALL
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { ThemeToggle, Modal, LoginModal, RegisterModal } from "@/components/ui";
-import { getInitials, getPalette } from "@/components/customers/CustomerCard.jsx";
+import { getInitials, getPalette } from "@/components/users/UserCard.jsx";
 import { useClickOutside } from "@/components/ui/shared/useClickOutside.jsx";
 import { NotificationBell } from "@/components/ui/layout/Header.jsx";
 
@@ -219,7 +219,7 @@ export default function MainPage({ onNavChange }) {
     setCheckoutError("");
     try {
       const order = await orderService.create({
-        customer_id: user.id,
+        user_id: user.id,
         service_type: "Takeaway",
         allergy_restrictions: checkoutAllergies || null,
         kitchen_sequence_json: JSON.stringify(cartItems.map(c => ({
@@ -262,7 +262,7 @@ export default function MainPage({ onNavChange }) {
       try {
         await paymentService.create({
           invoice_id:     inv.id,
-          customer_id:    user.id,
+          user_id:        user.id,
           amount:         total,
           payment_method: "Cash",
           payment_status: "Completed",

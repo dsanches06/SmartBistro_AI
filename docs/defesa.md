@@ -52,7 +52,7 @@ R: JWT (JSON Web Token) com bcrypt para passwords. No registo, a password é cif
 
 ---
 
-**P: Porque é que tens dois sistemas de autenticação — `customers` e `auth_accounts`?**
+**P: Porque é que tens dois sistemas de autenticação — `users` e `auth_accounts`?**
 
 R: Para separar o conceito de "cliente do restaurante" do conceito de "utilizador com conta". Um cliente pode ser criado pelo Maître AI (via pipeline de pedidos) sem ter conta. Quando esse cliente depois se regista, a nova conta é ligada ao cliente existente — não cria duplicado. Isto garante que o histórico de pedidos fica associado mesmo que o cliente tenha feito pedidos antes de ter conta.
 
@@ -67,13 +67,13 @@ R: Para separar o conceito de "cliente do restaurante" do conceito de "utilizado
 **P: Quantas tabelas tens e como estão relacionadas?**
 
 R: Tenho mais de 10 tabelas. As principais relações são:
-- `customers` ← `auth_accounts` (1:1) — conta ligada ao cliente
-- `customers` → `orders` (1:N) — um cliente tem vários pedidos
+- `users` ← `auth_accounts` (1:1) — conta ligada ao cliente
+- `users` → `orders` (1:N) — um cliente tem vários pedidos
 - `orders` → `order_items` → `items` (N:M) — pedido tem vários itens do menu
 - `orders` → `invoices` → `payments` (1:1:1) — fatura e pagamento por pedido
 - `orders` → `tables` (N:1) — pedido numa mesa
 - `items` → `recipe_items` → `ingredients` → `stock` (N:M) — receita e inventário
-- `customers` → `reservations` → `tables` — reservas
+- `users` → `reservations` → `tables` — reservas
 
 ---
 
@@ -145,7 +145,7 @@ R: Automaticamente pelo backend quando o status do pedido muda para "Ready". O c
 
 **P: Como funciona o sistema de notificações ao cliente?**
 
-R: Há um bell icon no header de todas as páginas autenticadas. Faz polling a cada 30 segundos via `customerService.getNotifications()`. Quando uma notificação chega (por exemplo "Pedido pronto — pagar 28.82€"), o badge vermelho aparece no bell. O cliente clica, vê a notificação com botão "Pagar" que o leva para o perfil. No perfil, um banner verde mostra o total de faturas pendentes e permite pagar tudo de uma vez com um único clique.
+R: Há um bell icon no header de todas as páginas autenticadas. Faz polling a cada 30 segundos via `userService.getNotifications()`. Quando uma notificação chega (por exemplo "Pedido pronto — pagar 28.82€"), o badge vermelho aparece no bell. O cliente clica, vê a notificação com botão "Pagar" que o leva para o perfil. No perfil, um banner verde mostra o total de faturas pendentes e permite pagar tudo de uma vez com um único clique.
 
 ---
 

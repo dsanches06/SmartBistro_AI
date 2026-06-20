@@ -9,7 +9,7 @@ import { Bar, Doughnut } from "react-chartjs-2";
 import { PageSection } from "@/components";
 import {
   invoiceService, orderService, orderItemService,
-  itemService, tableService, customerService,
+  itemService, tableService, userService,
 } from "@/services";
 import { fmtEur } from "@/utils";
 import { useTheme } from "@/context/ThemeContext";
@@ -355,8 +355,8 @@ function ClientesSection({ customers, orders }) {
 
   const perCustomer = {};
   orders.forEach(o => {
-    if (o.customer_id) {
-      perCustomer[o.customer_id] = (perCustomer[o.customer_id] || 0) + 1;
+    if (o.user_id) {
+      perCustomer[o.user_id] = (perCustomer[o.user_id] || 0) + 1;
     }
   });
   const topCustomers = Object.entries(perCustomer)
@@ -447,7 +447,7 @@ export default function RelatoriosPage() {
   const { data: orderItems = [] } = useQuery({ queryKey: ["order-items"], queryFn: orderItemService.getAll,  refetchInterval: 30_000 });
   const { data: menuItems  = [] } = useQuery({ queryKey: ["items"],       queryFn: itemService.getAll,       refetchInterval: 30_000 });
   const { data: tables     = [] } = useQuery({ queryKey: ["tables"],      queryFn: tableService.getAll,      refetchInterval: 30_000 });
-  const { data: customers  = [] } = useQuery({ queryKey: ["customers"],   queryFn: customerService.getAll,   refetchInterval: 30_000 });
+  const { data: customers  = [] } = useQuery({ queryKey: ["users"],       queryFn: userService.getAll,       refetchInterval: 30_000 });
 
   const itemMap = useMemo(() => new Map(menuItems.map(i => [i.id, i])), [menuItems]);
 

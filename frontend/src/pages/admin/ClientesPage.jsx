@@ -2,13 +2,13 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router";
 import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler } from "chart.js";
 import { Doughnut, Line } from "react-chartjs-2";
-import { customerService }  from "@/services/customerService.js";
+import { userService }      from "@/services/userService.js";
 import { orderService }     from "@/services/orderService.js";
 import { invoiceService }   from "@/services/invoiceService.js";
 import { orderItemService } from "@/services/orderItemService.js";
 import { itemService }      from "@/services/itemService.js";
 import { TrophySpin } from "@/components/ui";
-import CustomerCard, { getPalette, getInitials, formatDate } from "@/components/customers/CustomerCard.jsx";
+import UserCard, { getPalette, getInitials, formatDate } from "@/components/users/UserCard.jsx";
 import { useAuth } from "@/context/AuthContext";
 import { CAT_COLORS, CAT_FALLBACK } from "@/utils/menuUtils";
 import { ORDER_STATUS_STYLE, ORDERS_PER_PAGE, NOTIFS_PER_PAGE } from "@/utils/orderUtils";
@@ -84,7 +84,7 @@ function NovoClienteModal({ onClose, onCreate }) {
     if (!form.name.trim()) return setErr("Nome obrigatório.");
     setSaving(true); setErr("");
     try {
-      const created = await customerService.create({ name: form.name.trim(), phone: form.phone.trim() || null });
+      const created = await userService.create({ name: form.name.trim(), phone: form.phone.trim() || null });
       onCreate(created);
       onClose();
     } catch { setErr("Erro ao criar cliente. Nome ou telefone já podem existir."); }
@@ -160,14 +160,14 @@ function CustomerDetail({ customer, onBack }) {
   useEffect(() => {
     let cancelled = false;
 
-    customerService.getNotifications(customer.id)
+    userService.getNotifications(customer.id)
       .then((d) => { if (!cancelled) setNotifications(Array.isArray(d) ? d : []); })
       .catch(() => { if (!cancelled) setNotifications([]); })
       .finally(() => { if (!cancelled) setLoadingNotifs(false); });
 
     // orders → invoices → order items → category breakdown
     Promise.all([
-      orderService.getByCustomer(customer.id).catch(() => []),
+      orderService.getByUser(customer.id).catch(() => []),
       itemService.getAll().catch(() => []),
     ]).then(async ([orderList, allItems]) => {
       if (cancelled) return;
@@ -231,7 +231,7 @@ function CustomerDetail({ customer, onBack }) {
     if (markingId) return;
     setMarkingId(notifId);
     try {
-      await customerService.markNotificationRead(customer.id, notifId);
+      await userService.markNotificationRead(customer.id, notifId);
       setNotifications((prev) => prev.map((n) => (n.id === notifId ? { ...n, is_read: true } : n)));
     } catch {/* silent */} finally { setMarkingId(null); }
   }
@@ -530,7 +530,7 @@ export default function ClientesPage() {
     try {
       setLoading(true);
       setError(null);
-      const data = await customerService.getAll();
+      const data = await userService.getAll();
       setCustomers(
         data.map((c) => ({ ...c, active: c.active === true || c.active === 1 }))
       );
@@ -594,7 +594,7 @@ export default function ClientesPage() {
     setConfirmDeleteId(null);
     if (activeDetail?.id === id) setActiveDetail(null);
     try {
-      await customerService.remove(id);
+      await userService.remove(id);
     } catch {
       loadCustomers();
     }
@@ -766,7 +766,7 @@ export default function ClientesPage() {
         {/* ── Customer grid ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
           {sorted.map((c, i) => (
-            <CustomerCard
+            <UserCard
               key={c.id}
               customer={c}
               onDetail={setActiveDetail}

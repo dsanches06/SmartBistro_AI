@@ -9,7 +9,7 @@ class CreateOrderFunction extends BaseFunction {
         'Cria um novo pedido na base de dados com os dados validados pelo Maître. ' +
         'Usa após confirmação de cliente, mesa e itens do menu.',
       properties: {
-        customer_id: {
+        user_id: {
           type: Type.INTEGER,
           description: 'ID do cliente que efectua o pedido',
         },
@@ -36,7 +36,7 @@ class CreateOrderFunction extends BaseFunction {
 
   mapValues(args = {}) {
     return {
-      customer_id:           args.customer_id != null ? this.parseNumber(args.customer_id, 0) : null,
+      user_id:           args.user_id != null ? this.parseNumber(args.user_id, 0) : null,
       table_id:              this.parseNumber(args.table_id, 0),
       service_type:          this.parseString(args.service_type, 'Dine In'),
       allergy_restrictions:  this.parseString(args.allergy_restrictions, ''),

@@ -26,7 +26,7 @@
   <text x="20" y="252" fill="#a6e3a1"> ✓ tests/recipeItems.test.js      <tspan fill="#6c7086">(12 tests)  298ms</tspan></text>
   <text x="20" y="270" fill="#a6e3a1"> ✓ tests/reservations.test.js     <tspan fill="#6c7086">(14 tests)  320ms</tspan></text>
   <text x="20" y="288" fill="#a6e3a1"> ✓ tests/invoices.test.js         <tspan fill="#6c7086">(13 tests)  297ms</tspan></text>
-  <text x="20" y="306" fill="#a6e3a1"> ✓ tests/customers.test.js        <tspan fill="#6c7086">(14 tests)  310ms</tspan></text>
+  <text x="20" y="306" fill="#a6e3a1"> ✓ tests/users.test.js        <tspan fill="#6c7086">(14 tests)  310ms</tspan></text>
   <text x="20" y="324" fill="#a6e3a1"> ✓ tests/ingredients.test.js      <tspan fill="#6c7086">(12 tests)  287ms</tspan></text>
   <text x="20" y="342" fill="#a6e3a1"> ✓ tests/orderItems.test.js       <tspan fill="#6c7086">(14 tests)  335ms</tspan></text>
   <text x="20" y="360" fill="#a6e3a1"> ✓ tests/stock.test.js            <tspan fill="#6c7086">(15 tests)  401ms</tspan></text>

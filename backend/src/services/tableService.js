@@ -25,7 +25,7 @@ export const getTableReservationById = async (id) => {
     `SELECT r.id, r.reservation_date, r.party_size, r.status, r.phone, r.notes,
             c.name AS customer_name
      FROM reservations r
-     LEFT JOIN customers c ON c.id = r.customer_id
+     LEFT JOIN customers c ON c.id = r.user_id
      WHERE r.table_id = ? AND r.status IN ('Pending', 'Confirmed')
      ORDER BY r.reservation_date ASC
      LIMIT 1`,
@@ -44,7 +44,7 @@ export const getTableDetailsById = async (id) => {
     `SELECT r.id, r.reservation_date, r.party_size, r.status, r.phone, r.notes,
             c.name AS customer_name
      FROM reservations r
-     LEFT JOIN customers c ON c.id = r.customer_id
+     LEFT JOIN customers c ON c.id = r.user_id
      WHERE r.table_id = ? AND r.status IN ('Pending', 'Confirmed')
      ORDER BY r.reservation_date ASC
      LIMIT 1`,
@@ -54,7 +54,7 @@ export const getTableDetailsById = async (id) => {
   const [orderRows] = await db.query(
     `SELECT o.*, c.name AS customer_name
      FROM orders o
-     LEFT JOIN customers c ON c.id = o.customer_id
+     LEFT JOIN customers c ON c.id = o.user_id
      WHERE o.table_id = ? AND o.order_status NOT IN ('Done', 'Cancelled')
      ORDER BY o.created_at DESC
      LIMIT 1`,

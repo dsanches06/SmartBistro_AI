@@ -1,5 +1,5 @@
 -- PostgreSQL / Neon schema for SmartBistro
--- customers → users + nova tabela staff + customer_id → user_id
+-- customers → users + nova tabela staff + user_id → user_id
 
 -- Drop existing objects
 DROP TABLE IF EXISTS logs CASCADE;

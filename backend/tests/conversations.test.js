@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 
 vi.mock('../src/db.js', () => ({ db: { query: vi.fn() }, pgPool: {}, mysqlDb: {} }))
@@ -6,7 +6,7 @@ vi.mock('jsonwebtoken', () => ({ default: { sign: vi.fn(), verify: vi.fn() } }))
 vi.mock('../src/services/index.js', () => ({
   getAllConversations: vi.fn(), getConversationById: vi.fn(),
   createConversation: vi.fn(), updateConversation: vi.fn(), deleteConversation: vi.fn(),
-  getOrderById: vi.fn(), getCustomerById: vi.fn(), getTableById: vi.fn(),
+  getOrderById: vi.fn(), getUserById: vi.fn(), getTableById: vi.fn(),
   getItemById: vi.fn(), getIngredientById: vi.fn(), getStockById: vi.fn(),
   getOrderItemById: vi.fn(), getInvoiceById: vi.fn(), getPaymentById: vi.fn(),
   getReservationById: vi.fn(), getNotificationById: vi.fn(),
@@ -41,13 +41,13 @@ describe('GET /conversations/:id', () => {
 
 describe('POST /conversations', () => {
   it('devolve 400 se title estiver em falta', async () => {
-    const res = await request(app).post('/conversations').send({ customer_id: 1 })
+    const res = await request(app).post('/conversations').send({ user_id: 1 })
     expect(res.status).toBe(400)
     expect(res.body.error).toMatch(/title/)
   })
   it('cria conversa e devolve 201', async () => {
     services.createConversation.mockResolvedValue({ id: 8, title: 'Nova Conversa' })
-    const res = await request(app).post('/conversations').send({ title: 'Nova Conversa', customer_id: 1 })
+    const res = await request(app).post('/conversations').send({ title: 'Nova Conversa', user_id: 1 })
     expect(res.status).toBe(201)
     expect(res.body).toHaveProperty('id', 8)
   })

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "@/context/ThemeContext";
 import { useTableRefresh } from "@/context/TableRefreshContext";
-import { reservationService, tableService, orderService, customerService, invoiceService, itemService, orderItemService } from "@/services";
+import { reservationService, tableService, orderService, userService, invoiceService, itemService, orderItemService } from "@/services";
 import { STATUS_CONFIG } from "@/utils/tablePageUtils";
 import { getItemEmoji, formatMenuPrice } from "@/utils";
 import { PageSection, StatCard, TableCard, PaymentModal } from "@/components";
@@ -304,13 +304,13 @@ function AtribuirMesaModal({ table, onClose, onAssigned }) {
     (async () => {
       try {
         const [allCustomers, allOrders] = await Promise.all([
-          customerService.getAll(),
+          userService.getAll(),
           orderService.getAll(),
         ]);
         const seatedIds = new Set(
           (Array.isArray(allOrders) ? allOrders : [])
             .filter(o => o.table_id && !["Cancelled", "Delivered", "Done"].includes(o.order_status))
-            .map(o => o.customer_id)
+            .map(o => o.user_id)
             .filter(Boolean),
         );
         setCustomers(
@@ -330,7 +330,7 @@ function AtribuirMesaModal({ table, onClose, onAssigned }) {
     setAssigning(true); setErr("");
     try {
       await orderService.create({
-        customer_id: customer.id,
+        user_id: customer.id,
         table_id: table.id,
         service_type: "Table",
         order_status: "Pending",
@@ -384,7 +384,7 @@ function ReservarModal({ table, onClose, onReserved }) {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   useEffect(() => {
-    customerService.getAll()
+    userService.getAll()
       .then(data => setCustomers(Array.isArray(data) ? data.filter(c => c.active && c.role_id !== 1) : []))
       .catch(() => setErr("Erro ao carregar clientes."))
       .finally(() => setLoading(false));
@@ -404,7 +404,7 @@ function ReservarModal({ table, onClose, onReserved }) {
     setSaving(true); setErr("");
     try {
       await reservationService.create({
-        customer_id: selectedCustomer.id,
+        user_id: selectedCustomer.id,
         table_id: table.id,
         reservation_date: `${form.date}T${form.time}:00`,
         party_size: parseInt(form.party_size) || 2,
@@ -578,8 +578,8 @@ export default function TablePage() {
 
         if (!map[order.table_id]) map[order.table_id] = { emojis: [], customerName: null };
 
-        if (!map[order.table_id].customerName && order.customer_name) {
-          map[order.table_id].customerName = order.customer_name;
+        if (!map[order.table_id].customerName && order.user_name) {
+          map[order.table_id].customerName = order.user_name;
         }
 
         const items = (() => {
@@ -599,8 +599,8 @@ export default function TablePage() {
         if (!res.table_id) continue;
         if (['Cancelled', 'Completed'].includes(res.status)) continue;
         if (!map[res.table_id]) map[res.table_id] = { emojis: [], customerName: null };
-        if (!map[res.table_id].customerName && res.customer_name) {
-          map[res.table_id].customerName = res.customer_name;
+        if (!map[res.table_id].customerName && res.user_name) {
+          map[res.table_id].customerName = res.user_name;
         }
       }
 
@@ -672,7 +672,7 @@ export default function TablePage() {
           invoice = await invoiceService.getByOrder(activeOrder.id);
         } else throw e;
       }
-      setFecharMesaData({ invoice, customerId: activeOrder.customer_id ?? null });
+      setFecharMesaData({ invoice, userId: activeOrder.user_id ?? null });
     } catch (err) {
       setDetailsError(err.message || "Erro ao fechar mesa.");
     } finally {
@@ -784,7 +784,7 @@ export default function TablePage() {
       {fecharMesaData && (
         <PaymentModal
           unpaidInvoices={[{ inv: fecharMesaData.invoice }]}
-          customerId={fecharMesaData.customerId}
+          userId={fecharMesaData.userId}
           onClose={() => setFecharMesaData(null)}
           onPaid={handleFecharMesaPaid}
         />
@@ -915,7 +915,7 @@ export default function TablePage() {
                         Cliente
                       </p>
                       <p className="mt-2 text-base font-semibold text-[var(--text)]">
-                        {detailsLoading ? "A carregar..." : (activeReservation?.customer_name ?? "Sem cliente")}
+                        {detailsLoading ? "A carregar..." : (activeReservation?.user_name ?? "Sem cliente")}
                       </p>
                     </div>
                     <div className="rounded-3xl bg-surface-2 p-4">
@@ -996,7 +996,7 @@ export default function TablePage() {
                         Cliente em fila
                       </p>
                       <p className="mt-2 text-base font-semibold text-[var(--text)]">
-                        {detailsLoading ? "A carregar..." : (activeOrder?.customer_name ?? "Sem cliente")}
+                        {detailsLoading ? "A carregar..." : (activeOrder?.user_name ?? "Sem cliente")}
                       </p>
                     </div>
                     <div className="rounded-3xl bg-surface-2 p-4">

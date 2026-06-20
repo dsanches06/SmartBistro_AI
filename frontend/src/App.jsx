@@ -41,7 +41,7 @@ function OrderAutoAdvance() {
 
       // Fallback Chef AI: pedidos Pending há mais de 45s (chatbot ou chefStart falhado)
       try {
-        const orders = await orderService.getByCustomer(user.id).catch(() => []);
+        const orders = await orderService.getByUser(user.id).catch(() => []);
         const now = Date.now();
         (Array.isArray(orders) ? orders : [])
           .filter(o => {

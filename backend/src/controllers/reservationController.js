@@ -30,10 +30,10 @@ export const getById = async (req, res) => {
   }
 };
 
-// GET /reservations/customer/:customerId
-export const getByCustomer = async (req, res) => {
+// GET /reservations/user/:userId
+export const getByUserId = async (req, res) => {
   try {
-    res.json(await getReservationsByCustomerId(req.params.customerId));
+    res.json(await getReservationsByCustomerId(req.params.userId));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -42,12 +42,12 @@ export const getByCustomer = async (req, res) => {
 // POST /reservations
 export const create = async (req, res) => {
   try {
-    const { customer_id, table_id, reservation_date, party_size, phone, notes, status } = req.body;
+    const { user_id, table_id, reservation_date, party_size, phone, notes, status } = req.body;
     if (!reservation_date)
       return res.status(400).json({ error: "reservation_date é obrigatório" });
 
     const reservation = await createReservation({
-      customer_id, table_id, reservation_date, party_size, phone, notes, status,
+      user_id, table_id, reservation_date, party_size, phone, notes, status,
     });
     res.status(201).json(reservation);
   } catch (err) {

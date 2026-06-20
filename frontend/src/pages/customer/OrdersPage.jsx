@@ -35,7 +35,7 @@ export default function CustomerOrdersPage() {
   const load = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const list = await orderService.getByCustomer(user.id);
+      const list = await orderService.getByUser(user.id);
       const rows = Array.isArray(list) ? list : [];
       setOrders(rows);
 
@@ -145,7 +145,7 @@ export default function CustomerOrdersPage() {
     setRepeatPayError("");
     try {
       const order = await orderService.create({
-        customer_id: user.id,
+        user_id: user.id,
         service_type: repeatPayInfo.originalOrder.service_type ?? "Takeaway",
         allergy_restrictions: repeatPayInfo.allergies || null,
         kitchen_sequence_json: JSON.stringify(repeatPayInfo.kitchenSeq.map(i => ({ name: i.name, quantity: i.quantity, price: i.price }))),
@@ -174,7 +174,7 @@ export default function CustomerOrdersPage() {
       if (!inv?.id) throw new Error("Não foi possível obter a fatura.");
 
       try {
-        await paymentService.create({ invoice_id: inv.id, customer_id: user.id, amount: total, payment_method: "Cash", payment_status: "Completed" });
+        await paymentService.create({ invoice_id: inv.id, user_id: user.id, amount: total, payment_method: "Cash", payment_status: "Completed" });
       } catch (err) {
         if (!err?.message?.includes("409")) throw err;
       }
@@ -394,7 +394,7 @@ export default function CustomerOrdersPage() {
         <PaymentModal
           onClose={() => setPayInfo(null)}
           unpaidInvoices={[{ orderId: payInfo.order.id, inv: payInfo.inv }]}
-          customerId={user?.id}
+          userId={user?.id}
           onPaid={() => {
             const paidId = payInfo.order.id;
             setPaidOrderIds(prev => { const s = new Set(prev); s.add(paidId); return s; });

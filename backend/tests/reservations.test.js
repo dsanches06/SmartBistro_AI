@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 
 vi.mock('../src/db.js', () => ({ db: { query: vi.fn() }, pgPool: {}, mysqlDb: {} }))
@@ -7,7 +7,7 @@ vi.mock('../src/services/index.js', () => ({
   getAllReservations: vi.fn(), getReservationById: vi.fn(), getReservationsByCustomerId: vi.fn(),
   createReservation: vi.fn(), updateReservationStatus: vi.fn(), cancelReservation: vi.fn(),
   deleteReservation: vi.fn(), updateTableStatus: vi.fn(),
-  getOrderById: vi.fn(), getCustomerById: vi.fn(), getTableById: vi.fn(),
+  getOrderById: vi.fn(), getUserById: vi.fn(), getTableById: vi.fn(),
   getItemById: vi.fn(), getIngredientById: vi.fn(), getStockById: vi.fn(),
   getOrderItemById: vi.fn(), getInvoiceById: vi.fn(), getPaymentById: vi.fn(),
   getNotificationById: vi.fn(),
@@ -29,7 +29,7 @@ describe('GET /reservations', () => {
 
 describe('GET /reservations/customer/:customerId', () => {
   it('devolve reservas do cliente', async () => {
-    services.getReservationsByCustomerId.mockResolvedValue([{ id: 3, customer_id: 2 }])
+    services.getReservationsByCustomerId.mockResolvedValue([{ id: 3, user_id: 2 }])
     const res = await request(app).get('/reservations/customer/2')
     expect(res.status).toBe(200)
     expect(res.body).toHaveLength(1)
@@ -38,14 +38,14 @@ describe('GET /reservations/customer/:customerId', () => {
 
 describe('POST /reservations', () => {
   it('devolve 400 se reservation_date estiver em falta', async () => {
-    const res = await request(app).post('/reservations').send({ customer_id: 1 })
+    const res = await request(app).post('/reservations').send({ user_id: 1 })
     expect(res.status).toBe(400)
     expect(res.body.error).toMatch(/reservation_date/)
   })
   it('cria reserva e devolve 201', async () => {
     services.createReservation.mockResolvedValue({ id: 8, reservation_date: '2026-07-01' })
     const res = await request(app).post('/reservations').send({
-      customer_id: 1, reservation_date: '2026-07-01', party_size: 4,
+      user_id: 1, reservation_date: '2026-07-01', party_size: 4,
     })
     expect(res.status).toBe(201)
     expect(res.body).toHaveProperty('id', 8)

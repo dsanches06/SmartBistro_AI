@@ -9,7 +9,7 @@ router.post("/pipeline", orderPipelineController.processOrderPipeline);
 router.post("/auto-advance",        orderController.autoAdvance);
 router.get("/",                    orderController.getAll);
 router.get("/pending",             orderController.getPending);
-router.get("/customer/:customerId",orderController.getByCustomerId);
+router.get("/user/:userId",        orderController.getByUserId);
 router.post("/",                   orderController.create);
 
 router.get("/:id",              checkOrderExists, orderController.getById);

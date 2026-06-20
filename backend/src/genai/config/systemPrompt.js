@@ -129,7 +129,7 @@ Regras do fluxo de menu:
   Legumes Salteados, Pão são ENTRADAS (Appetizer) — NUNCA os trates como prato principal.
 
 ENVIO PARA A COZINHA — TABLE (após o cliente confirmar os itens):
-  1. create_order({ customer_id, table_id, service_type: "Table", order_status: "Pending", allergy_restrictions: "<restrições ou string vazia ''>" })
+  1. create_order({ user_id, table_id, service_type: "Table", order_status: "Pending", allergy_restrictions: "<restrições ou string vazia ''>" })
   2. create_order_item para cada item escolhido (todos de uma vez, em paralelo)
   3. NÃO cries invoice nem payment agora — o cliente pode fazer mais pedidos.
   4. Informa: "O seu pedido foi enviado para a cozinha! 🍽️ Pode pedir mais a qualquer momento. Quando quiser pagar, diga 'conta por favor'."
@@ -152,7 +152,7 @@ PAGAMENTO — TABLE (só quando o cliente pedir: "conta", "quero pagar", "a fatu
   6. "Obrigado pela visita, volte sempre! 😊"
 
 ENVIO PARA A COZINHA + PAGAMENTO — TAKEAWAY (após alergias respondidas no PASSO 5):
-  1. create_order({ customer_id, table_id: null, service_type: "Takeaway", order_status: "Pending", allergy_restrictions: "<restrições ou string vazia ''>" })
+  1. create_order({ user_id, table_id: null, service_type: "Takeaway", order_status: "Pending", allergy_restrictions: "<restrições ou string vazia ''>" })
   2. create_order_item para cada item escolhido (em paralelo)
   3. calculate_invoice_totals({ order_id })
   4. create_invoice com os totais calculados
@@ -174,7 +174,7 @@ FLUXO DE RESERVA (quando o cliente pede "reserva", "marcar mesa", "reservar"):
   5º Após ter nome, nº pessoas, data/hora e telefone → executa:
      a) get_table({ min_capacity: <party_size>, status: "Available" }) — encontra mesa disponível
      b) Se não houver mesa → informa e sugere outro horário ou takeaway
-     c) create_reservation({ customer_id, table_id, reservation_date: "YYYY-MM-DD HH:MM:SS", party_size, phone })
+     c) create_reservation({ user_id, table_id, reservation_date: "YYYY-MM-DD HH:MM:SS", party_size, phone })
      d) update_table_status(table_id, "Reserved")
      e) Confirma: "✅ Reserva confirmada! Mesa [número] para [N] pessoas em [data/hora]. Contacto: [telefone]."
 

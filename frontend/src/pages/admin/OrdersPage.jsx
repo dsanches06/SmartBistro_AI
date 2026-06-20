@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageSection, Pagination, ListCard } from "@/components";
-import { orderService, tableService, customerService, itemService, orderItemService, invoiceService } from "@/services";
+import { orderService, tableService, userService, itemService, orderItemService, invoiceService } from "@/services";
 import {
   formatTime,
   ORDER_PAGE_SIZE,
@@ -21,7 +21,7 @@ function NovoPedidoModal({ onClose, onCreated }) {
   const [tables,        setTables]        = useState([]);
   const [customers,     setCustomers]     = useState([]);
   const [menuItems,     setMenuItems]     = useState([]);
-  const [form,          setForm]          = useState({ service_type: "Table", table_id: "", customer_id: "" });
+  const [form,          setForm]          = useState({ service_type: "Table", table_id: "", user_id: "" });
   const [selectedItems, setSelectedItems] = useState([]);
   const [itemSearch,    setItemSearch]    = useState("");
   const [saving,        setSaving]        = useState(false);
@@ -30,7 +30,7 @@ function NovoPedidoModal({ onClose, onCreated }) {
   useEffect(() => {
     Promise.all([
       tableService.getAll().catch(() => []),
-      customerService.getAll().catch(() => []),
+      userService.getAll().catch(() => []),
       itemService.getActive().catch(() => []),
     ]).then(([t, c, m]) => {
       setTables(Array.isArray(t) ? t : []);
@@ -68,7 +68,7 @@ function NovoPedidoModal({ onClose, onCreated }) {
         kitchen_sequence_json,
         order_status: "Pending",
         ...(form.table_id    ? { table_id:    parseInt(form.table_id)    } : {}),
-        ...(form.customer_id ? { customer_id: parseInt(form.customer_id) } : {}),
+        ...(form.user_id ? { user_id: parseInt(form.user_id) } : {}),
       };
       const order = await orderService.create(orderData);
       await orderItemService.createBulk({
@@ -139,7 +139,7 @@ function NovoPedidoModal({ onClose, onCreated }) {
             {/* Cliente */}
             <div>
               <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Cliente (opcional)</label>
-              <select value={form.customer_id} onChange={e => set("customer_id", e.target.value)}
+              <select value={form.user_id} onChange={e => set("user_id", e.target.value)}
                 className="w-full rounded-xl px-3 py-2 text-sm outline-none" style={inputStyle}>
                 <option value="">Sem cliente</option>
                 {customers.filter(c => c.active).map(c => (

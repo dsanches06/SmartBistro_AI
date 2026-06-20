@@ -1,9 +1,7 @@
-export * from "./customerService.js";
-export { getById as getCustomerById } from "./customerService.js";
-// User e Staff (phoneExists omitido do index para evitar conflito com customerService)
+// User e Staff (phoneExists exportado directamente — sem conflitos)
 export {
   getAllUsers, getUserById, createUser, findOrCreateUser,
-  updateUser, toggleUserActive, emailExists, deleteUser,
+  updateUser, toggleUserActive, phoneExists, emailExists, deleteUser,
 } from "./userService.js";
 export * from "./staffService.js";
 export * from "./roleService.js";

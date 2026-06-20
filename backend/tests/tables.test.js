@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 
 vi.mock('../src/db.js', () => ({
@@ -24,7 +24,7 @@ vi.mock('../src/services/index.js', () => ({
   deleteTable:             vi.fn(),
   // outros middlewares de existência
   getOrderById:         vi.fn(),
-  getCustomerById:      vi.fn(),
+  getUserById:      vi.fn(),
   getItemById:          vi.fn(),
   getIngredientById:    vi.fn(),
   getStockById:         vi.fn(),

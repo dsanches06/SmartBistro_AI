@@ -10,7 +10,7 @@ class CreateReservationFunction extends BaseFunction {
         'Usa apenas após confirmar que o cliente não tem reserva activa e que a mesa tem capacity adequada ao party_size. ' +
         'Após criar a reserva, actualiza o status da mesa para "Reserved" com update_table_status.',
       properties: {
-        customer_id: {
+        user_id: {
           type: Type.INTEGER,
           description: 'ID do cliente',
         },
@@ -41,7 +41,7 @@ class CreateReservationFunction extends BaseFunction {
 
   mapValues(args = {}) {
     return {
-      customer_id:      args.customer_id != null ? this.parseNumber(args.customer_id, 0) : null,
+      user_id:      args.user_id != null ? this.parseNumber(args.user_id, 0) : null,
       table_id:         this.parseNumber(args.table_id, 0),
       reservation_date: this.parseString(args.reservation_date),
       party_size:       this.parseNumber(args.party_size, 1),
