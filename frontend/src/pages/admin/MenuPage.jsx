@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PageSection, Pagination, ListCard } from "@/components";
+import { SortTh } from "@/components/ui/shared/SortTh.jsx";
 import { itemService } from "@/services";
 import { MENU_CATEGORIES, MENU_CATEGORY_META, formatMenuPrice, getItemEmoji, MENU_PAGE_SIZE } from "@/utils";
 
@@ -249,6 +250,12 @@ export default function MenuPage() {
   const [savingId,   setSavingId]   = useState(null);
   const [togglingId, setTogglingId] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [sortCol, setSortCol] = useState(null);
+  const [sortDir, setSortDir] = useState("asc");
+  const handleSort = (col) => {
+    if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortCol(col); setSortDir("asc"); }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -270,11 +277,24 @@ export default function MenuPage() {
     return () => clearInterval(id);
   }, [load]);
 
-  const filtered = items.filter(i => {
-    const matchCat    = catFilter === "all" || i.category === catFilter;
-    const matchSearch = !search.trim() || i.name.toLowerCase().includes(search.trim().toLowerCase());
-    return matchCat && matchSearch;
-  });
+  const filtered = useMemo(() => {
+    const base = items.filter(i => {
+      const matchCat    = catFilter === "all" || i.category === catFilter;
+      const matchSearch = !search.trim() || i.name.toLowerCase().includes(search.trim().toLowerCase());
+      return matchCat && matchSearch;
+    });
+    if (!sortCol) return base;
+    return [...base].sort((a, b) => {
+      let va, vb;
+      if (sortCol === "name")     { va = a.name?.toLowerCase() ?? "";     vb = b.name?.toLowerCase() ?? ""; }
+      if (sortCol === "category") { va = a.category?.toLowerCase() ?? ""; vb = b.category?.toLowerCase() ?? ""; }
+      if (sortCol === "price")    { va = Number(a.price);                  vb = Number(b.price); }
+      if (sortCol === "status")   { va = a.is_active ? 1 : 0;             vb = b.is_active ? 1 : 0; }
+      if (va < vb) return sortDir === "asc" ? -1 : 1;
+      if (va > vb) return sortDir === "asc" ?  1 : -1;
+      return 0;
+    });
+  }, [items, catFilter, search, sortCol, sortDir]);
 
   const pageData = filtered.slice((page - 1) * MENU_PAGE_SIZE, page * MENU_PAGE_SIZE);
 
@@ -411,10 +431,11 @@ export default function MenuPage() {
               <table className="w-full text-left">
                 <thead>
                   <tr style={{ borderBottom: "1px solid var(--border)", background: "var(--surface-2)" }}>
-                    {["Item", "Categoria", "Preço", "Estado", "Ações"].map(h => (
-                      <th key={h} className="py-3 px-4 text-xs font-semibold uppercase tracking-wider"
-                        style={{ color: "var(--text-secondary)" }}>{h}</th>
-                    ))}
+                    <SortTh col="name"     sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Item</SortTh>
+                    <SortTh col="category" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Categoria</SortTh>
+                    <SortTh col="price"    sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Preço</SortTh>
+                    <SortTh col="status"   sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Estado</SortTh>
+                    <th className="py-3 px-4 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Ações</th>
                   </tr>
                 </thead>
                 <tbody>

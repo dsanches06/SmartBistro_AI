@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PageSection, Pagination, ListCard } from "@/components";
+import { SortTh } from "@/components/ui/shared/SortTh.jsx";
 import { stockService, ingredientService } from "@/services";
 import {
   STOCK_PAGE_SIZE,
@@ -446,26 +447,10 @@ export default function StockPage() {
                 <thead>
                   <tr style={{ borderBottom: "1px solid var(--border)", background: "var(--surface-2)" }}>
                     <th className="py-3 px-4 w-12" />
-                    {[
-                      { label: "Produto",     col: "name"   },
-                      { label: "Stock Atual", col: "qty"    },
-                      { label: "Unidade",     col: "unit"   },
-                      { label: "Estado",      col: "status" },
-                    ].map(({ label, col }) => (
-                      <th key={col}
-                        className="py-3 px-4 text-xs font-semibold uppercase tracking-wider select-none cursor-pointer hover:text-[var(--primary)] transition-colors"
-                        style={{ color: sortCol === col ? "var(--primary)" : "var(--text-secondary)" }}
-                        onClick={() => handleSort(col)}>
-                        <span className="flex items-center gap-1">
-                          {label}
-                          <i className={`fa-solid text-[10px] ${
-                            sortCol === col
-                              ? sortDir === "asc" ? "fa-arrow-up" : "fa-arrow-down"
-                              : "fa-arrows-up-down opacity-30"
-                          }`} />
-                        </span>
-                      </th>
-                    ))}
+                    <SortTh col="name"   sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Produto</SortTh>
+                    <SortTh col="qty"    sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Stock Atual</SortTh>
+                    <SortTh col="unit"   sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Unidade</SortTh>
+                    <SortTh col="status" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Estado</SortTh>
                     <th className="py-3 px-4" />
                   </tr>
                 </thead>

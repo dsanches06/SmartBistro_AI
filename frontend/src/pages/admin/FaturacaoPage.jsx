@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageSection, Pagination, StatCard } from "@/components";
+import { SortTh } from "@/components/ui/shared/SortTh.jsx";
 import {
   invoiceService, orderService, paymentService,
   orderItemService, itemService,
@@ -170,6 +171,12 @@ export default function FaturacaoPage() {
   const [page, setPage]             = useState(1);
   const [selectedInv, setSelectedInv] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [sortCol, setSortCol] = useState(null);
+  const [sortDir, setSortDir] = useState("desc"); // default: mais recente primeiro
+  const handleSort = (col) => {
+    if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortCol(col); setSortDir(col === "date" ? "desc" : "asc"); }
+  };
 
   const { data: invoices   = [] } = useQuery({ queryKey: ["invoices"],    queryFn: invoiceService.getAll,    refetchInterval: 30_000 });
   const { data: orders     = [] } = useQuery({ queryKey: ["orders"],      queryFn: orderService.getAll,      refetchInterval: 30_000 });
@@ -223,9 +230,24 @@ export default function FaturacaoPage() {
   }, [filteredInvoices, paidInvoices]);
 
   // ── pagination ──────────────────────────────────────────────────────────────
+  const sortedInvoices = useMemo(() => {
+    if (!sortCol) return filteredInvoices;
+    return [...filteredInvoices].sort((a, b) => {
+      let va, vb;
+      if (sortCol === "num")    { va = a.id;                             vb = b.id; }
+      if (sortCol === "client") { va = (a.customerName ?? "").toLowerCase(); vb = (b.customerName ?? "").toLowerCase(); }
+      if (sortCol === "date")   { va = new Date(a.issued_at).getTime(); vb = new Date(b.issued_at).getTime(); }
+      if (sortCol === "valor")  { va = Number(a.total_amount ?? 0);     vb = Number(b.total_amount ?? 0); }
+      if (sortCol === "status") { va = a.paymentStatus ?? "";            vb = b.paymentStatus ?? ""; }
+      if (va < vb) return sortDir === "asc" ? -1 : 1;
+      if (va > vb) return sortDir === "asc" ?  1 : -1;
+      return 0;
+    });
+  }, [filteredInvoices, sortCol, sortDir]);
+
   const pagedInvoices = useMemo(() =>
-    filteredInvoices.slice((page - 1) * FATURACAO_PAGE_SIZE, page * FATURACAO_PAGE_SIZE),
-    [filteredInvoices, page]);
+    sortedInvoices.slice((page - 1) * FATURACAO_PAGE_SIZE, page * FATURACAO_PAGE_SIZE),
+    [sortedInvoices, page]);
 
   // ── detail items: order_items ↔ menu items ──────────────────────────────────
   const itemMap = useMemo(() => new Map(menuItems.map(i => [i.id, i])), [menuItems]);
@@ -342,11 +364,11 @@ export default function FaturacaoPage() {
             <table className="w-full">
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                  <th className="pb-2 text-left text-xs font-semibold pr-3" style={{ color: "var(--text-muted)" }}>Nº Fatura</th>
-                  <th className="pb-2 text-left text-xs font-semibold pr-3 hidden sm:table-cell" style={{ color: "var(--text-muted)" }}>Cliente</th>
-                  <th className="pb-2 text-left text-xs font-semibold pr-3 hidden md:table-cell" style={{ color: "var(--text-muted)" }}>Data</th>
-                  <th className="pb-2 text-left text-xs font-semibold pr-3" style={{ color: "var(--text-muted)" }}>Valor</th>
-                  <th className="pb-2 text-left text-xs font-semibold" style={{ color: "var(--text-muted)" }}>Estado</th>
+                  <SortTh col="num"    sortCol={sortCol} sortDir={sortDir} onSort={handleSort} className="pr-3">Nº Fatura</SortTh>
+                  <SortTh col="client" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} className="pr-3 hidden sm:table-cell">Cliente</SortTh>
+                  <SortTh col="date"   sortCol={sortCol} sortDir={sortDir} onSort={handleSort} className="pr-3 hidden md:table-cell">Data</SortTh>
+                  <SortTh col="valor"  sortCol={sortCol} sortDir={sortDir} onSort={handleSort} className="pr-3">Valor</SortTh>
+                  <SortTh col="status" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Estado</SortTh>
                 </tr>
               </thead>
               <tbody>

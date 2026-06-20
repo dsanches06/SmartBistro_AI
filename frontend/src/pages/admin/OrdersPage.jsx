@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageSection, Pagination, ListCard } from "@/components";
+import { SortTh } from "@/components/ui/shared/SortTh.jsx";
 import { orderService, tableService, userService, itemService, orderItemService, invoiceService } from "@/services";
 import {
   formatTime,
@@ -288,6 +289,12 @@ export default function OrdersPage() {
   const [showSearch,  setShowSearch]  = useState(false);
   const [page,        setPage]        = useState(1);
   const [showCreate,  setShowCreate]  = useState(false);
+  const [sortCol, setSortCol] = useState(null);
+  const [sortDir, setSortDir] = useState("asc");
+  const handleSort = (col) => {
+    if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortCol(col); setSortDir("asc"); }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -318,7 +325,23 @@ export default function OrdersPage() {
   useEffect(() => { setPage(1); }, [tab, search]);
 
   const counts   = useMemo(() => countOrdersByStatus(orders), [orders]);
-  const filtered = useMemo(() => filterOrders(orders, { tab, search }), [orders, tab, search]);
+  const filtered = useMemo(() => {
+    const base = filterOrders(orders, { tab, search });
+    if (!sortCol) return base;
+    return [...base].sort((a, b) => {
+      let va, vb;
+      if (sortCol === "id")     { va = a.id;                       vb = b.id; }
+      if (sortCol === "mesa")   { va = a.table_id ?? 0;            vb = b.table_id ?? 0; }
+      if (sortCol === "client") { va = (a.user_name ?? "").toLowerCase(); vb = (b.user_name ?? "").toLowerCase(); }
+      if (sortCol === "status") { va = a.order_status ?? "";       vb = b.order_status ?? ""; }
+      if (sortCol === "items")  { va = getOrderItemCount(a);       vb = getOrderItemCount(b); }
+      if (sortCol === "valor")  { va = Number(invoiceMap[a.id]?.total_amount ?? 0); vb = Number(invoiceMap[b.id]?.total_amount ?? 0); }
+      if (sortCol === "hora")   { va = new Date(a.created_at).getTime(); vb = new Date(b.created_at).getTime(); }
+      if (va < vb) return sortDir === "asc" ? -1 : 1;
+      if (va > vb) return sortDir === "asc" ?  1 : -1;
+      return 0;
+    });
+  }, [orders, tab, search, sortCol, sortDir, invoiceMap]);
   const pageData = filtered.slice((page - 1) * ORDER_PAGE_SIZE, page * ORDER_PAGE_SIZE);
 
   return (
@@ -424,12 +447,13 @@ export default function OrdersPage() {
               <table className="w-full text-left">
                 <thead>
                   <tr style={{ borderBottom: "1px solid var(--border)", background: "var(--surface-2)" }}>
-                    {ORDER_TABLE_HEADERS.map(h => (
-                      <th key={h} className="py-3 px-4 text-xs font-semibold uppercase tracking-wider"
-                        style={{ color: "var(--text-secondary)" }}>
-                        {h}
-                      </th>
-                    ))}
+                    <SortTh col="id"     sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>ID</SortTh>
+                    <SortTh col="mesa"   sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Mesa</SortTh>
+                    <SortTh col="client" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Cliente</SortTh>
+                    <SortTh col="status" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Estado</SortTh>
+                    <SortTh col="items"  sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Itens</SortTh>
+                    <SortTh col="valor"  sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Valor</SortTh>
+                    <SortTh col="hora"   sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Hora</SortTh>
                   </tr>
                 </thead>
                 <tbody>
