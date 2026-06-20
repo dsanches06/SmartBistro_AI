@@ -675,6 +675,7 @@ export default function TablePage() {
   const [showReservar, setShowReservar] = useState(false);
   const [showFazerPedido, setShowFazerPedido] = useState(false);
   const [fecharMesaData, setFecharMesaData] = useState(null);
+  const [statusFilter, setStatusFilter] = useState(null); // null=todos | "Occupied" | "Available" | "Reserved"
   const { tableRefreshCount, ordersRefreshCount } = useTableRefresh();
   const selectedTableIdRef = useRef(selectedTableId);
   useEffect(() => { selectedTableIdRef.current = selectedTableId; }, [selectedTableId]);
@@ -865,6 +866,11 @@ export default function TablePage() {
     );
   }, [mesas]);
 
+  const mesasFiltradas = useMemo(
+    () => statusFilter ? mesas.filter(m => m.status === statusFilter) : mesas,
+    [mesas, statusFilter],
+  );
+
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
@@ -959,31 +965,40 @@ export default function TablePage() {
         </button>
       </div>
 
-      {/* Stats — estilo tabs Pedidos (ícone + label sm:inline + badge) */}
+      {/* Stats — pills clicáveis para filtrar mesas */}
       <div className="flex items-center gap-2">
         {[
-          { label: "Total Mesas", value: totals.total,    icon: "fa-solid fa-table-cells",   color: "#3b82f6" },
-          { label: "Ocupadas",    value: totals.ocupada,  icon: "fa-solid fa-chair",          color: "#f59e0b" },
-          { label: "Livres",      value: totals.livre,    icon: "fa-solid fa-check-circle",   color: "#22c55e" },
-          { label: "Reservadas",  value: totals.reservada,icon: "fa-solid fa-calendar-check", color: "#8b5cf6" },
-        ].map(({ label, value, icon, color }) => (
-          <div key={label}
-            className="relative flex-1 flex items-center justify-center gap-1.5 rounded-full px-2 sm:px-4 py-2 sm:py-2.5"
-            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-            <i className={`${icon} text-xs sm:text-sm`} style={{ color }} />
-            <span className="hidden sm:inline text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>{label}</span>
-            {/* Mobile: badge absoluto */}
-            <span className="sm:hidden absolute -top-1.5 -right-1 w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold"
-              style={{ background: color, color: "#fff" }}>
-              {value}
-            </span>
-            {/* Desktop: badge inline */}
-            <span className="hidden sm:inline rounded-full px-1.5 py-0.5 text-[10px] font-bold"
-              style={{ background: color, color: "#fff" }}>
-              {value}
-            </span>
-          </div>
-        ))}
+          { label: "Total Mesas", value: totals.total,    icon: "fa-solid fa-table-cells",   color: "#3b82f6", filter: null         },
+          { label: "Ocupadas",    value: totals.ocupada,  icon: "fa-solid fa-chair",          color: "#f59e0b", filter: "Occupied"   },
+          { label: "Livres",      value: totals.livre,    icon: "fa-solid fa-check-circle",   color: "#22c55e", filter: "Available"  },
+          { label: "Reservadas",  value: totals.reservada,icon: "fa-solid fa-calendar-check", color: "#8b5cf6", filter: "Reserved"   },
+        ].map(({ label, value, icon, color, filter }) => {
+          const active = statusFilter === filter;
+          return (
+            <button key={label}
+              type="button"
+              title={label}
+              onClick={() => setStatusFilter(active ? null : filter)}
+              className="relative flex-1 flex items-center justify-center gap-1.5 rounded-full px-2 sm:px-4 py-2 sm:py-2.5 transition-all active:scale-95"
+              style={{
+                background: active ? "var(--primary)" : "var(--surface-2)",
+                color: active ? "#fff" : "var(--text-secondary)",
+              }}>
+              <i className={`${icon} text-xs sm:text-sm`} style={{ color: active ? "#fff" : color }} />
+              <span className="hidden sm:inline text-sm font-semibold whitespace-nowrap">{label}</span>
+              {/* Mobile: badge absoluto */}
+              <span className="sm:hidden absolute -top-1.5 -right-1 w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-bold"
+                style={{ background: active ? "rgba(255,255,255,0.9)" : color, color: active ? "var(--primary)" : "#fff" }}>
+                {value}
+              </span>
+              {/* Desktop: badge inline */}
+              <span className="hidden sm:inline rounded-full px-1.5 py-0.5 text-[10px] font-bold"
+                style={{ background: active ? "rgba(255,255,255,0.3)" : color, color: "#fff" }}>
+                {value}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {loading && (
@@ -1004,12 +1019,12 @@ export default function TablePage() {
         >
           <div className="rounded-[32px] bg-surface p-6 shadow-sm">
             <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 xl:grid-rows-4 justify-items-center">
-              {mesas.length === 0 ? (
+              {mesasFiltradas.length === 0 ? (
                 <div className="col-span-full text-center py-16 text-[var(--text-secondary)]">
-                  Nenhuma mesa encontrada.
+                  {statusFilter ? `Nenhuma mesa ${statusFilter === "Occupied" ? "ocupada" : statusFilter === "Available" ? "livre" : "reservada"}.` : "Nenhuma mesa encontrada."}
                 </div>
               ) : (
-                mesas.map((mesa) => (
+                mesasFiltradas.map((mesa) => (
                   <TableCard
                     key={mesa.id}
                     mesa={mesa}
