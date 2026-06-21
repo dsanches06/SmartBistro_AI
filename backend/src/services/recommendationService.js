@@ -3,7 +3,7 @@ import { db } from '../db.js';
 // Devolve os itens activos do menu (máx. 30, agrupados por categoria).
 export const getActiveMenuItems = async () => {
   const [rows] = await db.query(
-    'SELECT id, name, category FROM items WHERE is_active = 1 ORDER BY category LIMIT 30'
+    'SELECT id, name, category FROM items WHERE is_active = true ORDER BY category LIMIT 30'
   );
   return rows;
 };
@@ -29,7 +29,7 @@ export const getPopularItems = async () => {
     `SELECT oi.item_id, COUNT(*) AS orders
      FROM order_items oi
      JOIN orders o ON o.id = oi.order_id
-     WHERE o.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+     WHERE o.created_at >= NOW() - INTERVAL '7 days'
      GROUP BY oi.item_id
      ORDER BY orders DESC
      LIMIT 6`
