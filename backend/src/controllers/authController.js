@@ -21,12 +21,12 @@ function maskPhone(phone) {
   return s.slice(0, 2) + '*'.repeat(s.length - 4) + s.slice(-2);
 }
 
-// Gera um JWT com id e role do utilizador, válido por 8 horas.
+// Gera um JWT com id e role do utilizador, válido por 30 minutos.
 function signToken(user) {
   return jwt.sign(
     { id: user.id, role_id: user.role_id },
     process.env.JWT_SECRET,
-    { expiresIn: 'h' },
+    { expiresIn: '30m' },
   );
 }
 
