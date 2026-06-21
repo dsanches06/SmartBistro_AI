@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 
@@ -54,7 +54,6 @@ export function BottomNav({ onOpenChange }) {
   const { pathname }    = useLocation();
   const { theme }       = useTheme();
   const { user } = useAuth();
-  const navigate        = useNavigate();
   const isDark          = theme === 'dark';
   const [open, setOpen] = useState(false);
 
@@ -75,10 +74,10 @@ export function BottomNav({ onOpenChange }) {
   /* ── Nav cliente (role ≠ 1) com show/hide ── */
   if (isClient) {
     const clientLinks = [
-      { to: '/',       label: 'Cardápio', icon: 'fa-utensils', exact: true },
-      { to: '/perfil', label: 'Perfil',   icon: 'fa-user', exact: true },
-      { to: '/perfil/dashboard', label: 'Dashboard', icon: 'fa-chart-line' },
-      { to: '/perfil/pedidos',   label: 'Pedidos',   icon: 'fa-receipt' },
+      { to: '/',                 label: 'Cardápio',  icon: 'fa-solid fa-utensils',   exact: true },
+      { to: '/perfil',           label: 'Perfil',    icon: 'fa-solid fa-user',        exact: true },
+      { to: '/perfil/dashboard', label: 'Dashboard', icon: 'fa-solid fa-chart-line'              },
+      { to: '/perfil/pedidos',   label: 'Pedidos',   icon: 'fa-solid fa-receipt'                 },
     ];
 
     return (
@@ -89,11 +88,12 @@ export function BottomNav({ onOpenChange }) {
           <div
             className="fixed bottom-0 left-0 right-0 z-40 flex flex-col"
             style={{
+              height: NAV_OPEN_H,
               background: bg,
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)',
               borderTop: `1px solid ${border}`,
-              paddingBottom: 'calc(var(--safe-bottom) + 0.35rem)',
+              paddingBottom: 'calc(var(--safe-bottom) + 0.9rem)',
             }}
           >
             <div className="absolute left-1/2 z-10" style={{ top: 0, transform: 'translate(-50%, -100%)' }}>
@@ -111,12 +111,11 @@ export function BottomNav({ onOpenChange }) {
               {clientLinks.map(({ to, label, icon, exact }) => {
                 const active = exact ? pathname === to : pathname.startsWith(to);
                 return (
-                  <button
+                  <Link
                     key={to}
-                    type="button"
-                    onClick={() => navigate(to)}
+                    to={to}
                     className={[
-                      'group flex flex-col items-center justify-center gap-1 rounded-2xl py-3 text-[11px] font-semibold uppercase text-center select-none transition-colors duration-200',
+                      'group flex flex-col items-center justify-center gap-1 rounded-xl py-3 text-[10px] font-semibold uppercase text-center select-none transition-colors duration-200',
                       active ? 'text-[var(--primary)]' : 'text-[var(--text-muted)] hover:text-[var(--primary)]',
                     ].join(' ')}
                     style={{
@@ -125,9 +124,9 @@ export function BottomNav({ onOpenChange }) {
                     }}
                     aria-current={active ? 'page' : undefined}
                   >
-                    <i className={`fa-solid ${icon} text-2xl transition-transform duration-200 group-hover:scale-110`} aria-hidden="true" />
+                    <i className={`${icon} text-base transition-transform duration-200 group-hover:scale-110`} aria-hidden="true" />
                     <span className="leading-none">{label}</span>
-                  </button>
+                  </Link>
                 );
               })}
             </div>
