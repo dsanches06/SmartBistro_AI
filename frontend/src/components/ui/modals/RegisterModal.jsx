@@ -76,7 +76,7 @@ export default function RegisterModal({ open, onClose, onSwitchToLogin, isDark, 
   const [error, setError]       = useState("");
 
   const passwordsMatch = password.length > 0 && password === confirm;
-  const canSubmit = name.trim().length > 0 && username.trim().length > 0 && passwordsMatch;
+  const canSubmit = name.trim().length >= 3 && username.trim().length >= 3 && passwordsMatch;
 
   const handleClose = () => {
     setName("");
@@ -97,6 +97,9 @@ export default function RegisterModal({ open, onClose, onSwitchToLogin, isDark, 
       setError("As palavras-passe não coincidem.");
       return;
     }
+    if (name.trim().length < 3) return setError("O nome deve ter pelo menos 3 caracteres.");
+    if (username.trim().length < 3) return setError("O username deve ter pelo menos 3 caracteres.");
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return setError("E-mail inválido. Verifica o formato (ex: nome@dominio.com).");
     setLoading(true);
     try {
       await onRegister(name, username, email, phone, password);
@@ -109,13 +112,28 @@ export default function RegisterModal({ open, onClose, onSwitchToLogin, isDark, 
 
   return (
     <Modal open={open} onClose={handleClose} title="Criar conta" isDark={isDark}>
-      <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
+      <form className="flex flex-col gap-3" onSubmit={handleSubmit} noValidate>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Nome completo *" value={name} onChange={setName} placeholder="O teu nome" autoFocus />
-          <Field label="Username *" value={username} onChange={setUsername} placeholder="username" />
+          <div className="flex flex-col gap-1">
+            <Field label="Nome completo *" value={name} onChange={setName} placeholder="O teu nome" autoFocus />
+            {name.length > 0 && name.trim().length < 3 && (
+              <p className="text-[10px]" style={{ color: "#ef4444" }}>Mínimo 3 caracteres</p>
+            )}
+          </div>
+          <div className="flex flex-col gap-1">
+            <Field label="Username *" value={username} onChange={setUsername} placeholder="username" />
+            {username.length > 0 && username.trim().length < 3 && (
+              <p className="text-[10px]" style={{ color: "#ef4444" }}>Mínimo 3 caracteres</p>
+            )}
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="E-mail" type="email" value={email} onChange={setEmail} placeholder="email (opcional)" />
+          <div className="flex flex-col gap-1">
+            <Field label="E-mail" type="email" value={email} onChange={setEmail} placeholder="email (opcional)" />
+            {email.trim().length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && (
+              <p className="text-[10px]" style={{ color: "#ef4444" }}>E-mail inválido</p>
+            )}
+          </div>
           <Field label="Telefone" value={phone} onChange={setPhone} placeholder="telefone (opcional)" />
         </div>
         <div className="grid grid-cols-2 gap-3">

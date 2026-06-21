@@ -55,13 +55,23 @@ export async function register(req, res) {
   if (!name?.trim() || !password?.trim())
     return res.status(400).json({ message: 'name e password são obrigatórios.' });
 
+  if (name.trim().length < 3)
+    return res.status(400).json({ message: 'O nome deve ter pelo menos 3 caracteres.' });
+
   if (!username?.trim())
     return res.status(400).json({ message: 'O username é obrigatório.' });
+
+  if (username.trim().length < 3)
+    return res.status(400).json({ message: 'O username deve ter pelo menos 3 caracteres.' });
+
+  const emailTrimmed = email?.trim() || null;
+  if (emailTrimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed))
+    return res.status(400).json({ message: 'E-mail inválido. Verifica o formato (ex: nome@dominio.com).' });
 
   try {
     const nameTrim  = name.trim();
     const userTrim  = username.trim();
-    const emailTrim = email?.trim()  || null;
+    const emailTrim = emailTrimmed;
     const phoneTrim = phone?.trim()  || null;
 
     // Verificar se o username já está em uso
