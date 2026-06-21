@@ -1,11 +1,6 @@
 import { BaseAgentAI } from '../../models/index.js';
 import { buildRecommendationMessage, buildForecastMessage } from './analyticsMessages.js';
-
-const ANALYTICS_PROMPT = `És um agente de análise de dados para um restaurante.
-Duas responsabilidades:
-1. Recomendações de menu — analisas histórico de pedidos e popularidade.
-2. Previsão de receitas — analisas dados históricos de faturação e projetas tendências.
-Respondes SEMPRE em JSON puro, sem markdown, sem texto extra.`;
+import { ANALYTICS_PROMPT } from './analyticsPrompt.js';
 
 // Agente de Analytics — recomendações personalizadas e previsão de receitas.
 // temp 0.4 → criatividade moderada nos labels; coerência mantida com os dados numéricos.
