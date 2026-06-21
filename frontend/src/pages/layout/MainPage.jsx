@@ -339,16 +339,23 @@ export default function MainPage({ onNavChange }) {
       .finally(() => setLoading(false));
   }, []);
 
-  // Recomendações: só chama o Groq se o userId mudou ou se os pedidos mudaram (cacheKey diferente)
+  // Recomendações: só chama o Groq se o user estiver autenticado (tem token)
+  // e se o histórico de pedidos mudou (cacheKey diferente)
   useEffect(() => {
-    const uid = user?.id ?? null;
-    fetchRecommendations(uid).then(({ map, cacheKey }) => {
+    if (!token) {
+      setRecommendations(new Map());
+      return;
+    }
+
+    fetchRecommendations(token).then(({ map, cacheKey }) => {
       const cached = recCacheRef.current;
-      if (cached.userId === uid && cached.cacheKey === cacheKey) return; // sem alterações
-      recCacheRef.current = { userId: uid, cacheKey };
+      if (cached.cacheKey === cacheKey) return; // sem alterações
+      recCacheRef.current = { cacheKey };
       setRecommendations(map);
-    }).catch(() => {});
-  }, [user?.id]);
+    }).catch(() => {
+      setRecommendations(new Map());
+    });
+  }, [token]);
 
   // Admin/manager vai para o dashboard; cliente fica no cardápio.
   const handleLogin = async (identifier, password) => {
