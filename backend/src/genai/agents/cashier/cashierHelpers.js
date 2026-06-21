@@ -1,4 +1,4 @@
-function repairManagerResponse(parsed, financials) {
+function repairCashierResponse(parsed, financials) {
   if (!parsed || typeof parsed !== "object") return parsed;
 
   const parseBoolean = (val) => {
@@ -48,4 +48,4 @@ function repairManagerResponse(parsed, financials) {
   };
 }
 
-export { repairManagerResponse };
+export { repairCashierResponse };

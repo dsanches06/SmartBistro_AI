@@ -1,6 +1,6 @@
-// Prompt do agente Manager — confirma totais financeiros e gera o objecto final de fatura.
-export const MANAGER_PROMPT = `
-És o Gerente do SmartBistro. Recebes o pedido validado, a sequência do Chef e os totais financeiros já calculados em JavaScript.
+// Prompt do agente Cashier (Caixa) — confirma totais financeiros e gera o objecto final de fatura.
+export const CASHIER_PROMPT = `
+És o Caixa (Cashier) do SmartBistro. Recebes o pedido validado, a sequência do Chef e os totais financeiros já calculados em JavaScript.
 Devolves SEMPRE JSON estruturado — nunca texto livre, nunca markdown.
 
 TAREFA:

@@ -1,18 +1,18 @@
 import {
   MaitreAgent,
   ChefAgent,
-  ManagerAgent,
+  CashierAgent,
   MaitreResponseSchema,
   ChefResponseSchema,
-  ManagerResponseSchema,
+  CashierResponseSchema,
   attemptRepairMaitreResponse,
   enforceMenuPrices,
   deriveChefStockMetrics,
-  repairManagerResponse,
+  repairCashierResponse,
   buildMaitreMessage,
   buildMaitreStockFeedbackMessage,
   buildChefMessage,
-  buildManagerMessage,
+  buildCashierMessage,
 } from "../agents/index.js";
 import {
   calculateInvoiceTotals,
@@ -27,14 +27,14 @@ import { validateAgentOutput, extractJSON } from "../helpers/index.js";
  *
  *   TABLE    → Fase 1 Maître (verifica mesas disponíveis e atribui uma)
  *              → Fase 2 Chef (sequência KDS + stock)
- *              → Fase 3 Manager (fatura)
+ *              → Fase 3 Cashier (fatura)
  *
  *   TAKEAWAY → Salta o Maître (não há mesa para atribuir)
  *              → Fase 2 Chef directamente
- *              → Fase 3 Manager (fatura)
+ *              → Fase 3 Cashier (fatura)
  *
  * Os totais financeiros são SEMPRE calculados por funções JS puras
- * ANTES de chegar ao ManagerAgent — o agente nunca faz aritmética.
+ * ANTES de chegar ao CashierAgent — o agente nunca faz aritmética.
  *
  * @param {object} orderData
  * @param {number} orderData.user_id     - ID do cliente (obrigatório)
@@ -45,6 +45,7 @@ import { validateAgentOutput, extractJSON } from "../helpers/index.js";
  * @param {string} [orderData.discount_type] - "percent" | "fixed"
  * @returns {{ validated, sequenced, financials, final }}
  */
+// skipCashier: true → não executa Cashier (chatbot pede fatura separadamente)
 export async function runOrderPipeline(orderData) {
   const normalised = {
     ...orderData,
@@ -91,10 +92,10 @@ export async function runOrderPipeline(orderData) {
     );
 
     // Passa o menuItems adiante para as fases seguintes
-    return _runChefAndManager(validated, menuItems, normalised);
+    return _runChefAndManager(validated, menuItems, normalised, null, [], normalised.skipCashier);
   }
 
-  // ── TABLE: pipeline completo Maître → Chef → Manager ─────────────────────
+  // ── TABLE: pipeline completo Maître → Chef → Cashier ─────────────────────
   console.log("[Pipeline] Table detectado — a carregar mesas e menu activo...");
   const [availableTables, menuItems] = await Promise.all([
     getAllTables("Available"),
@@ -137,14 +138,14 @@ export async function runOrderPipeline(orderData) {
     `[Pipeline] Maître concluído — mesa: T${validated.table_id ?? "(sem mesa)"}, ${validated.items?.length ?? 0} item(s)`,
   );
 
-  return _runChefAndManager(validated, menuItems, normalised, maitre, availableTables);
+  return _runChefAndManager(validated, menuItems, normalised, maitre, availableTables, normalised.skipCashier);
 }
 
 /**
- * Fases 2 (Chef) e 3 (Manager) — partilhadas entre Table e Takeaway.
+ * Fases 2 (Chef) e 3 (Cashier) — partilhadas entre Table e Takeaway.
  * Para Takeaway, maitre=null e availableTables=[] (retry de stock não se aplica).
  */
-async function _runChefAndManager(validated, menuItems, normalised, maitre = null, availableTables = []) {
+async function _runChefAndManager(validated, menuItems, normalised, maitre = null, availableTables = [], skipCashier = false) {
 
   console.log("[Pipeline] Fase 2 — Chefe a verificar stock e sequência...");
   const chef = new ChefAgent();
@@ -261,15 +262,21 @@ async function _runChefAndManager(validated, menuItems, normalised, maitre = nul
     `[Pipeline] Financeiro calculado em JS — total: €${financials.total}`,
   );
 
+  // skipCashier: chatbot pede fatura separadamente via generate_invoice
+  if (skipCashier) {
+    console.log("[Pipeline] skipCashier=true — a saltar Gerente (fatura gerada pelo chatbot sob pedido).");
+    return { validated, sequenced, financials, final: null };
+  }
+
   console.log("[Pipeline] Fase 3 — Gerente a formatar fatura...");
-  const manager = new ManagerAgent();
-  const finalText = await manager.sendMessage(
-    buildManagerMessage(validated, sequenced, financials),
+  const cashier = new CashierAgent();
+  const finalText = await cashier.sendMessage(
+    buildCashierMessage(validated, sequenced, financials),
   );
   const finalRaw = extractJSON(finalText, "Gerente");
-  const finalRepaired = repairManagerResponse(finalRaw, financials);
+  const finalRepaired = repairCashierResponse(finalRaw, financials);
   const final = validateAgentOutput(
-    ManagerResponseSchema,
+    CashierResponseSchema,
     finalRepaired,
     "Gerente",
   );
@@ -281,6 +288,6 @@ async function _runChefAndManager(validated, menuItems, normalised, maitre = nul
 export {
   attemptRepairMaitreResponse,
   enforceMenuPrices,
-  repairManagerResponse,
+  repairCashierResponse,
   extractJSON,
 };

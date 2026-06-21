@@ -1,4 +1,4 @@
-function buildManagerMessage(validated, sequenced, financials) {
+function buildCashierMessage(validated, sequenced, financials) {
   const stockWarnings = [];
   if (sequenced.stock_status !== "ok") {
     stockWarnings.push(`Stock status: ${sequenced.stock_status}`);
@@ -72,4 +72,4 @@ ${JSON.stringify(sequenced, null, 2)}
 `.trim();
 }
 
-export { buildManagerMessage };
+export { buildCashierMessage };
