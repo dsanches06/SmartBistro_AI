@@ -42,9 +42,14 @@ import {
   createReservationFunctionDeclaration,
   cancelReservationFunctionDeclaration,
 } from "../functions/reservations/index.js";
+import {
+  getCustomerPointsFunctionDeclaration,
+  redeemCustomerPointsFunctionDeclaration,
+} from "../functions/points/index.js";
 
 // ── Services (operações reais na BD) ──────────────────────────────────────────
 import { getChatHistoryByConversationId } from "../../services/index.js";
+import { getUserPoints, redeemPoints } from '../../services/pointsService.js';
 import {
   getUserById,
   getAllUsers,
@@ -97,6 +102,8 @@ const ALL_DECLARATIONS = [
   getReservationFunctionDeclaration,
   createReservationFunctionDeclaration,
   cancelReservationFunctionDeclaration,
+  getCustomerPointsFunctionDeclaration,
+  redeemCustomerPointsFunctionDeclaration,
 ];
 
 // ── Handlers: recebem os args do Groq e executam operações na BD ──────────────
@@ -194,6 +201,16 @@ export const FUNCTION_HANDLERS = {
 
   create_invoice: async (args) => createInvoice(args),
   create_payment: async (args) => createPayment(args),
+
+  get_customer_points: async (args) => {
+    const data = await getUserPoints(args.user_id);
+    return { ...data, canRedeem: data.balance >= 50, pointValue: 0.10, minRedeem: 50 };
+  },
+
+  redeem_customer_points: async (args) => {
+    const discount = await redeemPoints(args.user_id, args.points);
+    return { success: true, pointsUsed: args.points, discount, message: `Desconto de €${discount.toFixed(2)} aplicado.` };
+  },
   update_payment_status: async (args) =>
     updatePayment(args.payment_id, {
       payment_status: args.payment_status,

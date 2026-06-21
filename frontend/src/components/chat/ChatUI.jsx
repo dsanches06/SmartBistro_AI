@@ -6,6 +6,9 @@ import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTableRefresh } from "@/context/TableRefreshContext";
 import { chatService } from "@/services/chatService";
+import { paymentService } from "@/services/paymentService";
+import { tableService } from "@/services/tableService";
+import { PaymentModal } from "@/components/ui/modals/PaymentModal.jsx";
 import {
   ChatBubbleUI,
   ChatHeaderUI,
@@ -24,6 +27,7 @@ export function ChatUI({ isOpen, onClose }) {
   const { user } = useAuth();
   const { triggerTableRefresh } = useTableRefresh();
   const customerName = user?.name ?? null;
+  const [takeawayPayModal, setTakeawayPayModal] = useState(null); // { inv, userId }
   const [messages, setMessages]                     = useState([createWelcomeMessage()]);
   const [input, setInput]                           = useState("");
   const [loading, setLoading]                       = useState(false);
@@ -127,6 +131,19 @@ export function ChatUI({ isOpen, onClose }) {
     const hasMutation = results.some((r) => TABLE_MUTATION_FNS.includes(r.functionName));
     if (hasMutation) triggerTableRefresh();
 
+    // Detecta fatura criada mas pagamento ainda não efectuado → mostra botões de pagamento
+    const invoiceResult  = results.find(r => r.functionName === 'create_invoice' && r.result?.id);
+    const paymentDone    = results.some(r => r.functionName === 'create_payment'  && r.result?.id);
+    const orderResult    = results.find(r => r.functionName === 'create_order');
+    const isTakeaway     = orderResult?.result?.service_type === 'Takeaway';
+    const pointsResult   = results.find(r => r.functionName === 'redeem_customer_points' && r.result?.discount);
+    const pointsDiscount = pointsResult?.result?.discount ?? 0;
+    const tableResult = results.find(r => r.functionName === 'update_table_status' || r.functionName === 'get_table');
+    const tableId     = tableResult?.result?.id ?? orderResult?.result?.table_id ?? null;
+    const pendingPayment = (!paymentDone && invoiceResult)
+      ? { invoice_id: invoiceResult.result.id, amount: Math.max(0, Number(invoiceResult.result.total_amount) - pointsDiscount), isTakeaway, tableId }
+      : null;
+
     // Marca mensagem como "done" quando cancelamento ou criação de reserva é bem-sucedido
     const isDone =
       results.some((r) => r.functionName === 'cancel_reservation' && r.result?.success) ||
@@ -149,7 +166,8 @@ export function ChatUI({ isOpen, onClose }) {
                 ...m,
                 done: isDone,
                 functionResults: results,
-                ...(menuItems.length > 0 ? { menuItems } : {}),
+                ...(menuItems.length > 0    ? { menuItems }    : {}),
+                ...(pendingPayment          ? { pendingPayment } : {}),
               }
             : m
         )
@@ -211,8 +229,32 @@ export function ChatUI({ isOpen, onClose }) {
 
   const handleMenuOrder = (itemNames) => {
     if (loading) return;
-    // itemNames pode ser "Item A" ou "Item A, Item B, Item C" (multi-select)
     doSend(`Quero pedir ${itemNames}`);
+  };
+
+  // Pagamento por botão (mesa/dine-in) — chama a API directamente sem passar pelo chat
+  const handlePaymentMethod = async (msgId, method, invoiceId, amount, tableId) => {
+    try {
+      await paymentService.create({
+        invoice_id:     invoiceId,
+        user_id:        user?.id ?? null,
+        amount,
+        payment_method: method,
+        payment_status: "Completed",
+      });
+      // Liberta a mesa automaticamente após pagamento
+      if (tableId) await tableService.updateStatus(tableId, "Available").catch(() => {});
+      setMessages(p => p.map(m => m.id === msgId ? { ...m, pendingPayment: null, paymentDone: method } : m));
+      triggerTableRefresh();
+      doSend(`Paguei com ${method}`);
+    } catch (e) {
+      setMessages(p => p.map(m => m.id === msgId ? { ...m, paymentError: e.message } : m));
+    }
+  };
+
+  // TAKEAWAY via chat — abre o PaymentModal com o método de pagamento visual
+  const handleTakeawayPay = (msgId, invoiceId, amount) => {
+    setTakeawayPayModal({ inv: { id: invoiceId, total_amount: amount }, userId: user?.id ?? null, msgId });
   };
 
   const handleRetry = async () => {
@@ -310,10 +352,31 @@ export function ChatUI({ isOpen, onClose }) {
         {!showHistory && (
           <>
             <div className="flex-1 overflow-y-auto bg-surface-2 px-4 py-4 space-y-4">
+              {/* PaymentModal para takeaway via chat */}
+              {takeawayPayModal && (
+                <PaymentModal
+                  unpaidInvoices={[{ inv: takeawayPayModal.inv }]}
+                  userId={takeawayPayModal.userId}
+                  onClose={() => setTakeawayPayModal(null)}
+                  onPaid={() => {
+                    const { msgId } = takeawayPayModal;
+                    setMessages(p => p.map(m => m.id === msgId ? { ...m, pendingPayment: null, paymentDone: 'Pago' } : m));
+                    setTakeawayPayModal(null);
+                    triggerTableRefresh();
+                  }}
+                />
+              )}
+
               {messages.map((msg) => (
                 <div key={msg.id}>
                   {(msg.text || msg.menuItems) && (
-                    <ChatBubbleUI message={msg} sender={msg.sender} onOrder={handleMenuOrder} />
+                    <ChatBubbleUI
+                      message={msg}
+                      sender={msg.sender}
+                      onOrder={handleMenuOrder}
+                      onPaymentMethod={(method, invoiceId, amount, tableId) => handlePaymentMethod(msg.id, method, invoiceId, amount, tableId)}
+                      onTakeawayPay={(invoiceId, amount) => handleTakeawayPay(msg.id, invoiceId, amount)}
+                    />
                   )}
                   {msg.providerError && (
                     <div className="flex justify-start mt-1">
