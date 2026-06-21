@@ -418,7 +418,7 @@ export default function MainPage({ onNavChange }) {
               <button
                 onClick={() => setShowLogin(true)}
                 title="Entrar"
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:border-[var(--primary)] hover:text-[var(--primary)]"
                 style={headerBtnStyle}
               >
                 <IconLogin />
@@ -428,7 +428,7 @@ export default function MainPage({ onNavChange }) {
               <button
                 onClick={() => setShowRegister(true)}
                 title="Registar"
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
                 style={{ background: "var(--primary)", color: "#fff", border: "1.5px solid var(--primary)" }}
               >
                 <IconRegister />
