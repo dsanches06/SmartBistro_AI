@@ -1,11 +1,16 @@
 import { BaseChatProcessor } from "../models/index.js";
 import { CHATBOT_SYSTEM_PROMPT } from "../config/index.js";
-import { classifyGroqError, calculateInvoiceTotals, calculateProfitMargin } from "../../utils/index.js";
+import {
+  classifyGroqError,
+  calculateInvoiceTotals,
+  calculateProfitMargin,
+} from "../../utils/index.js";
 import { PipelineError } from "../../utils/pipelineError.js";
 
-// ── Declarações das ferramentas ────────────────────────────────────────────────
+// ── Declarações das ferramentas expostas ao chatbot ──────────────────────────
+// Apenas funções que o chatbot (orquestrador) pode chamar directamente.
+// Stock, stock, create_order, etc. são internos ao pipeline — não expostos ao Groq.
 import {
-  createUserFunctionDeclaration,
   getUserFunctionDeclaration,
   findOrCreateUserFunctionDeclaration,
 } from "../functions/users/index.js";
@@ -13,30 +18,12 @@ import {
   getTableFunctionDeclaration,
   updateTableStatusFunctionDeclaration,
 } from "../functions/tables/index.js";
+import { getItemsFunctionDeclaration } from "../functions/items/index.js";
 import {
-  getItemFunctionDeclaration,
-  getItemsFunctionDeclaration,
-} from "../functions/items/index.js";
-import { getRecipeItemsFunctionDeclaration } from "../functions/recipe_items/index.js";
-import {
-  getStockFunctionDeclaration,
-  adjustStockFunctionDeclaration,
-} from "../functions/stock/index.js";
-import {
-  createOrderFunctionDeclaration,
   updateOrderStatusFunctionDeclaration,
+  submitOrderFunctionDeclaration,
 } from "../functions/orders/index.js";
-import { createOrderItemFunctionDeclaration } from "../functions/order_items/index.js";
-import {
-  createInvoiceFunctionDeclaration,
-  calculateInvoiceTotalsFunctionDeclaration,
-} from "../functions/invoices/index.js";
-import {
-  createPaymentFunctionDeclaration,
-  updatePaymentStatusFunctionDeclaration,
-} from "../functions/payments/index.js";
-import { createNotificationFunctionDeclaration } from "../functions/notifications/index.js";
-import { createLogFunctionDeclaration } from "../functions/logs/index.js";
+import { generateInvoiceFunctionDeclaration } from "../functions/invoices/index.js";
 import {
   getReservationFunctionDeclaration,
   createReservationFunctionDeclaration,
@@ -49,61 +36,34 @@ import {
 
 // ── Services (operações reais na BD) ──────────────────────────────────────────
 import { getChatHistoryByConversationId } from "../../services/index.js";
-import { getUserPoints, redeemPoints } from '../../services/pointsService.js';
+import { getUserPoints, redeemPoints } from "../../services/pointsService.js";
+import { runOrderPipeline } from "./orderOrchestrator.js";
 import {
-  getUserById,
-  getAllUsers,
-  createUser,
-  findOrCreateUser,
-  getTableById,
-  getAllTables,
-  updateTableStatus,
-  getItemById,
-  getAllItems,
-  getItemsByOrderId,
-  getRecipeByItemId,
-  getStockByIngredientId,
-  adjustQuantity,
-  createOrder,
-  updateOrderStatus,
-  createOrderItem,
-  createInvoice,
-  createPayment,
-  updatePayment,
-  createNotification,
-  createLog,
-  getReservationById,
-  getActiveReservationByCustomerId, // alias do reservationService (recebe userId)
-  getReservationsByTableId,
-  createReservation,
-  cancelReservation,
+  getUserById, getAllUsers, findOrCreateUser,
+  getTableById, getAllTables, updateTableStatus,
+  getAllItems, getItemsByOrderId,
+  createOrder, updateOrderStatus, createOrderItem,
+  createInvoice, updatePayment,
+  createNotification, createLog,
+  getReservationById, getActiveReservationByCustomerId,
+  getReservationsByTableId, createReservation, cancelReservation,
 } from "../../services/index.js";
 
-// ── Todas as declarações de ferramentas do pipeline ───────────────────────────
+// ── Ferramentas expostas ao Groq (chatbot orquestrador) ───────────────────────
 const ALL_DECLARATIONS = [
-  findOrCreateUserFunctionDeclaration,
-  getUserFunctionDeclaration,
-  getTableFunctionDeclaration,
-  updateTableStatusFunctionDeclaration,
-  getItemFunctionDeclaration,
-  getItemsFunctionDeclaration,
-  getRecipeItemsFunctionDeclaration,
-  getStockFunctionDeclaration,
-  adjustStockFunctionDeclaration,
-  createOrderFunctionDeclaration,
-  updateOrderStatusFunctionDeclaration,
-  createOrderItemFunctionDeclaration,
-  calculateInvoiceTotalsFunctionDeclaration,
-  createInvoiceFunctionDeclaration,
-  createPaymentFunctionDeclaration,
-  updatePaymentStatusFunctionDeclaration,
-  createNotificationFunctionDeclaration,
-  createLogFunctionDeclaration,
-  getReservationFunctionDeclaration,
-  createReservationFunctionDeclaration,
-  cancelReservationFunctionDeclaration,
-  getCustomerPointsFunctionDeclaration,
-  redeemCustomerPointsFunctionDeclaration,
+  findOrCreateUserFunctionDeclaration,   // identificar cliente
+  getUserFunctionDeclaration,            // consultar cliente
+  getTableFunctionDeclaration,           // encontrar mesa disponível
+  updateTableStatusFunctionDeclaration,  // ocupar / libertar mesa
+  getItemsFunctionDeclaration,           // mostrar menu por categoria
+  updateOrderStatusFunctionDeclaration,  // actualizar estado do pedido
+  submitOrderFunctionDeclaration,        // submeter pedido ao pipeline Maître→Chef
+  generateInvoiceFunctionDeclaration,    // gerar fatura via Cashier (quando cliente pede conta)
+  getReservationFunctionDeclaration,     // consultar reserva
+  createReservationFunctionDeclaration,  // criar reserva
+  cancelReservationFunctionDeclaration,  // cancelar reserva
+  getCustomerPointsFunctionDeclaration,  // consultar pontos de fidelidade
+  redeemCustomerPointsFunctionDeclaration, // resgatar pontos
 ];
 
 // ── Handlers: recebem os args do Groq e executam operações na BD ──────────────
@@ -111,10 +71,14 @@ export const FUNCTION_HANDLERS = {
   find_or_create_user: async (args) => {
     // Alguns modelos passam name como objecto em vez de string — coagir defensivamente
     let name = args.name;
-    if (typeof name === 'object' && name !== null) {
-      name = name.name ?? name.full_name ?? name.value ?? Object.values(name).filter(Boolean).join(' ');
+    if (typeof name === "object" && name !== null) {
+      name =
+        name.name ??
+        name.full_name ??
+        name.value ??
+        Object.values(name).filter(Boolean).join(" ");
     }
-    return findOrCreateUser(String(name ?? '').trim(), args.phone ?? null);
+    return findOrCreateUser(String(name ?? "").trim(), args.phone ?? null);
   },
 
   get_user: async (args) => {
@@ -126,90 +90,118 @@ export const FUNCTION_HANDLERS = {
     }
     return null;
   },
-  create_user: async (args) => createUser(args),
   get_table: async (args) => {
     if (args.table_id) return getTableById(args.table_id);
     const tables = await getAllTables();
     if (args.table_number) {
-      const num = String(args.table_number).replace(/^[Tt]/, '');
-      return tables.find((t) => String(t.table_number).replace(/^[Tt]/, '') === num) ?? null;
+      const num = String(args.table_number).replace(/^[Tt]/, "");
+      return (
+        tables.find(
+          (t) => String(t.table_number).replace(/^[Tt]/, "") === num,
+        ) ?? null
+      );
     }
     // Filtra por status — por defeito só devolve mesas Available (segurança contra modelo sem argumento)
-    const statusFilter = args.status || 'Available';
-    let filtered = tables.filter(t => t.status === statusFilter);
-    if (args.min_capacity) filtered = filtered.filter(t => t.capacity >= Number(args.min_capacity));
+    const statusFilter = args.status || "Available";
+    let filtered = tables.filter((t) => t.status === statusFilter);
+    if (args.min_capacity)
+      filtered = filtered.filter(
+        (t) => t.capacity >= Number(args.min_capacity),
+      );
     // Ordena por capacidade crescente para atribuir a mesa mais adequada
     filtered.sort((a, b) => a.capacity - b.capacity);
     return filtered[0] ?? null;
   },
   update_table_status: async (args) =>
     updateTableStatus(args.table_id, args.status),
-  get_item: async (args) => getItemById(args.item_id),
   get_items: async (args) => {
     const category = args.category ? String(args.category).trim() : undefined;
-    const search = args.search ? String(args.search).trim() : undefined;
-    const sort = args.sort ? String(args.sort).toLowerCase() : undefined;
+    const search   = args.search   ? String(args.search).trim()   : undefined;
+    const sort     = args.sort     ? String(args.sort).toLowerCase() : undefined;
     return getAllItems(search || undefined, category || undefined, sort);
   },
-  get_recipe_items: async (args) => getRecipeByItemId(args.item_id),
-  get_stock: async (args) => getStockByIngredientId(args.ingredient_id),
-  adjust_stock: async (args) => adjustQuantity(args.ingredient_id, args.delta),
-  create_order: async (args) => createOrder(args),
-  update_order_status: async (args) =>
-    updateOrderStatus(args.order_id, args.order_status),
-  create_order_item: async (args) => createOrderItem(args),
+  update_order_status: async (args) => updateOrderStatus(args.order_id, args.order_status),
 
-  // ── Cálculo financeiro em JS puro (nunca pelo modelo) ─────────────────────
-  calculate_invoice_totals: async (args) => {
-    const orderId = Number(args.order_id);
-    const taxRate  = args.tax_rate != null ? Number(args.tax_rate) : undefined;
+  // Submete pedido ao pipeline Maître→Chef e persiste na BD.
+  // Cashier NÃO é chamado aqui — só quando o cliente pedir a conta.
+  submit_order: async (args) => {
+    const { user_id, table_id, service_type, allergy_restrictions, items } = args;
+    const isTakeaway = service_type === 'Takeaway';
+    const itemsText  = items.map(i => `${i.quantity ?? 1}x ${i.name}`).join(', ');
 
-    // 1. Buscar todos os itens do pedido
-    const orderItems = await getItemsByOrderId(orderId);
-    if (!orderItems?.length) {
-      return { error: `Nenhum item encontrado para o pedido ${orderId}.` };
-    }
-
-    // 2. Enriquecer com preço unitário (busca paralela)
-    const enriched = await Promise.all(
-      orderItems.map(async (oi) => {
-        const item = await getItemById(oi.item_id);
-        return {
-          price:    Number(item?.price ?? 0),
-          quantity: Number(oi.quantity ?? 1),
-          name:     item?.name ?? `item_${oi.item_id}`,
-        };
-      }),
-    );
-
-    // 3. Calcular totais em JS — sem IA
-    const totals = calculateInvoiceTotals({
-      items:   enriched,
-      taxRate: taxRate,
+    const { validated, sequenced } = await runOrderPipeline({
+      customer_name:        `User#${user_id}`,
+      user_id,
+      message:              `Pedido: ${itemsText}`,
+      service_type:         isTakeaway ? 'Takeaway' : 'Table',
+      allergy_restrictions: allergy_restrictions || '',
+      items:                items.map(i => ({ item_id: i.item_id, name: i.name, quantity: i.quantity ?? 1, price: i.price ?? 0 })),
+      skipCashier:          true,
     });
 
+    const order = await createOrder({
+      user_id,
+      table_id:              validated.table_id ?? table_id ?? null,
+      service_type:          isTakeaway ? 'Takeaway' : 'Table',
+      order_status:          'Pending',
+      allergy_restrictions:  allergy_restrictions || null,
+      kitchen_sequence_json: JSON.stringify(sequenced.kitchen_sequence ?? []),
+    });
+
+    await Promise.all(
+      (validated.items ?? items).map(item =>
+        createOrderItem({ order_id: order.id, item_id: item.item_id, quantity: item.quantity ?? 1 })
+      )
+    );
+
     return {
-      order_id:        orderId,
-      items:           enriched,
-      subtotal_amount: totals.subtotal,
-      tax_rate:        totals.taxRate,
-      tax_amount:      totals.taxAmount,
-      total_amount:    totals.total,
-      profit_margin:   calculateProfitMargin(totals.total),
+      success:      true,
+      order_id:     order.id,
+      table_id:     validated.table_id ?? table_id ?? null,
+      service_type: isTakeaway ? 'Takeaway' : 'Table',
+      items_count:  (validated.items ?? items).length,
+      message:      `Pedido #${order.id} enviado para a cozinha.`,
     };
   },
 
-  create_invoice: async (args) => createInvoice(args),
-  create_payment: async (args) => createPayment(args),
+  // Gera fatura — só quando o cliente pede a conta (Cashier calcula totais).
+  generate_invoice: async (args) => {
+    const { order_id, discount = 0 } = args;
+    const orderItems = await getItemsByOrderId(order_id);
+    const totals     = calculateInvoiceTotals({ items: orderItems });
+    const total      = Math.max(0, totals.total - discount);
+    const subtotal   = Number((total / 1.13).toFixed(2));
+    const tax        = Number((total - subtotal).toFixed(2));
+
+    const inv = await createInvoice({
+      order_id,
+      subtotal_amount: subtotal,
+      tax_amount:      tax,
+      total_amount:    total,
+      profit_margin:   calculateProfitMargin(total, 0),
+    });
+
+    return { success: true, invoice_id: inv.id, total, message: `Fatura gerada — total: €${total.toFixed(2)}.` };
+  },
 
   get_customer_points: async (args) => {
     const data = await getUserPoints(args.user_id);
-    return { ...data, canRedeem: data.balance >= 50, pointValue: 0.10, minRedeem: 50 };
+    return {
+      ...data,
+      canRedeem: data.balance >= 50,
+      pointValue: 0.1,
+      minRedeem: 50,
+    };
   },
 
   redeem_customer_points: async (args) => {
     const discount = await redeemPoints(args.user_id, args.points);
-    return { success: true, pointsUsed: args.points, discount, message: `Desconto de €${discount.toFixed(2)} aplicado.` };
+    return {
+      success: true,
+      pointsUsed: args.points,
+      discount,
+      message: `Desconto de €${discount.toFixed(2)} aplicado.`,
+    };
   },
   update_payment_status: async (args) =>
     updatePayment(args.payment_id, {
@@ -222,8 +214,8 @@ export const FUNCTION_HANDLERS = {
 
   get_reservation: async (args) => {
     if (args.reservation_id) return getReservationById(args.reservation_id);
-    if (args.user_id)        return getActiveReservationByCustomerId(args.user_id);
-    if (args.table_id)       return getReservationsByTableId(args.table_id);
+    if (args.user_id) return getActiveReservationByCustomerId(args.user_id);
+    if (args.table_id) return getReservationsByTableId(args.table_id);
     return null;
   },
 
@@ -231,7 +223,8 @@ export const FUNCTION_HANDLERS = {
 
   cancel_reservation: async (args) => {
     const reservation = await getReservationById(args.reservation_id);
-    if (!reservation) return { error: `Reserva ${args.reservation_id} não encontrada.` };
+    if (!reservation)
+      return { error: `Reserva ${args.reservation_id} não encontrada.` };
 
     await cancelReservation(args.reservation_id);
 
@@ -239,13 +232,18 @@ export const FUNCTION_HANDLERS = {
       await updateTableStatus(reservation.table_id, "Available");
     }
 
-    return { success: true, reservation_id: args.reservation_id, table_freed: reservation.table_id ?? null };
+    return {
+      success: true,
+      reservation_id: args.reservation_id,
+      table_freed: reservation.table_id ?? null,
+    };
   },
 };
 
 // ── SmartBistroChatProcessor ───────────────────────────────────────────────────
 class SmartBistroChatProcessor extends BaseChatProcessor {
-  constructor(customerName = null) { // customerName mantido por retrocompat com chatBotController
+  constructor(customerName = null) {
+    // customerName mantido por retrocompat com chatBotController
     super({
       toolConfig: ALL_DECLARATIONS,
       functionHandlers: FUNCTION_HANDLERS,
@@ -283,7 +281,7 @@ async function getOrCreateSession(conversationId, customerName = null) {
   try {
     const rows = await getChatHistoryByConversationId(conversationId);
     processor.history = rows.map((r) => ({
-      role:    r.role_id === 2 ? "user" : "assistant",
+      role: r.role_id === 2 ? "user" : "assistant",
       content: r.content,
     }));
   } catch {
@@ -304,7 +302,10 @@ export async function processChatStream(
   { onChunk, onDone, onError },
   customerName = null,
 ) {
-  const processor = await getOrCreateSession(String(conversationId), customerName);
+  const processor = await getOrCreateSession(
+    String(conversationId),
+    customerName,
+  );
   try {
     const result = await processor.chat(message, onChunk);
     if (onDone) onDone(result.message || "", result.functionResults ?? []);
@@ -312,7 +313,7 @@ export async function processChatStream(
     const classified = classifyGroqError(err);
     const pe = new PipelineError(classified.userMessage, {
       code: `GROQ_${classified.type}`,
-      stage: 'provider',
+      stage: "provider",
       details: { message: err?.message },
       cause: err,
     });

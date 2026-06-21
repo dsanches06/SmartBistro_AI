@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const ManagerResponseSchema = z.object({
+const CashierResponseSchema = z.object({
   success: z.preprocess((val) => {
     if (val === true) return true;
     if (typeof val === "string")
@@ -47,4 +47,4 @@ const ManagerResponseSchema = z.object({
     .optional(),
 });
 
-export { ManagerResponseSchema };
+export { CashierResponseSchema };

@@ -33,8 +33,8 @@ export const AGENT_MODEL_QUEUES = {
   maitre:    [GROQ_MODELS.LLAMA33_70B,     GROQ_MODELS.QWEN3_32B,      GROQ_MODELS.LLAMA4_SCOUT,    GROQ_MODELS.LLAMA4_MAVERICK, GROQ_MODELS.LLAMA31_8B],
   // Chef: sequência de cozinha — velocidade primeiro
   chef:      [GROQ_MODELS.LLAMA4_SCOUT,    GROQ_MODELS.LLAMA33_70B,    GROQ_MODELS.LLAMA4_MAVERICK, GROQ_MODELS.QWEN3_32B,      GROQ_MODELS.LLAMA31_8B],
-  // Manager: relatórios e alertas — raciocínio analítico primeiro
-  manager:   [GROQ_MODELS.QWEN3_32B,       GROQ_MODELS.LLAMA33_70B,    GROQ_MODELS.LLAMA4_SCOUT,    GROQ_MODELS.LLAMA4_MAVERICK, GROQ_MODELS.LLAMA31_8B],
+  // Cashier: geração de fatura — raciocínio analítico e financeiro primeiro
+  cashier:   [GROQ_MODELS.QWEN3_32B,       GROQ_MODELS.LLAMA33_70B,    GROQ_MODELS.LLAMA4_SCOUT,    GROQ_MODELS.LLAMA4_MAVERICK, GROQ_MODELS.LLAMA31_8B],
   // Analytics: recomendações e previsões — Maverick primeiro (multimodal + boa análise)
   analytics: [GROQ_MODELS.LLAMA4_MAVERICK, GROQ_MODELS.QWEN3_32B,     GROQ_MODELS.LLAMA33_70B,     GROQ_MODELS.LLAMA4_SCOUT,   GROQ_MODELS.LLAMA31_8B],
   // Chatbot: conversação com clientes — Scout primeiro (rápido, natural)
