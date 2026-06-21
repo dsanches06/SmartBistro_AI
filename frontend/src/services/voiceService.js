@@ -12,12 +12,26 @@ export async function transcribeAudio(audioBlob, mimeType = 'audio/webm') {
   const formData  = new FormData();
   formData.append('file', audioFile);
 
-  const res = await fetch(`${BACKEND_URL}/voice/transcribe`, {
-    method: 'POST',
-    body:   formData,
-  });
+  console.log(`[VoiceService] Enviando: ${audioFile.name} (${audioBlob.size}b, ${mimeType})`);
 
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Erro na transcrição.');
-  return data.text;
+  try {
+    const res = await fetch(`${BACKEND_URL}/voice/transcribe`, {
+      method: 'POST',
+      body:   formData,
+    });
+
+    const data = await res.json();
+    
+    if (!res.ok) {
+      console.error(`[VoiceService] Erro ${res.status}:`, data);
+      throw new Error(data.message || `Erro na transcrição (${res.status})`);
+    }
+    
+    console.log(`[VoiceService] Sucesso: "${data.text}"`);
+    return data.text;
+  } catch (err) {
+    console.error('[VoiceService] Erro ao transcrever:', err.message);
+    throw err;
+  }
 }
+

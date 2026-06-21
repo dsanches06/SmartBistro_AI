@@ -7,6 +7,7 @@ export function ChatInputUI({ value, onChange, onSubmit, onVoiceSend, disabled =
   const [transcribing, setTranscribing] = useState(false);
   const mediaRef  = useRef(null);
   const chunksRef = useRef([]);
+  const mimeRef   = useRef('audio/webm');
 
   const handleKeyPress = (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSubmit(e); }
@@ -16,40 +17,73 @@ export function ChatInputUI({ value, onChange, onSubmit, onVoiceSend, disabled =
     try {
       const stream   = await navigator.mediaDevices.getUserMedia({ audio: true });
       chunksRef.current = [];
-      const recorder = new MediaRecorder(stream);
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-      recorder.start();
+      // Forçar audio/webm para garantir que não usa video/webm
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : 'audio/webm';
+      mimeRef.current = mimeType;
+      const recorder = new MediaRecorder(stream, { mimeType });
+      
+      // ✅ CRÍTICO: Registar ondataavailable ANTES de start()
+      recorder.ondataavailable = (e) => {
+        console.log('[Voice] chunk tamanho:', e.data?.size, 'bytes');
+        if (e.data && e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
+      };
+      
+      // timeslice=500ms garante dados mesmo em gravações muito curtas
+      recorder.start(500);
       mediaRef.current = recorder;
       setRecording(true);
-    } catch { /* sem permissão */ }
+    } catch (err) { console.error('[Voice] erro ao iniciar gravação:', err); }
   };
 
   const stopAndTranscribe = async (autoSend = false) => {
     const recorder = mediaRef.current;
-    if (!recorder) return;
+    if (!recorder || recorder.state === 'inactive') return;
+    const savedMime = mimeRef.current || 'audio/webm';
     setRecording(false);
 
     await new Promise((resolve) => {
+      // ✅ CRÍTICO: requestData() ANTES de stop() para flush final de dados
       recorder.onstop = () => {
+        console.log('[Voice] onstop acionado, total chunks:', chunksRef.current.length);
         recorder.stream.getTracks().forEach(t => t.stop());
         resolve();
       };
-      recorder.requestData(); // força flush de todos os dados pendentes
-      recorder.stop();
+      
+      // ✅ Força flush do buffer: disparará ondataavailable uma última vez
+      recorder.requestData();
+      
+      // ✅ Depois de requestData(), para o gravador
+      setTimeout(() => recorder.stop(), 100);
     });
 
+    console.log('[Voice] total chunks capturados:', chunksRef.current.length, 
+                chunksRef.current.map(c => `${c.size}b`).join(' + '));
+    
     setTranscribing(true);
     try {
-      const mimeType = recorder.mimeType || 'audio/webm';
-      const blob = new Blob(chunksRef.current, { type: mimeType });
-      const text = await transcribeAudio(blob, mimeType);
+      const blob = new Blob(chunksRef.current, { type: savedMime });
+      console.log('[Voice] blob final:', blob.size, 'bytes, type:', savedMime);
+      
+      if (blob.size < 500) { 
+        console.warn('[Voice] ⚠️ blob muito pequeno (<500bytes), gravação falhou');
+        return; 
+      }
+      
+      const text = await transcribeAudio(blob, savedMime);
       if (!text) return;
+      
       if (autoSend && onVoiceSend) {
         onVoiceSend(text);           // envia directamente ao chatbot
       } else {
         onChange({ target: { value: (value ? value + ' ' : '') + text } });
       }
-    } catch { /* erro silencioso */ }
+    } catch (err) { 
+      console.error('[Voice] erro na transcrição:', err.message);
+    }
     finally { setTranscribing(false); }
   };
 
