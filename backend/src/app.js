@@ -24,6 +24,7 @@ import {
   reservationRoutes,
   recommendationRoutes,
   forecastRoutes,
+  pointsRoutes,
 } from "./routes/index.js";
 
 dotenv.config();
@@ -73,6 +74,7 @@ app.use("/logs", logRoutes);
 app.use("/reservations",    reservationRoutes);
 app.use("/recommendations", recommendationRoutes);
 app.use("/forecast",        forecastRoutes);
+app.use("/points",          pointsRoutes);
 
 const PORT = process.env.PORT || 3000;
 if (process.env.NODE_ENV !== 'test') {

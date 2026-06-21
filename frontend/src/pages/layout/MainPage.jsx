@@ -14,6 +14,7 @@ import ForgotPasswordModal from "@/components/ui/modals/ForgotPasswordModal.jsx"
 import { getInitials, getPalette } from "@/components/users/UserCard.jsx";
 import { useClickOutside } from "@/components/ui/shared/useClickOutside.jsx";
 import { NotificationBell } from "@/components/ui/layout/Header.jsx";
+import { fetchPoints, redeemPoints } from "@/services/pointsService.js";
 
 /* ── Icons ── */
 // Ícone usado para abrir o modal de autenticação.
@@ -150,7 +151,7 @@ export default function MainPage({ onNavChange }) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const payingRef = useRef(false);
-  const { user, login, register, logout, sessionBlocked, sessionMessage } = useAuth();
+  const { user, token, login, register, logout, sessionBlocked, sessionMessage } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
@@ -166,6 +167,14 @@ export default function MainPage({ onNavChange }) {
   const [recommendations, setRecommendations] = useState(new Map());
   // Cache: só faz novo request ao Groq se o histórico de pedidos mudou
   const recCacheRef = useRef({ userId: null, cacheKey: -1 });
+
+  // Programa de pontos
+  const [pointsData, setPointsData]           = useState(null);
+  const [showPointsModal, setShowPointsModal] = useState(false);
+  const [pointsToUse, setPointsToUse]         = useState(0);
+  const [pointsDiscount, setPointsDiscount]   = useState(0);
+  // useRef garante que handleCheckoutPay lê sempre o valor actual (evita stale closure)
+  const pointsDiscountRef = useRef(0);
 
   useEffect(() => { onNavChange?.(navOpen); }, [navOpen, onNavChange]);
   const [cart, setCart]                 = useState({});
@@ -205,6 +214,12 @@ export default function MainPage({ onNavChange }) {
       return { ...prev, [itemId]: { ...prev[itemId], qty } };
     });
 
+  // Busca saldo de pontos quando o utilizador autentica
+  useEffect(() => {
+    if (!user?.id || !token) { setPointsData(null); return; }
+    fetchPoints(token, user.id).then(setPointsData).catch(() => {});
+  }, [user?.id, token]);
+
   const handleConfirmCart = () => {
     if (!cartItems.length) return;
     setShowCart(false);
@@ -215,6 +230,28 @@ export default function MainPage({ onNavChange }) {
     setShowAllergyModal(false);
     setCheckoutAllergies(allergies);
     setCheckoutError("");
+    setPointsToUse(0);
+    setPointsDiscount(0);
+    pointsDiscountRef.current = 0;
+    // Se tiver ≥50 pontos, mostra o modal de resgate antes do pagamento
+    if (isClient && pointsData?.canRedeem) {
+      setShowPointsModal(true);
+    } else {
+      setShowCheckout(true);
+    }
+  };
+
+  const handlePointsConfirm = async (pts) => {
+    setShowPointsModal(false);
+    if (pts > 0) {
+      try {
+        const result = await redeemPoints(token, user.id, pts);
+        pointsDiscountRef.current = result.discount;  // ref actualizada antes do checkout abrir
+        setPointsToUse(pts);
+        setPointsDiscount(result.discount);
+        setPointsData(prev => prev ? { ...prev, balance: prev.balance - pts, canRedeem: (prev.balance - pts) >= 50 } : prev);
+      } catch { /* ignora erro, prossegue sem desconto */ }
+    }
     setShowCheckout(true);
   };
 
@@ -244,7 +281,7 @@ export default function MainPage({ onNavChange }) {
         items: cartItems.map(c => ({ item_id: c.item.id, quantity: c.qty })),
       }).catch(() => {});
 
-      const total    = Number(cartTotal.toFixed(2));
+      const total    = Number(Math.max(0, cartTotal - pointsDiscountRef.current).toFixed(2));
       const subtotal = Number((total / 1.13).toFixed(2)); // IVA 13% taxa intermédia restauração
       const tax      = Number((total - subtotal).toFixed(2));
 
@@ -400,6 +437,13 @@ export default function MainPage({ onNavChange }) {
         <div className="flex items-center gap-2">
           {isClient ? (
             <>
+              {pointsData && pointsData.balance > 0 && (
+                <span className="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold select-none"
+                  style={{ background: 'rgba(99,102,241,0.12)', color: 'var(--primary)', border: '1px solid rgba(99,102,241,0.2)' }}
+                  title={`${pointsData.balance} pontos acumulados`}>
+                  ⭐ {pointsData.balance}
+                </span>
+              )}
               <NotificationBell user={user} />
               <UserMenuCompact user={user} onLogout={logout} />
             </>
@@ -682,6 +726,67 @@ export default function MainPage({ onNavChange }) {
         </div>
       )}
 
+      {/* Modal de pontos — aparece entre alergias e checkout quando ≥50 pts */}
+      {showPointsModal && pointsData && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}>
+          <div className="w-full max-w-sm rounded-2xl p-6 shadow-2xl flex flex-col gap-4"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">⭐</span>
+              <div>
+                <h3 className="text-base font-bold" style={{ color: "var(--text)" }}>Usar pontos?</h3>
+                <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
+                  Tens <strong style={{ color: "var(--primary)" }}>{pointsData.balance} pontos</strong> — cada ponto vale €0,10
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl p-3 flex flex-col gap-2"
+              style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+              <div className="flex items-center justify-between text-xs">
+                <span style={{ color: "var(--text-secondary)" }}>Pontos a usar</span>
+                <input
+                  type="number"
+                  min={50}
+                  max={pointsData.balance}
+                  step={10}
+                  value={pointsToUse}
+                  onChange={e => setPointsToUse(Math.min(pointsData.balance, Math.max(0, parseInt(e.target.value) || 0)))}
+                  className="w-20 text-right rounded-lg px-2 py-1 text-sm font-bold outline-none"
+                  style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)" }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span style={{ color: "var(--text-secondary)" }}>Desconto</span>
+                <span className="font-bold" style={{ color: "#22c55e" }}>
+                  − €{(pointsToUse * 0.10).toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+              Mínimo 50 pontos para resgatar. Máximo: {pointsData.balance} pts.
+            </p>
+
+            <div className="flex gap-2">
+              <button onClick={() => handlePointsConfirm(0)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
+                style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
+                Não usar
+              </button>
+              <button
+                onClick={() => handlePointsConfirm(pointsToUse)}
+                disabled={pointsToUse < 50}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50"
+                style={{ background: "var(--primary)" }}>
+                Usar {pointsToUse > 0 ? `${pointsToUse} pts` : ''}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de checkout / pagamento */}
       {showCheckout && (
         <div
@@ -715,11 +820,29 @@ export default function MainPage({ onNavChange }) {
                 ))}
               </div>
 
+              {/* Desconto de pontos */}
+              {pointsDiscount > 0 && (
+                <div className="flex items-center justify-between px-4 py-2 rounded-xl"
+                  style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
+                  <span className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "#22c55e" }}>
+                    ⭐ {pointsToUse} pontos usados
+                  </span>
+                  <span className="text-sm font-bold" style={{ color: "#22c55e" }}>− {formatMenuPrice(pointsDiscount)}</span>
+                </div>
+              )}
+
               {/* Total */}
               <div className="flex items-center justify-between px-4 py-3 rounded-xl"
                 style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
                 <span className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>Total</span>
-                <span className="text-xl font-bold" style={{ color: "var(--primary)" }}>{formatMenuPrice(cartTotal)}</span>
+                <div className="flex items-center gap-2">
+                  {pointsDiscount > 0 && (
+                    <span className="text-sm line-through" style={{ color: "var(--text-muted)" }}>{formatMenuPrice(cartTotal)}</span>
+                  )}
+                  <span className="text-xl font-bold" style={{ color: "var(--primary)" }}>
+                    {formatMenuPrice(Math.max(0, cartTotal - pointsDiscount))}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -736,7 +859,7 @@ export default function MainPage({ onNavChange }) {
                 className="w-full py-3.5 rounded-2xl text-sm font-bold text-white disabled:opacity-60 transition-opacity"
                 style={{ background: "var(--primary)" }}
               >
-                {checkoutLoading ? "A processar..." : `Pagar ${formatMenuPrice(cartTotal)}`}
+                {checkoutLoading ? "A processar..." : `Pagar ${formatMenuPrice(Math.max(0, cartTotal - pointsDiscount))}`}
               </button>
             </div>
           </div>

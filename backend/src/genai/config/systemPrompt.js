@@ -146,21 +146,29 @@ PEDIDOS ADICIONAIS — TABLE (cliente quer mais itens depois do envio inicial):
 PAGAMENTO — TABLE (só quando o cliente pedir: "conta", "quero pagar", "a fatura", "vou embora"):
   1. calculate_invoice_totals({ order_id }) — calcula o total de TODOS os itens do pedido
   2. create_invoice com os totais calculados
-  3. Pergunta o método: "Como deseja pagar? Dinheiro, cartão ou MB Way?"
-  4. create_payment({ invoice_id, payment_method, payment_status: "Completed" })
-  5. update_table_status(table_id, "Available")  ← liberta a mesa
-  6. "Obrigado pela visita, volte sempre! 😊"
+  3. SE o cliente tiver user_id → get_customer_points({ user_id })
+     - SE balance >= 50 → informa: "Tem X pontos disponíveis (vale €Y de desconto). Quer usar pontos? Se sim, quantos? (mínimo 50, 1 ponto = €0,10)"
+     → PARA. Espera resposta.
+     - SE cliente confirmar pontos → redeem_customer_points({ user_id, points }) e ajusta o amount do pagamento: amount = total - discount
+     - SE não quiser pontos → prossegue normalmente
+  4. PARA aqui — NÃO chames create_payment. O frontend mostrará botões de método de pagamento.
+     Responde apenas: "Pode escolher o método de pagamento abaixo. Obrigado! 😊"
+     (O pagamento e a libertação da mesa são tratados automaticamente ao clicar no botão.)
 
 ENVIO PARA A COZINHA + PAGAMENTO — TAKEAWAY (após alergias respondidas no PASSO 5):
   1. create_order({ user_id, table_id: null, service_type: "Takeaway", order_status: "Pending", allergy_restrictions: "<restrições ou string vazia ''>" })
   2. create_order_item para cada item escolhido (em paralelo)
   3. calculate_invoice_totals({ order_id })
   4. create_invoice com os totais calculados
-  5. Apresenta o resumo e pede confirmação:
-     "Resumo do pedido: [lista de itens]. Total: X€. Confirma o pagamento?"
+  5. SE o cliente tiver user_id → get_customer_points({ user_id })
+     - SE balance >= 50 → informa: "Tem X pontos (vale €Y de desconto). Quer usar antes de pagar? Se sim, quantos?"
+     → PARA. Espera resposta.
+     - SE confirmar → redeem_customer_points({ user_id, points }) e ajusta amount = total - discount
+  6. Apresenta o resumo e pede confirmação:
+     "Resumo do pedido: [lista de itens]. Total: X€[com desconto se aplicável]. Confirma o pagamento?"
      → PARA. Espera confirmação do cliente.
-  6. [Após confirmação]: create_payment({ invoice_id, payment_method: "Cash", payment_status: "Completed" })
-  7. "✅ Pedido confirmado e pago! Total: X€. Pode levantar em breve. 🛍️"
+  7. PARA aqui — NÃO chames create_payment. O frontend mostrará um botão para escolher o método.
+     Responde: "O seu pedido está confirmado! Escolha o método de pagamento abaixo. 🛍️"
 
 FLUXO DE RESERVA (quando o cliente pede "reserva", "marcar mesa", "reservar"):
   1º Se não souberes o nome → pergunta. Se já sabes (cliente autenticado) → chama find_or_create_customer({ name }) IMEDIATAMENTE.

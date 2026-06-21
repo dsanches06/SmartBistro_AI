@@ -100,7 +100,14 @@ function MenuCardsMessage({ items, onOrder }) {
  * ChatBubbleUI — renderiza uma bolha de mensagem.
  * Suporta: texto, functionResults, badge Concluído e cards de menu interativos.
  */
-export function ChatBubbleUI({ message, sender, onOrder }) {
+const PAYMENT_METHODS = [
+  { value: 'Cash',        label: '💵 Dinheiro' },
+  { value: 'MB Way',      label: '📱 MB Way'   },
+  { value: 'Credit Card', label: '💳 Cartão'   },
+  { value: 'Multibanco',  label: '🏧 Multibanco' },
+];
+
+export function ChatBubbleUI({ message, sender, onOrder, onPaymentMethod, onTakeawayPay }) {
   const isBot    = sender !== "user";
   const hasMenu  = (message.menuItems?.length ?? 0) > 0;
 
@@ -136,6 +143,45 @@ export function ChatBubbleUI({ message, sender, onOrder }) {
                 </pre>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Botões de método de pagamento (mesa/dine-in) */}
+        {message.pendingPayment && !message.pendingPayment.isTakeaway && onPaymentMethod && (
+          <div className="mt-3 flex flex-col gap-2">
+            <p className="text-xs font-semibold" style={{ color: "var(--text-secondary)" }}>
+              Como deseja pagar? ({message.pendingPayment.amount.toFixed(2)} €)
+            </p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {PAYMENT_METHODS.map(({ value, label }) => (
+                <button key={value}
+                  onClick={() => onPaymentMethod(value, message.pendingPayment.invoice_id, message.pendingPayment.amount, message.pendingPayment.tableId)}
+                  className="py-2 px-3 rounded-xl text-xs font-semibold text-left transition-colors hover:opacity-80"
+                  style={{ background: "var(--primary)", color: "#fff" }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Takeaway via chat — abre PaymentModal */}
+        {message.pendingPayment?.isTakeaway && onTakeawayPay && (
+          <div className="mt-3">
+            <button
+              onClick={() => onTakeawayPay(message.pendingPayment.invoice_id, message.pendingPayment.amount)}
+              className="w-full py-2.5 rounded-xl text-sm font-bold text-white"
+              style={{ background: "var(--primary)" }}>
+              💳 Escolher método de pagamento ({message.pendingPayment.amount.toFixed(2)} €)
+            </button>
+          </div>
+        )}
+
+        {/* Pagamento concluído */}
+        {message.paymentDone && (
+          <div className="mt-2 flex items-center gap-1.5 text-green-400 text-xs font-semibold">
+            <i className="fa-solid fa-circle-check" />
+            <span>Pago com {message.paymentDone} ✓</span>
           </div>
         )}
 
