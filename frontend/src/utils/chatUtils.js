@@ -52,24 +52,6 @@ export const formatConversationDate = (dateString) => {
   }
 };
 
-/** Cores por status de tarefa — alinhadas com STATUS_COLOR em userUtils */
-export const TASK_STATUS_COLORS = {
-  CREATED:     '#185FA5',
-  ASSIGNED:    '#1D9E75',
-  IN_PROGRESS: '#BA7517',
-  BLOCKED:     '#A32D2D',
-  COMPLETED:   '#3B6D11',
-  ARCHIVED:    '#5F5E5A',
-};
-
-/** Devolve a cor correspondente à severidade (1-10) de um ticket */
-export function getSeverityColor(sev) {
-  if (sev >= 8) return '#DC2626';
-  if (sev >= 5) return '#D97706';
-  if (sev >= 3) return '#2563EB';
-  return '#16A34A';
-}
-
 /**
  * Cria a mensagem de boas-vindas inicial do chat.
  * @returns {Object} Objeto da mensagem de boas-vindas.

@@ -13,3 +13,6 @@ export { invoiceService }              from "./invoiceService.js";
 export { paymentService }              from "./paymentService.js";
 export { notificationService }         from "./notificationService.js";
 export { reservationService }          from "./reservationService.js";
+export { fetchRecommendations }        from "./recommendationService.js";
+export { fetchForecast }               from "./forecastService.js";
+export { fetchPoints, redeemPoints }   from "./pointsService.js";
