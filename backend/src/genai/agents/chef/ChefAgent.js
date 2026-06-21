@@ -5,7 +5,7 @@ import { CHEF_PROMPT } from "../../config/index.js";
 // temp 0.2 → LOW reasoning_effort (decisões precisas: stock, receitas, disponibilidade)
 class ChefAgent extends BaseAgentAI {
   constructor() {
-    super("Chef", CHEF_PROMPT, 0.2, null, [], true);
+    super("Chef", CHEF_PROMPT, 0.2, null, 'chef');
   }
 }
 

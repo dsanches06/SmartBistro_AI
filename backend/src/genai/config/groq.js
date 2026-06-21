@@ -20,26 +20,8 @@ if (!process.env.GROQ_API_KEY) {
   process.exit(1);
 }
 
-export const GROQ_MODEL =
-  process.env.GROQ_MODEL ||
-  process.env.GROQ_MODEL_NAME ||
-  "llama-3.3-70b-versatile";
-
-// Fila de fallback ordenada por prioridade para function calling:
-// NOTA: groq/compound e groq/compound-mini removidos — não suportam tool calling
-//       openai/gpt-oss-* removidos — latência superior ao llama-3.3-70b
-const _BASE_QUEUE = [
-  "llama-3.3-70b-versatile",                     // 1. melhor para function calling (padrão)
-  "meta-llama/llama-4-scout-17b-16e-instruct",   // 2. Llama 4 Scout — rápido, boa capacidade
-  "qwen/qwen3-32b",                               // 3. Qwen3 — raciocínio via <think>, estável
-  "llama-3.1-8b-instant",                         // 4. fallback leve, menos preciso
-];
-
-// Coloca GROQ_MODEL como primeiro e remove duplicatas
-export const GROQ_MODEL_QUEUE = [
-  GROQ_MODEL,
-  ..._BASE_QUEUE.filter((m) => m !== GROQ_MODEL),
-];
+import { GROQ_MODEL, GROQ_MODEL_QUEUE, AGENT_MODEL_QUEUES } from './models.js';
+export { GROQ_MODEL, GROQ_MODEL_QUEUE, AGENT_MODEL_QUEUES } from './models.js';
 
 export const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
