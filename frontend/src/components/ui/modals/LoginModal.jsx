@@ -65,7 +65,7 @@ function ErrorMsg({ msg }) {
   );
 }
 
-export default function LoginModal({ open, onClose, onSwitchToRegister, isDark, onLogin, sessionBlocked, sessionMessage }) {
+export default function LoginModal({ open, onClose, onSwitchToRegister, onForgotPassword, isDark, onLogin, sessionBlocked, sessionMessage }) {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -100,6 +100,15 @@ export default function LoginModal({ open, onClose, onSwitchToRegister, isDark, 
         {sessionBlocked && sessionMessage ? <ErrorMsg msg={sessionMessage} /> : null}
         <Field label="E-mail ou username" value={identifier} onChange={setIdentifier} placeholder="email ou username" autoFocus />
         <Field label="Palavra-passe" type="password" value={password} onChange={setPassword} placeholder="••••••••" />
+        {onForgotPassword && (
+          <div className="flex justify-end -mt-2">
+            <button type="button" onClick={() => { handleClose(); onForgotPassword(); }}
+              className="text-xs underline underline-offset-2"
+              style={{ color: "var(--text-muted)" }}>
+              Esqueceste a palavra-passe?
+            </button>
+          </div>
+        )}
         <ErrorMsg msg={error} />
 
         <button

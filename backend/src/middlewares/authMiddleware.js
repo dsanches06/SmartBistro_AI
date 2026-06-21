@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken';
 
+// Valida o JWT do header Authorization e anexa o payload a req.user.
+// Rejeita com 401 se o token estiver em falta, inválido ou expirado.
 export function verifyToken(req, res, next) {
   const header = req.headers['authorization'];
   const token  = header?.startsWith('Bearer ') ? header.slice(7) : null;
@@ -15,6 +17,8 @@ export function verifyToken(req, res, next) {
   }
 }
 
+// Verifica se o utilizador autenticado tem um dos roles permitidos.
+// Devolve 403 caso o role não esteja na lista fornecida.
 export function requireRole(...roles) {
   return (req, res, next) => {
     if (!roles.includes(req.user?.role_id))

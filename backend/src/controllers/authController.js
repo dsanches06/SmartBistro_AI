@@ -2,16 +2,35 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { db } from '../db.js';
 
+// Número de iterações do bcrypt — equilibra segurança e desempenho no login.
 const SALT_ROUNDS = 10;
 
+// OTP store em memória: username → { code, expires } — limpo após uso ou expiração (10 min).
+const otpStore = new Map();
+
+// Gera um código OTP numérico de 6 dígitos.
+function genOTP() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+// Mascara o telemóvel mostrando apenas os 2 primeiros e últimos dígitos. Ex: "912345678" → "91****78".
+function maskPhone(phone) {
+  if (!phone) return null;
+  const s = phone.replace(/\D/g, '');
+  if (s.length < 4) return phone;
+  return s.slice(0, 2) + '*'.repeat(s.length - 4) + s.slice(-2);
+}
+
+// Gera um JWT com id e role do utilizador, válido por 30 minutos.
 function signToken(user) {
   return jwt.sign(
     { id: user.id, role_id: user.role_id },
     process.env.JWT_SECRET,
-    { expiresIn: '8h' },
+    { expiresIn: '30m' },
   );
 }
 
+// Normaliza o resultado de db.query() para devolver sempre um array de linhas.
 function getQueryRows(result) {
   if (Array.isArray(result) && result.length > 0 && Array.isArray(result[0])) {
     return result[0];
@@ -19,6 +38,7 @@ function getQueryRows(result) {
   return Array.isArray(result) ? result : [];
 }
 
+// Extrai o id do registo inserido, compatível com diferentes formatos de resposta MySQL.
 function getInsertId(result) {
   if (result == null) return null;
   if (Array.isArray(result)) return getInsertId(result[0]);
@@ -279,6 +299,107 @@ export async function me(req, res) {
     return res.json(rows[0]);
   } catch (err) {
     console.error('[Auth] me:', err.message);
+    return res.status(500).json({ message: 'Erro interno.' });
+  }
+}
+
+// POST /auth/reset-request  { username }
+// Verifica se o username existe e tem telemóvel. Se tiver, gera OTP (10 min); caso contrário devolve needsPhone:true.
+export async function resetRequest(req, res) {
+  const { username } = req.body;
+  if (!username?.trim())
+    return res.status(400).json({ message: 'Username obrigatório.' });
+
+  try {
+    const [rows] = await db.query(
+      `SELECT u.id, u.phone FROM auth_accounts a
+       JOIN users u ON u.id = a.user_id
+       WHERE a.username = ?`,
+      [username.trim()]
+    );
+
+    if (!rows.length)
+      return res.status(404).json({ message: 'Utilizador não encontrado.' });
+
+    const { id: userId, phone } = rows[0];
+
+    if (!phone)
+      return res.json({ needsPhone: true, userId });
+
+    const code = genOTP();
+    otpStore.set(username.trim(), { code, expires: Date.now() + 10 * 60 * 1000 });
+    console.log(`[Auth] reset OTP for "${username}": ${code}`);
+
+    return res.json({ codeSent: true, phone: maskPhone(phone), demoCode: code });
+  } catch (err) {
+    console.error('[Auth] resetRequest:', err.message);
+    return res.status(500).json({ message: 'Erro interno.' });
+  }
+}
+
+// POST /auth/reset-add-phone  { username, phone }
+// Associa um telemóvel ao utilizador e gera OTP para continuar o fluxo de recuperação.
+export async function resetAddPhone(req, res) {
+  const { username, phone } = req.body;
+  if (!username?.trim() || !phone?.trim())
+    return res.status(400).json({ message: 'Username e telefone obrigatórios.' });
+
+  try {
+    const [rows] = await db.query(
+      `SELECT u.id FROM auth_accounts a
+       JOIN users u ON u.id = a.user_id
+       WHERE a.username = ?`,
+      [username.trim()]
+    );
+    if (!rows.length)
+      return res.status(404).json({ message: 'Utilizador não encontrado.' });
+
+    const userId = rows[0].id;
+    await db.query('UPDATE users SET phone = ? WHERE id = ?', [phone.trim(), userId]);
+
+    const code = genOTP();
+    otpStore.set(username.trim(), { code, expires: Date.now() + 10 * 60 * 1000 });
+    console.log(`[Auth] reset OTP (new phone) for "${username}": ${code}`);
+
+    return res.json({ codeSent: true, phone: maskPhone(phone.trim()), demoCode: code });
+  } catch (err) {
+    console.error('[Auth] resetAddPhone:', err.message);
+    return res.status(500).json({ message: 'Erro interno.' });
+  }
+}
+
+// POST /auth/reset-confirm  { username, otp, newPassword }
+// Valida o OTP e, se correto, substitui o hash da password. O código é apagado após uso.
+export async function resetConfirm(req, res) {
+  const { username, otp, newPassword } = req.body;
+  if (!username?.trim() || !otp?.trim() || !newPassword?.trim())
+    return res.status(400).json({ message: 'username, otp e newPassword obrigatórios.' });
+
+  if (newPassword.length < 6)
+    return res.status(400).json({ message: 'A nova password deve ter pelo menos 6 caracteres.' });
+
+  const stored = otpStore.get(username.trim());
+  if (!stored || Date.now() > stored.expires)
+    return res.status(400).json({ message: 'Código expirado ou inválido. Pede um novo.' });
+
+  if (stored.code !== otp.trim())
+    return res.status(400).json({ message: 'Código incorreto.' });
+
+  try {
+    const [rows] = await db.query(
+      'SELECT a.id FROM auth_accounts a JOIN users u ON u.id = a.user_id WHERE a.username = ?',
+      [username.trim()]
+    );
+    if (!rows.length)
+      return res.status(404).json({ message: 'Utilizador não encontrado.' });
+
+    const newHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    await db.query('UPDATE auth_accounts SET password_hash = ? WHERE id = ?', [newHash, rows[0].id]);
+
+    otpStore.delete(username.trim());
+    return res.json({ success: true, message: 'Palavra-passe alterada com sucesso.' });
+  } catch (err) {
+    console.error('[Auth] resetConfirm:', err.message);
     return res.status(500).json({ message: 'Erro interno.' });
   }
 }

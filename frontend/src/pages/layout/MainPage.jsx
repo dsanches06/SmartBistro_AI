@@ -9,6 +9,7 @@ import { MENU_CATEGORIES, MENU_CATEGORY_META, formatMenuPrice, getItemEmoji, ALL
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { ThemeToggle, Modal, LoginModal, RegisterModal } from "@/components/ui";
+import ForgotPasswordModal from "@/components/ui/modals/ForgotPasswordModal.jsx";
 import { getInitials, getPalette } from "@/components/users/UserCard.jsx";
 import { useClickOutside } from "@/components/ui/shared/useClickOutside.jsx";
 import { NotificationBell } from "@/components/ui/layout/Header.jsx";
@@ -158,6 +159,7 @@ export default function MainPage({ onNavChange }) {
   const [showLogin, setShowLogin]       = useState(false);
   const [showRegister, setShowRegister] = useState(false);
   const [showRegisterSuccess, setShowRegisterSuccess] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [navOpen, setNavOpen]           = useState(false);
 
   useEffect(() => { onNavChange?.(navOpen); }, [navOpen, onNavChange]);
@@ -730,10 +732,16 @@ export default function MainPage({ onNavChange }) {
         open={showLogin}
         onClose={() => setShowLogin(false)}
         onSwitchToRegister={() => setShowRegister(true)}
+        onForgotPassword={() => setShowForgotPassword(true)}
         isDark={isDark}
         onLogin={handleLogin}
         sessionBlocked={sessionBlocked}
         sessionMessage={sessionMessage}
+      />
+      <ForgotPasswordModal
+        open={showForgotPassword}
+        onClose={() => setShowForgotPassword(false)}
+        isDark={isDark}
       />
       <RegisterModal
         open={showRegister}
