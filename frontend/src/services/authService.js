@@ -62,14 +62,6 @@ export const authService = {
       body: JSON.stringify({ username }),
     }),
 
-  // Associa um novo número de telemóvel ao utilizador e envia o OTP.
-  // Usado quando o utilizador não tinha telemóvel no perfil.
-  resetAddPhone: (username, phone) =>
-    request('/auth/reset-add-phone', {
-      method: 'POST',
-      body: JSON.stringify({ username, phone }),
-    }),
-
   // Valida o OTP e define a nova palavra-passe.
   // O código expira 10 minutos após geração e só pode ser usado uma vez.
   resetConfirm: (username, otp, newPassword) =>

@@ -304,7 +304,7 @@ export async function me(req, res) {
 }
 
 // POST /auth/reset-request  { username }
-// Verifica se o username existe e tem telemóvel. Se tiver, gera OTP (10 min); caso contrário devolve needsPhone:true.
+// Verifica se o username existe (é UNIQUE em auth_accounts) e gera OTP válido 10 minutos.
 export async function resetRequest(req, res) {
   const { username } = req.body;
   if (!username?.trim())
@@ -312,60 +312,27 @@ export async function resetRequest(req, res) {
 
   try {
     const [rows] = await db.query(
-      `SELECT u.id, u.phone FROM auth_accounts a
-       JOIN users u ON u.id = a.user_id
-       WHERE a.username = ?`,
+      'SELECT id FROM auth_accounts WHERE username = ?',
       [username.trim()]
     );
 
     if (!rows.length)
-      return res.status(404).json({ message: 'Utilizador não encontrado.' });
-
-    const { id: userId, phone } = rows[0];
-
-    if (!phone)
-      return res.json({ needsPhone: true, userId });
+      return res.status(404).json({ message: 'Username não encontrado.' });
 
     const code = genOTP();
     otpStore.set(username.trim(), { code, expires: Date.now() + 10 * 60 * 1000 });
     console.log(`[Auth] reset OTP for "${username}": ${code}`);
 
-    return res.json({ codeSent: true, phone: maskPhone(phone), demoCode: code });
+    return res.json({ codeSent: true, demoCode: code });
   } catch (err) {
     console.error('[Auth] resetRequest:', err.message);
     return res.status(500).json({ message: 'Erro interno.' });
   }
 }
 
-// POST /auth/reset-add-phone  { username, phone }
-// Associa um telemóvel ao utilizador e gera OTP para continuar o fluxo de recuperação.
+// POST /auth/reset-add-phone — endpoint mantido por compatibilidade, redireciona para reset-request.
 export async function resetAddPhone(req, res) {
-  const { username, phone } = req.body;
-  if (!username?.trim() || !phone?.trim())
-    return res.status(400).json({ message: 'Username e telefone obrigatórios.' });
-
-  try {
-    const [rows] = await db.query(
-      `SELECT u.id FROM auth_accounts a
-       JOIN users u ON u.id = a.user_id
-       WHERE a.username = ?`,
-      [username.trim()]
-    );
-    if (!rows.length)
-      return res.status(404).json({ message: 'Utilizador não encontrado.' });
-
-    const userId = rows[0].id;
-    await db.query('UPDATE users SET phone = ? WHERE id = ?', [phone.trim(), userId]);
-
-    const code = genOTP();
-    otpStore.set(username.trim(), { code, expires: Date.now() + 10 * 60 * 1000 });
-    console.log(`[Auth] reset OTP (new phone) for "${username}": ${code}`);
-
-    return res.json({ codeSent: true, phone: maskPhone(phone.trim()), demoCode: code });
-  } catch (err) {
-    console.error('[Auth] resetAddPhone:', err.message);
-    return res.status(500).json({ message: 'Erro interno.' });
-  }
+  return res.status(410).json({ message: 'Endpoint removido. Use /auth/reset-request.' });
 }
 
 // POST /auth/reset-confirm  { username, otp, newPassword }
