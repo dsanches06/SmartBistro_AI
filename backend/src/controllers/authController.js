@@ -2,15 +2,18 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { db } from '../db.js';
 
+// Número de iterações do bcrypt — equilibra segurança e desempenho no login.
 const SALT_ROUNDS = 10;
 
-// OTP store: username → { code, expires }
+// OTP store em memória: username → { code, expires } — limpo após uso ou expiração (10 min).
 const otpStore = new Map();
 
+// Gera um código OTP numérico de 6 dígitos.
 function genOTP() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
+// Mascara o telemóvel mostrando apenas os 2 primeiros e últimos dígitos. Ex: "912345678" → "91****78".
 function maskPhone(phone) {
   if (!phone) return null;
   const s = phone.replace(/\D/g, '');
@@ -18,14 +21,16 @@ function maskPhone(phone) {
   return s.slice(0, 2) + '*'.repeat(s.length - 4) + s.slice(-2);
 }
 
+// Gera um JWT com id e role do utilizador, válido por 8 horas.
 function signToken(user) {
   return jwt.sign(
     { id: user.id, role_id: user.role_id },
     process.env.JWT_SECRET,
-    { expiresIn: '8h' },
+    { expiresIn: 'h' },
   );
 }
 
+// Normaliza o resultado de db.query() para devolver sempre um array de linhas.
 function getQueryRows(result) {
   if (Array.isArray(result) && result.length > 0 && Array.isArray(result[0])) {
     return result[0];
@@ -33,6 +38,7 @@ function getQueryRows(result) {
   return Array.isArray(result) ? result : [];
 }
 
+// Extrai o id do registo inserido, compatível com diferentes formatos de resposta MySQL.
 function getInsertId(result) {
   if (result == null) return null;
   if (Array.isArray(result)) return getInsertId(result[0]);
@@ -298,6 +304,7 @@ export async function me(req, res) {
 }
 
 // POST /auth/reset-request  { username }
+// Verifica se o username existe e tem telemóvel. Se tiver, gera OTP (10 min); caso contrário devolve needsPhone:true.
 export async function resetRequest(req, res) {
   const { username } = req.body;
   if (!username?.trim())
@@ -331,6 +338,7 @@ export async function resetRequest(req, res) {
 }
 
 // POST /auth/reset-add-phone  { username, phone }
+// Associa um telemóvel ao utilizador e gera OTP para continuar o fluxo de recuperação.
 export async function resetAddPhone(req, res) {
   const { username, phone } = req.body;
   if (!username?.trim() || !phone?.trim())
@@ -361,6 +369,7 @@ export async function resetAddPhone(req, res) {
 }
 
 // POST /auth/reset-confirm  { username, otp, newPassword }
+// Valida o OTP e, se correto, substitui o hash da password. O código é apagado após uso.
 export async function resetConfirm(req, res) {
   const { username, otp, newPassword } = req.body;
   if (!username?.trim() || !otp?.trim() || !newPassword?.trim())
