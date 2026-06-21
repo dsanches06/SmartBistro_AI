@@ -22,6 +22,7 @@ import {
   chatRoutes,
   logRoutes,
   reservationRoutes,
+  recommendationRoutes,
 } from "./routes/index.js";
 
 dotenv.config();
@@ -68,7 +69,8 @@ app.use("/conversations", conversationRoutes);
 app.use("/chat-history", chatHistoryRoutes);
 app.use("/chat", chatRoutes);
 app.use("/logs", logRoutes);
-app.use("/reservations", reservationRoutes);
+app.use("/reservations",    reservationRoutes);
+app.use("/recommendations", recommendationRoutes);
 
 const PORT = process.env.PORT || 3000;
 if (process.env.NODE_ENV !== 'test') {

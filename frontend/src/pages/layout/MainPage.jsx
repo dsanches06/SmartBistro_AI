@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { itemService } from "@/services";
+import { fetchRecommendations } from "@/services/recommendationService.js";
 import { orderService }     from "@/services/orderService";
 import { orderItemService } from "@/services/orderItemService";
 import { invoiceService }   from "@/services/invoiceService";
@@ -161,6 +162,8 @@ export default function MainPage({ onNavChange }) {
   const [showRegisterSuccess, setShowRegisterSuccess] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [navOpen, setNavOpen]           = useState(false);
+  // Map item_id → label gerado pela AI (um único request por sessão)
+  const [recommendations, setRecommendations] = useState(new Map());
 
   useEffect(() => { onNavChange?.(navOpen); }, [navOpen, onNavChange]);
   const [cart, setCart]                 = useState({});
@@ -296,6 +299,13 @@ export default function MainPage({ onNavChange }) {
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
   }, []);
+
+  // Fetch único de recomendações após itens carregarem (userId opcional para personalização)
+  useEffect(() => {
+    fetchRecommendations(user?.id ?? null)
+      .then(setRecommendations)
+      .catch(() => setRecommendations(new Map()));
+  }, [user?.id]);
 
   // Admin/manager vai para o dashboard; cliente fica no cardápio.
   const handleLogin = async (identifier, password) => {
@@ -512,13 +522,13 @@ export default function MainPage({ onNavChange }) {
                       {catItems.length} item{catItems.length !== 1 ? "s" : ""}
                     </span>
                   </div>
-                  <ItemGrid items={catItems} isDark={isDark} isClient={isClient} cart={cart} onAdd={addToCart} onRemove={removeFromCart} />
+                  <ItemGrid items={catItems} isDark={isDark} isClient={isClient} cart={cart} onAdd={addToCart} onRemove={removeFromCart} recommendations={recommendations} />
                 </section>
               ))
             )}
           </div>
         ) : (
-          <ItemGrid items={filteredItems} isDark={isDark} isClient={isClient} cart={cart} onAdd={addToCart} onRemove={removeFromCart} />
+          <ItemGrid items={filteredItems} isDark={isDark} isClient={isClient} cart={cart} onAdd={addToCart} onRemove={removeFromCart} recommendations={recommendations} />
         )}
       </main>
 
@@ -871,7 +881,7 @@ export default function MainPage({ onNavChange }) {
 
 /* ── ItemGrid ── */
 // Grelha que apresenta os itens do menu em formato de cartões.
-function ItemGrid({ items, isDark, isClient, cart, onAdd, onRemove }) {
+function ItemGrid({ items, isDark, isClient, cart, onAdd, onRemove, recommendations }) {
   if (!items.length) {
     return (
       <div className="text-center py-10" style={{ color: "var(--text-muted)" }}>
@@ -890,6 +900,7 @@ function ItemGrid({ items, isDark, isClient, cart, onAdd, onRemove }) {
           isClient={isClient}
           onAdd={() => onAdd?.(item)}
           onRemove={() => onRemove?.(item.id)}
+          recLabel={recommendations?.get(item.id) ?? null}
         />
       ))}
     </div>
@@ -897,8 +908,8 @@ function ItemGrid({ items, isDark, isClient, cart, onAdd, onRemove }) {
 }
 
 /* ── ItemCard ── */
-// Cartão individual com nome, preço, categoria e ações de carrinho.
-function ItemCard({ item, isDark, qty, isClient, onAdd, onRemove }) {
+// Cartão individual com nome, preço, categoria, ações de carrinho e pill de recomendação AI.
+function ItemCard({ item, isDark, qty, isClient, onAdd, onRemove, recLabel }) {
   const meta = MENU_CATEGORY_META[item.category] ?? {};
   return (
     <div
@@ -909,6 +920,13 @@ function ItemCard({ item, isDark, qty, isClient, onAdd, onRemove }) {
         boxShadow: qty > 0 ? "0 2px 12px rgba(99,102,241,0.15)" : "0 2px 8px rgba(0,0,0,0.06)",
       }}
     >
+      {/* Pill de recomendação gerado pela AI */}
+      {recLabel && (
+        <span className="self-start text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full"
+          style={{ background: "rgba(99,102,241,0.12)", color: "var(--primary)", border: "1px solid rgba(99,102,241,0.3)" }}>
+          ✨ {recLabel}
+        </span>
+      )}
       {/* Icon + name/category */}
       <div className="flex items-center gap-2">
         <div
