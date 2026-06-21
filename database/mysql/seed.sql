@@ -300,3 +300,41 @@ INSERT INTO notification (user_id, title, message, is_read, sent_at) VALUES
 (14, 'A sua conta está pronta', 'A sua fatura de 41,81 € está disponível. Pode pagar ao balcão ou via app.',   FALSE, NOW() - INTERVAL 25 MINUTE),
 (13, 'A sua conta está pronta', 'A sua fatura de 22,60 € está disponível. Pode levantar o seu pedido.',        FALSE, NOW() - INTERVAL 18 MINUTE),
 (12, 'A sua conta está pronta', 'A sua fatura de 10,74 € está disponível. Pode pagar ao balcão ou via app.',   FALSE, NOW() - INTERVAL 15 MINUTE);
+
+-- =========================================================================
+-- 14. PROGRAMA DE PONTOS (1€ pago = 1 ponto | mínimo 50 para resgatar)
+-- =========================================================================
+
+-- Saldos acumulados por cliente (histórico de pedidos anteriores + pedidos do seed)
+INSERT INTO user_points (user_id, balance, total_earned, total_redeemed) VALUES
+(3,  62,  72,  10),   -- Hugo Neto       — 62 pts (pode resgatar)
+(4,  85,  85,   0),   -- Ana Silva        — 85 pts (pode resgatar)
+(5,  30,  30,   0),   -- Joana Luz        — 30 pts (ainda não pode resgatar)
+(6,  55,  65,  10),   -- Bruno Costa      — 55 pts (pode resgatar)
+(7,  15,  15,   0),   -- Igor Lima        — 15 pts
+(8,  48,  48,   0),   -- Carla Dias       — 48 pts (quase a atingir)
+(9,  20,  30,  10),   -- Filipe Gil       — 20 pts
+(10, 73,  83,  10),   -- Elena Vaz        — 73 pts (pode resgatar)
+(11, 10,  10,   0),   -- David Reas       — 10 pts
+(12, 10,  10,   0),   -- Gina Rosa        — 10 pts (pedido atual pendente)
+(13, 22,  22,   0),   -- Ana Pereira      — 22 pts (pedido atual pendente)
+(14, 41,  41,   0),   -- Carlos Silva     — 41 pts (pedido atual pendente)
+(15, 52,  73,  21),   -- Manuel Santos    — 52 pts (pode resgatar; +21 do pedido atual pago)
+(16, 55,  86,  31);   -- Mariana Costa    — 55 pts (pode resgatar; +31 do pedido atual pago)
+
+-- Histórico de transações de pontos (últimos movimentos relevantes)
+INSERT INTO points_transactions (user_id, amount, description, order_id) VALUES
+(3,  50, 'Compra anterior',                NULL),
+(3,  22, 'Compra anterior',                NULL),
+(3, -10, 'Desconto resgatado (10 pts)',     NULL),
+(4,  85, 'Acumulado ao longo de vários pedidos', NULL),
+(5,  30, 'Compra anterior',                NULL),
+(6,  65, 'Acumulado ao longo de vários pedidos', NULL),
+(6, -10, 'Desconto resgatado (10 pts)',     NULL),
+(8,  48, 'Acumulado ao longo de vários pedidos', NULL),
+(10, 83, 'Acumulado ao longo de vários pedidos', NULL),
+(10,-10, 'Desconto resgatado (10 pts)',     NULL),
+(15, 52, 'Pedidos anteriores',             NULL),
+(15, 21, 'Compra #2',                      2),
+(16, 55, 'Pedidos anteriores',             NULL),
+(16, 31, 'Compra #1',                      1);
