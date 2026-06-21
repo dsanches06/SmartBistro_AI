@@ -12,6 +12,8 @@ export default function ForgotPasswordModal({ open, onClose, isDark }) {
   const [username, setUsername]   = useState("");
   const [otp, setOtp]             = useState("");
   const [demoCode, setDemoCode]   = useState("");
+  const [showNew, setShowNew]     = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [newPass, setNewPass]     = useState("");
   const [confirmPass, setConfirmPass] = useState("");
   const [loading, setLoading]     = useState(false);
@@ -150,17 +152,29 @@ export default function ForgotPasswordModal({ open, onClose, isDark }) {
               </p>
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Nova palavra-passe</label>
-                <input autoFocus type="password" value={newPass} onChange={e => setNewPass(e.target.value)}
-                  placeholder="mínimo 6 caracteres" className={inputCls} style={inputStyle}
-                  onFocus={e => e.target.style.borderColor = "var(--primary)"}
-                  onBlur={e => e.target.style.borderColor = "var(--border)"} />
+                <div className="relative">
+                  <input autoFocus type={showNew ? "text" : "password"} value={newPass} onChange={e => setNewPass(e.target.value)}
+                    placeholder="mínimo 6 caracteres" className={inputCls} style={{ ...inputStyle, paddingRight: "2.75rem" }}
+                    onFocus={e => e.target.style.borderColor = "var(--primary)"}
+                    onBlur={e => e.target.style.borderColor = "var(--border)"} />
+                  <button type="button" onClick={() => setShowNew(s => !s)} tabIndex={-1}
+                    className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-muted)" }}>
+                    <i className={`fa-solid ${showNew ? "fa-eye-slash" : "fa-eye"} text-sm`} />
+                  </button>
+                </div>
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Confirmar palavra-passe</label>
-                <input type="password" value={confirmPass} onChange={e => setConfirmPass(e.target.value)}
-                  placeholder="repetir password" className={inputCls} style={inputStyle}
-                  onFocus={e => e.target.style.borderColor = "var(--primary)"}
-                  onBlur={e => e.target.style.borderColor = "var(--border)"} />
+                <div className="relative">
+                  <input type={showConfirm ? "text" : "password"} value={confirmPass} onChange={e => setConfirmPass(e.target.value)}
+                    placeholder="repetir password" className={inputCls} style={{ ...inputStyle, paddingRight: "2.75rem" }}
+                    onFocus={e => e.target.style.borderColor = "var(--primary)"}
+                    onBlur={e => e.target.style.borderColor = "var(--border)"} />
+                  <button type="button" onClick={() => setShowConfirm(s => !s)} tabIndex={-1}
+                    className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-muted)" }}>
+                    <i className={`fa-solid ${showConfirm ? "fa-eye-slash" : "fa-eye"} text-sm`} />
+                  </button>
+                </div>
               </div>
               {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444" }}>{error}</p>}
               <button type="submit" disabled={!newPass || !confirmPass || loading}
