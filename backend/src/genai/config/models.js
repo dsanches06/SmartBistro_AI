@@ -1,42 +1,35 @@
-// IDs dos modelos disponíveis no Groq.
+// IDs dos modelos disponíveis no Groq (actualizados em Junho 2026).
+// Llama 3.3-70b, Llama 3.1-8b, Llama 4 Scout e Llama 4 Maverick depreciados/inexistentes.
+// Cada agente usa a sua própria fila — GROQ_MODEL_QUEUE é fallback de segurança.
 export const GROQ_MODELS = {
-  LLAMA33_70B:     "llama-3.3-70b-versatile",                        // melhor para function calling
-  LLAMA4_SCOUT:    "meta-llama/llama-4-scout-17b-16e-instruct",      // ultra-rápido, tarefas ágeis
-  LLAMA4_MAVERICK: "meta-llama/llama-4-maverick-17b-128e-instruct",  // multimodal texto + imagens
-  QWEN3_32B:       "qwen/qwen3-32b",                                  // raciocínio via <think>
-  LLAMA31_8B:      "llama-3.1-8b-instant",                            // fallback leve
-  WHISPER_V3:      "whisper-large-v3",                                // áudio — API de transcrição separada
+  QWEN3_32B:    "qwen/qwen3-32b",        // principal — reasoning sólido, latência aceitável
+  QWEN3_27B:    "qwen/qwen3.6-27b",      // variante Qwen3 mais recente
+  GPT_OSS_20B:  "openai/gpt-oss-20b",    // rápido (1000 T/s no Groq)
+  GPT_OSS_120B: "openai/gpt-oss-120b",   // robusto (500 T/s no Groq)
+  WHISPER_V3:   "whisper-large-v3",      // áudio — API de transcrição separada
 };
 
-// Modelo padrão — configurável por variável de ambiente.
-export const GROQ_MODEL =
-  process.env.GROQ_MODEL ||
-  process.env.GROQ_MODEL_NAME ||
-  GROQ_MODELS.LLAMA33_70B;
-
-// Fila global de fallback — usada quando um agente não tem fila própria.
+// Fila global de segurança — usada quando um agente não tem agentKey definida.
 export const GROQ_MODEL_QUEUE = [
-  GROQ_MODEL,
-  ...[
-    GROQ_MODELS.LLAMA33_70B,
-    GROQ_MODELS.LLAMA4_SCOUT,
-    GROQ_MODELS.LLAMA4_MAVERICK,
-    GROQ_MODELS.QWEN3_32B,
-    GROQ_MODELS.LLAMA31_8B,
-  ].filter((m) => m !== GROQ_MODEL),
+  GROQ_MODELS.QWEN3_32B,
+  GROQ_MODELS.QWEN3_27B,
+  GROQ_MODELS.GPT_OSS_20B,
+  GROQ_MODELS.GPT_OSS_120B,
 ];
 
-// Filas por agente — cada agente começa no seu modelo preferido.
-// Agentes diferentes usam modelos diferentes como 1.º → menos competição por rate limit.
+// Fila dedicada por agente — cada um começa no modelo mais adequado ao seu papel.
 export const AGENT_MODEL_QUEUES = {
-  // Maître: validação complexa de pedidos — reasoning primeiro
-  maitre:    [GROQ_MODELS.LLAMA33_70B,     GROQ_MODELS.QWEN3_32B,      GROQ_MODELS.LLAMA4_SCOUT,    GROQ_MODELS.LLAMA4_MAVERICK, GROQ_MODELS.LLAMA31_8B],
-  // Chef: sequência de cozinha — velocidade primeiro
-  chef:      [GROQ_MODELS.LLAMA4_SCOUT,    GROQ_MODELS.LLAMA33_70B,    GROQ_MODELS.LLAMA4_MAVERICK, GROQ_MODELS.QWEN3_32B,      GROQ_MODELS.LLAMA31_8B],
-  // Cashier: geração de fatura — raciocínio analítico e financeiro primeiro
-  cashier:   [GROQ_MODELS.QWEN3_32B,       GROQ_MODELS.LLAMA33_70B,    GROQ_MODELS.LLAMA4_SCOUT,    GROQ_MODELS.LLAMA4_MAVERICK, GROQ_MODELS.LLAMA31_8B],
-  // Analytics: recomendações e previsões — Maverick primeiro (multimodal + boa análise)
-  analytics: [GROQ_MODELS.LLAMA4_MAVERICK, GROQ_MODELS.QWEN3_32B,     GROQ_MODELS.LLAMA33_70B,     GROQ_MODELS.LLAMA4_SCOUT,   GROQ_MODELS.LLAMA31_8B],
-  // Chatbot: conversação com clientes — Scout primeiro (rápido, natural)
-  chatbot:   [GROQ_MODELS.LLAMA4_SCOUT,    GROQ_MODELS.LLAMA4_MAVERICK, GROQ_MODELS.LLAMA33_70B,   GROQ_MODELS.QWEN3_32B,      GROQ_MODELS.LLAMA31_8B],
+  // Maître: validação de pedidos — reasoning primeiro
+  maitre:    [GROQ_MODELS.QWEN3_32B,   GROQ_MODELS.QWEN3_27B,   GROQ_MODELS.GPT_OSS_20B,  GROQ_MODELS.GPT_OSS_120B],
+  // Chef: cozinha — Qwen alternado
+  chef:      [GROQ_MODELS.QWEN3_27B,   GROQ_MODELS.QWEN3_32B,   GROQ_MODELS.GPT_OSS_20B,  GROQ_MODELS.GPT_OSS_120B],
+  // Cashier: fatura — precisão financeira
+  cashier:   [GROQ_MODELS.QWEN3_32B,   GROQ_MODELS.GPT_OSS_120B, GROQ_MODELS.QWEN3_27B,   GROQ_MODELS.GPT_OSS_20B],
+  // Analytics: recomendações e previsões
+  analytics: [GROQ_MODELS.QWEN3_27B,   GROQ_MODELS.QWEN3_32B,   GROQ_MODELS.GPT_OSS_120B, GROQ_MODELS.GPT_OSS_20B],
+  // Chatbot: conversação — GPT-20B primeiro (mais rápido para respostas ao cliente)
+  chatbot:   [GROQ_MODELS.GPT_OSS_20B, GROQ_MODELS.QWEN3_32B,   GROQ_MODELS.QWEN3_27B,   GROQ_MODELS.GPT_OSS_120B],
 };
+
+// Mantido por retrocompatibilidade — pode ser removido quando confirmarmos que nenhum código o usa directamente.
+export const GROQ_MODEL = GROQ_MODELS.QWEN3_32B;

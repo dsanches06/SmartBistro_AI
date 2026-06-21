@@ -25,6 +25,7 @@ import {
   recommendationRoutes,
   forecastRoutes,
   pointsRoutes,
+  voiceRoutes,
 } from "./routes/index.js";
 
 dotenv.config();
@@ -75,6 +76,7 @@ app.use("/reservations",    reservationRoutes);
 app.use("/recommendations", recommendationRoutes);
 app.use("/forecast",        forecastRoutes);
 app.use("/points",          pointsRoutes);
+app.use("/voice",           voiceRoutes);
 
 const PORT = process.env.PORT || 3000;
 if (process.env.NODE_ENV !== 'test') {
@@ -84,3 +86,4 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 export default app;
+

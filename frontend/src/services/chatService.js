@@ -183,17 +183,17 @@ class ChatService extends BaseService {
 
   extractOrderDataFromFunctionResult(functionResult) {
     if (!functionResult?.result) return null;
-    return functionResult.result ? { ...functionResult.result } : null || null;
+    return functionResult.result ? { ...functionResult.result } : null;
   }
 
   extractOrderData(providerResponse) {
     if (!providerResponse) return null;
     if (typeof providerResponse === "object")
-      return typeof providerResponse === 'object' ? { ...providerResponse } : null || null;
+      return typeof providerResponse === 'object' ? { ...providerResponse } : null;
     try {
       const jsonMatch = providerResponse.match(/\{[\s\S]*\}/);
       if (jsonMatch)
-        return { ...JSON.parse(jsonMatch[0]) } || null;
+        return { ...JSON.parse(jsonMatch[0]) };
     } catch { /* ignore */ }
     return null;
   }

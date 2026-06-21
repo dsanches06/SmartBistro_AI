@@ -15,65 +15,86 @@ export function ChatInputUI({ value, onChange, onSubmit, onVoiceSend, disabled =
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream   = await navigator.mediaDevices.getUserMedia({ audio: true });
       chunksRef.current = [];
-
-      // Forçar audio/webm para garantir que o Chrome não usa video/webm
+      // Forçar audio/webm para garantir que não usa video/webm
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
-        : MediaRecorder.isTypeSupported('audio/webm')
-        ? 'audio/webm'
-        : '';
-
-      mimeRef.current = mimeType || 'audio/webm';
-
-      const recorder = mimeType
-        ? new MediaRecorder(stream, { mimeType })
-        : new MediaRecorder(stream);
-
+        : 'audio/webm';
+      mimeRef.current = mimeType;
+      const recorder = new MediaRecorder(stream, { mimeType });
+      
+      // ✅ CRÍTICO: Registar ondataavailable ANTES de start()
       recorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
+        console.log('[Voice] chunk tamanho:', e.data?.size, 'bytes');
+        if (e.data && e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
       };
-
-      recorder.start(500); // chunk a cada 500ms para garantir dados
+      
+      // timeslice=500ms garante dados mesmo em gravações muito curtas
+      recorder.start(500);
       mediaRef.current = recorder;
       setRecording(true);
-    } catch { /* sem permissão */ }
+    } catch (err) { console.error('[Voice] erro ao iniciar gravação:', err); }
   };
 
-  const stopAndSend = async () => {
+  const stopAndTranscribe = async (autoSend = false) => {
     const recorder = mediaRef.current;
     if (!recorder || recorder.state === 'inactive') return;
+    const savedMime = mimeRef.current || 'audio/webm';
     setRecording(false);
 
     await new Promise((resolve) => {
-      recorder.addEventListener('stop', () => {
+      // ✅ CRÍTICO: requestData() ANTES de stop() para flush final de dados
+      recorder.onstop = () => {
+        console.log('[Voice] onstop acionado, total chunks:', chunksRef.current.length);
         recorder.stream.getTracks().forEach(t => t.stop());
         resolve();
-      }, { once: true });
-      recorder.stop();
+      };
+      
+      // ✅ Força flush do buffer: disparará ondataavailable uma última vez
+      recorder.requestData();
+      
+      // ✅ Depois de requestData(), para o gravador
+      setTimeout(() => recorder.stop(), 100);
     });
 
-    if (!chunksRef.current.length) return;
-
+    console.log('[Voice] total chunks capturados:', chunksRef.current.length, 
+                chunksRef.current.map(c => `${c.size}b`).join(' + '));
+    
     setTranscribing(true);
     try {
-      const usedMime = mimeRef.current || 'audio/webm';
-      const blob = new Blob(chunksRef.current, { type: usedMime });
-      console.log('[Voice] blob size:', blob.size, 'type:', usedMime);
-      if (blob.size < 100) return; // blob demasiado pequeno — gravação falhada
-      const text = await transcribeAudio(blob, usedMime);
-      if (text && onVoiceSend) onVoiceSend(text);
-    } catch { /* erro silencioso */ }
+      const blob = new Blob(chunksRef.current, { type: savedMime });
+      console.log('[Voice] blob final:', blob.size, 'bytes, type:', savedMime);
+      
+      if (blob.size < 500) { 
+        console.warn('[Voice] ⚠️ blob muito pequeno (<500bytes), gravação falhou');
+        return; 
+      }
+      
+      const text = await transcribeAudio(blob, savedMime);
+      if (!text) return;
+      
+      if (autoSend && onVoiceSend) {
+        onVoiceSend(text);           // envia directamente ao chatbot
+      } else {
+        onChange({ target: { value: (value ? value + ' ' : '') + text } });
+      }
+    } catch (err) { 
+      console.error('[Voice] erro na transcrição:', err.message);
+    }
     finally { setTranscribing(false); }
   };
 
   return (
     <form onSubmit={onSubmit} className="border-t border-surface px-4 py-3 bg-surface-2">
 
+      {/* ── Barra de gravação compacta ── */}
       {(recording || transcribing) ? (
         <div className="flex items-center gap-2 h-[52px] px-3 rounded-lg border"
           style={{ background: 'var(--surface-3)', borderColor: 'var(--border)' }}>
+
           {transcribing ? (
             <>
               <i className="fa-solid fa-spinner fa-spin text-xs flex-shrink-0" style={{ color: 'var(--primary)' }} />
@@ -81,6 +102,7 @@ export function ChatInputUI({ value, onChange, onSubmit, onVoiceSend, disabled =
             </>
           ) : (
             <>
+              {/* Ondas animadas */}
               <div className="flex items-center gap-[3px] flex-shrink-0">
                 {[0.5, 0.9, 0.6, 1, 0.7, 0.8, 0.5, 0.9, 0.6].map((h, i) => (
                   <div key={i} style={{
@@ -91,7 +113,9 @@ export function ChatInputUI({ value, onChange, onSubmit, onVoiceSend, disabled =
                 ))}
               </div>
               <span className="text-xs flex-1" style={{ color: 'var(--text-muted)' }}>A ouvir...</span>
-              <button type="button" onClick={stopAndSend}
+
+              {/* Um único botão: para E envia directamente ao chatbot */}
+              <button type="button" onClick={() => stopAndTranscribe(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white flex-shrink-0"
                 style={{ background: '#ef4444' }}>
                 <i className="fa-solid fa-stop text-[10px]" /> Parar
@@ -100,6 +124,7 @@ export function ChatInputUI({ value, onChange, onSubmit, onVoiceSend, disabled =
           )}
         </div>
       ) : (
+        /* ── Estado normal ── */
         <div className="flex gap-2 items-end">
           <textarea ref={inputRef} value={value} onChange={onChange}
             onKeyPress={handleKeyPress}

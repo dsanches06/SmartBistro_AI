@@ -16,3 +16,4 @@ export { reservationService }          from "./reservationService.js";
 export { fetchRecommendations }        from "./recommendationService.js";
 export { fetchForecast }               from "./forecastService.js";
 export { fetchPoints, redeemPoints }   from "./pointsService.js";
+export { transcribeAudio }             from "./voiceService.js";

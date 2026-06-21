@@ -14,3 +14,4 @@ frontend/dist
 .vercel.env
 tmp_check_neon.js
 backend/check_*.mjs
+
