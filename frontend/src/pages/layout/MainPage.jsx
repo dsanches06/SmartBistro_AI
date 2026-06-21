@@ -873,7 +873,7 @@ function ItemGrid({ items, isDark, isClient, cart, onAdd, onRemove }) {
     );
   }
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
       {items.map(item => (
         <ItemCard
           key={item.id}
@@ -895,57 +895,61 @@ function ItemCard({ item, isDark, qty, isClient, onAdd, onRemove }) {
   const meta = MENU_CATEGORY_META[item.category] ?? {};
   return (
     <div
-      className="flex flex-col rounded-2xl p-4 transition-transform hover:scale-[1.02] gap-3"
+      className="flex flex-col rounded-2xl p-3 sm:p-4 transition-transform hover:scale-[1.02] gap-2 sm:gap-3"
       style={{
         background: "var(--surface)",
         border: qty > 0 ? `1.5px solid var(--primary)` : "1px solid var(--border)",
         boxShadow: qty > 0 ? "0 2px 12px rgba(99,102,241,0.15)" : "0 2px 8px rgba(0,0,0,0.06)",
       }}
     >
-      <div className="flex items-center gap-3">
+      {/* Icon + name/category */}
+      <div className="flex items-center gap-2">
         <div
-          className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-xl text-2xl"
+          className="flex-shrink-0 w-9 h-9 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl text-lg sm:text-2xl"
           style={{ background: isDark ? (meta.bgDark ?? "var(--surface-2)") : (meta.bg ?? "var(--surface-2)") }}
         >
           {getItemEmoji(item.name)}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm truncate" style={{ color: "var(--text)" }}>
+          <p className="font-semibold text-xs sm:text-sm truncate" style={{ color: "var(--text)" }}>
             {item.name}
           </p>
-          <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
+          <p className="text-[10px] sm:text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
             {meta.label ?? item.category}
           </p>
         </div>
-        <span className="flex-shrink-0 font-bold text-sm" style={{ color: meta.accent ?? "var(--primary)" }}>
-          {formatMenuPrice(item.price)}
-        </span>
       </div>
 
-      {isClient && (
-        qty > 0 ? (
-          <div className="flex items-center justify-between">
-            <button
-              onClick={onRemove}
-              className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-colors"
-              style={{ background: "var(--surface-2)", color: "var(--text)" }}
-            >−</button>
-            <span className="text-sm font-bold" style={{ color: "var(--primary)" }}>{qty} no pedido</span>
+      {/* Price + action */}
+      <div className="flex items-center justify-between gap-1">
+        <span className="font-bold text-sm flex-shrink-0" style={{ color: meta.accent ?? "var(--primary)" }}>
+          {formatMenuPrice(item.price)}
+        </span>
+        {isClient && (
+          qty > 0 ? (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={onRemove}
+                className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm transition-colors"
+                style={{ background: "var(--surface-2)", color: "var(--text)" }}
+              >−</button>
+              <span className="text-xs font-bold w-4 text-center" style={{ color: "var(--primary)" }}>{qty}</span>
+              <button
+                onClick={onAdd}
+                className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm text-white"
+                style={{ background: "var(--primary)" }}
+              >+</button>
+            </div>
+          ) : (
             <button
               onClick={onAdd}
-              className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm text-white"
+              className="text-[10px] sm:text-xs font-semibold text-white px-2 py-1 rounded-lg transition-opacity hover:opacity-85 whitespace-nowrap"
               style={{ background: "var(--primary)" }}
-            >+</button>
-          </div>
-        ) : (
-          <button
-            onClick={onAdd}
-            className="w-full py-1.5 rounded-xl text-xs font-semibold text-white transition-opacity hover:opacity-85"
-            style={{ background: "var(--primary)" }}
-          >
-            + Adicionar ao pedido
-          </button>
-        )
+            >
+              <span className="sm:hidden">+</span>
+              <span className="hidden sm:inline">+ Adicionar</span>
+            </button>
+          )
       )}
     </div>
   );
