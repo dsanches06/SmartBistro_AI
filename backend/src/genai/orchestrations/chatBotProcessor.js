@@ -41,9 +41,9 @@ import { runOrderPipeline } from "./orderOrchestrator.js";
 import {
   getUserById, getAllUsers, findOrCreateUser,
   getTableById, getAllTables, updateTableStatus,
-  getItemById, getAllItems, getItemsByOrderId,
+  getAllItems, getItemsByOrderId,
   createOrder, updateOrderStatus, createOrderItem,
-  createInvoice, createPayment, updatePayment,
+  createInvoice, updatePayment,
   createNotification, createLog,
   getReservationById, getActiveReservationByCustomerId,
   getReservationsByTableId, createReservation, cancelReservation,
@@ -90,7 +90,6 @@ export const FUNCTION_HANDLERS = {
     }
     return null;
   },
-  create_user: async (args) => createUser(args),
   get_table: async (args) => {
     if (args.table_id) return getTableById(args.table_id);
     const tables = await getAllTables();
