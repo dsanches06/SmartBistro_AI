@@ -159,8 +159,16 @@ export default function MainPage({ onNavChange }) {
   const [showRegister, setShowRegister] = useState(false);
   const [showRegisterSuccess, setShowRegisterSuccess] = useState(false);
   const [navOpen, setNavOpen]           = useState(false);
+  const [isMobile, setIsMobile]         = useState(() => window.innerWidth < 640);
 
   useEffect(() => { onNavChange?.(navOpen); }, [navOpen, onNavChange]);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639.98px)');
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
   const [cart, setCart]                 = useState({});
   const [showCart, setShowCart]               = useState(false);
   const [showAllergyModal, setShowAllergyModal] = useState(false);
@@ -478,7 +486,16 @@ export default function MainPage({ onNavChange }) {
       </div>
 
       {/* Content */}
-      <main className="px-4 sm:px-8 py-6 max-w-5xl mx-auto pb-40 sm:pb-12">
+      <main
+        className="px-4 sm:px-8 py-6 max-w-5xl mx-auto sm:pb-12"
+        style={{
+          paddingBottom: isMobile
+            ? navOpen
+              ? 'calc(15rem + 1.25rem)'
+              : 'calc(var(--safe-bottom, 0px) + 2rem)'
+            : undefined,
+        }}
+      >
         {orderSuccess && (
           <div className="mb-4 flex items-center gap-2 px-4 py-3 rounded-2xl text-sm font-semibold"
             style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", color: "#22c55e" }}>
@@ -803,12 +820,16 @@ export default function MainPage({ onNavChange }) {
                       to={to}
                       onClick={() => setNavOpen(false)}
                       className={[
-                        'group flex flex-col items-center justify-center gap-1 rounded-2xl py-3 min-h-[5rem] text-[10px] font-semibold uppercase text-center select-none transition-colors duration-200',
+                        'group flex flex-col items-center justify-center gap-1 rounded-xl py-3 text-[10px] font-semibold uppercase text-center select-none transition-colors duration-200',
                         active ? 'text-[var(--primary)]' : 'text-[var(--text-muted)] hover:text-[var(--primary)]',
                       ].join(' ')}
+                      style={{
+                        background: 'var(--surface)',
+                        border: `1px solid ${isDark ? '#2a2a2a' : '#c8cfd8'}`,
+                      }}
                       aria-current={active ? 'page' : undefined}
                     >
-                      <i className={`fa-solid ${icon} text-lg transition-transform duration-200 group-hover:scale-110`} aria-hidden="true" />
+                      <i className={`fa-solid ${icon} text-base transition-transform duration-200 group-hover:scale-110`} aria-hidden="true" />
                       <span className="leading-none">{label}</span>
                     </Link>
                   );
@@ -818,24 +839,24 @@ export default function MainPage({ onNavChange }) {
               <div className="grid grid-cols-2 gap-2 w-full pt-4">
                 <button
                   onClick={() => { setNavOpen(false); setShowLogin(true); }}
-                  className="group flex flex-col items-center justify-center gap-1 rounded-2xl py-3 min-h-[5rem] text-[10px] font-semibold uppercase text-center select-none transition-colors duration-200 text-[var(--text-muted)] hover:text-[var(--primary)]"
+                  className="group flex flex-col items-center justify-center gap-1 rounded-xl py-3 text-[10px] font-semibold uppercase text-center select-none transition-colors duration-200 text-[var(--text-muted)] hover:text-[var(--primary)]"
                   style={{
                     background: "var(--surface)",
-                    border: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.12)"}`,
+                    border: `1px solid ${isDark ? '#2a2a2a' : '#c8cfd8'}`,
                   }}
                 >
-                  <i className="fa-solid fa-right-to-bracket text-2xl transition-transform duration-200 group-hover:scale-110" />
+                  <i className="fa-solid fa-right-to-bracket text-base transition-transform duration-200 group-hover:scale-110" />
                   <span className="leading-none">Entrar</span>
                 </button>
                 <button
                   onClick={() => { setNavOpen(false); setShowRegister(true); }}
-                  className="group flex flex-col items-center justify-center gap-1 rounded-2xl py-3 min-h-[5rem] text-[10px] font-semibold uppercase text-center select-none transition-colors duration-200 text-[var(--text-muted)] hover:text-[var(--primary)]"
+                  className="group flex flex-col items-center justify-center gap-1 rounded-xl py-3 text-[10px] font-semibold uppercase text-center select-none transition-colors duration-200 text-[var(--text-muted)] hover:text-[var(--primary)]"
                   style={{
                     background: "var(--surface)",
-                    border: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.12)"}`,
+                    border: `1px solid ${isDark ? '#2a2a2a' : '#c8cfd8'}`,
                   }}
                 >
-                  <i className="fa-solid fa-user-plus text-2xl transition-transform duration-200 group-hover:scale-110" />
+                  <i className="fa-solid fa-user-plus text-base transition-transform duration-200 group-hover:scale-110" />
                   <span className="leading-none">Registar</span>
                 </button>
               </div>
