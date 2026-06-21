@@ -62,7 +62,7 @@ CREATE TABLE users (
 -- 3. Staff (subtipo de users)
 CREATE TABLE staff (
     user_id INTEGER NOT NULL,
-    employee_number VARCHAR(30) GENERATED ALWAYS AS ('EMP-' || user_id::text) STORED,
+    employee_number VARCHAR(20) GENERATED ALWAYS AS ('EMP-' || user_id::text) STORED,
     hire_date DATE DEFAULT CURRENT_DATE,
     PRIMARY KEY (user_id),
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
@@ -125,8 +125,8 @@ CREATE TABLE reservations (
     reservation_date TIMESTAMP WITH TIME ZONE NOT NULL,
     party_size INTEGER DEFAULT 1,
     status reservation_status DEFAULT 'Pending',
-    phone VARCHAR(20),
-    notes TEXT,
+    phone VARCHAR(20) DEFAULT NULL,
+    notes TEXT DEFAULT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
@@ -214,7 +214,7 @@ CREATE TABLE payments (
     amount NUMERIC(10,2) NOT NULL,
     payment_method payment_method DEFAULT 'MB Way',
     payment_status payment_status DEFAULT 'Pending',
-    processed_at TIMESTAMP WITH TIME ZONE,
+    processed_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
     FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
@@ -272,4 +272,8 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER stock_updated_at
 BEFORE UPDATE ON stock
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER user_points_updated_at
+BEFORE UPDATE ON user_points
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
