@@ -1,7 +1,8 @@
 // Agent classes
-export { default as MaitreAgent }  from './maitre/MaitreAgent.js';
-export { default as ChefAgent }    from './chef/ChefAgent.js';
-export { default as ManagerAgent } from './manager/ManagerAgent.js';
+export { default as MaitreAgent }          from './maitre/MaitreAgent.js';
+export { default as ChefAgent }            from './chef/ChefAgent.js';
+export { default as ManagerAgent }         from './manager/ManagerAgent.js';
+export { default as AnalyticsAgent } from './recommendation/AnalyticsAgent.js';
 
 // Maitre schemas, helpers & messages
 export { MaitreResponseSchema } from './maitre/maitreSchemas.js';
