@@ -7,6 +7,19 @@ vi.mock('../src/db.js', () => ({
   mysqlDb: {},
 }))
 
+vi.mock('../src/middlewares/authMiddleware.js', () => ({
+  verifyToken: vi.fn((req, res, next) => {
+    // Mock: se tiver Authorization header, simula user autenticado
+    const header = req.headers['authorization'];
+    if (header?.startsWith('Bearer ')) {
+      req.user = { id: 42, role_id: 2 };
+      return next();
+    }
+    return res.status(401).json({ message: 'Token em falta.' });
+  }),
+  requireRole: vi.fn(),
+}))
+
 vi.mock('../src/genai/agents/index.js', () => ({
   AnalyticsAgent: class MockAnalyticsAgent {
     async recommend() {
@@ -54,25 +67,13 @@ import * as services from '../src/services/index.js'
 beforeEach(() => vi.clearAllMocks())
 
 describe('GET /recommendations', () => {
-  it('devolve recomendações sem userId (convidado)', async () => {
-    services.getActiveMenuItems.mockResolvedValue([
-      { id: 1, name: 'Pizza', category: 'Main Course' },
-      { id: 2, name: 'Salada', category: 'Appetizer' },
-    ])
-    services.getUserOrderHistory.mockResolvedValue([])
-    services.getPopularItems.mockResolvedValue([
-      { item_id: 1, orders: 10 },
-      { item_id: 2, orders: 8 },
-    ])
-
+  it('devolve 401 sem autenticação', async () => {
     const res = await request(app).get('/recommendations')
-    expect(res.status).toBe(200)
-    expect(res.body).toHaveProperty('recommendations')
-    expect(res.body).toHaveProperty('cacheKey')
-    expect(Array.isArray(res.body.recommendations)).toBe(true)
+    expect(res.status).toBe(401)
+    expect(res.body.message).toMatch(/Token|autenticação/i)
   })
 
-  it('devolve recomendações com userId autenticado', async () => {
+  it('devolve recomendações com user autenticado', async () => {
     services.getActiveMenuItems.mockResolvedValue([
       { id: 1, name: 'Pizza', category: 'Main Course' },
       { id: 2, name: 'Salada', category: 'Appetizer' },
@@ -85,17 +86,24 @@ describe('GET /recommendations', () => {
       { item_id: 1, orders: 10 },
     ])
 
-    const res = await request(app).get('/recommendations?userId=42')
+    // Mock de user autenticado
+    const res = await request(app)
+      .get('/recommendations')
+      .set('Authorization', 'Bearer mock-token')
+    
     expect(res.status).toBe(200)
     expect(res.body).toHaveProperty('recommendations')
-    expect(res.body.cacheKey).toBe(7) // 5 + 2 = 7 total orders
+    expect(res.body.cacheKey).toBe(7) // 5 + 2
     expect(services.getUserOrderHistory).toHaveBeenCalledWith(42)
   })
 
   it('devolve 500 em erro ao buscar items', async () => {
     services.getActiveMenuItems.mockRejectedValue(new Error('DB fail'))
 
-    const res = await request(app).get('/recommendations')
+    const res = await request(app)
+      .get('/recommendations')
+      .set('Authorization', 'Bearer mock-token')
+    
     expect(res.status).toBe(500)
     expect(res.body.message).toMatch(/recomendações/)
   })
@@ -107,7 +115,10 @@ describe('GET /recommendations', () => {
     services.getUserOrderHistory.mockResolvedValue([])
     services.getPopularItems.mockRejectedValue(new Error('Groq fail'))
 
-    const res = await request(app).get('/recommendations')
+    const res = await request(app)
+      .get('/recommendations')
+      .set('Authorization', 'Bearer mock-token')
+    
     expect(res.status).toBe(500)
   })
 
@@ -116,7 +127,10 @@ describe('GET /recommendations', () => {
     services.getUserOrderHistory.mockResolvedValue([])
     services.getPopularItems.mockResolvedValue([])
 
-    const res = await request(app).get('/recommendations?userId=42')
+    const res = await request(app)
+      .get('/recommendations')
+      .set('Authorization', 'Bearer mock-token')
+    
     expect(res.status).toBe(200)
     expect(res.body.cacheKey).toBe(0)
   })

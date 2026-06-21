@@ -1,17 +1,22 @@
 import { getActiveMenuItems, getUserOrderHistory, getPopularItems } from '../services/index.js';
 import { AnalyticsAgent } from '../genai/agents/index.js';
 
-// GET /recommendations?userId=X
-// Orquestra as queries via service e delega ao AnalyticsAgent num único request Groq.
+// GET /recommendations
+// Recomendações personalizadas para utilizador autenticado.
+// userId vem do JWT (req.user.id), não do query param.
 export async function getRecommendations(req, res) {
-  const userId = req.query.userId ? parseInt(req.query.userId) : null;
+  const userId = req.user?.id;
+
+  if (!userId) {
+    return res.status(401).json({ message: 'Autenticação obrigatória.' });
+  }
 
   try {
     // Queries em paralelo via service layer
     const [menuItems, popular, userHistory] = await Promise.all([
       getActiveMenuItems(),
       getPopularItems(),
-      userId ? getUserOrderHistory(userId) : Promise.resolve([]),
+      getUserOrderHistory(userId),
     ]);
 
     // cacheKey = total de pedidos do utilizador (muda ao fazer novo pedido)
