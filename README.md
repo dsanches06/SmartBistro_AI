@@ -79,8 +79,6 @@ JWT_SECRET=change_this_to_a_long_random_secret ou usar smartbistro_jwt_secret_20
 
 # ===== GROQ AI =====
 GROQ_API_KEY=your_groq_api_key
-
-GROQ_MODEL=llama-3.3-70b-versatile
 ```
 
 | Variável | Obrigatória | Descrição |
@@ -88,7 +86,6 @@ GROQ_MODEL=llama-3.3-70b-versatile
 | `DB_*` | Sim | Credenciais MySQL |
 | `JWT_SECRET` | Sim | Segredo para assinar tokens JWT (mínimo 27 caracteres) |
 | `GROQ_API_KEY` | Sim | Chave da API Groq — obtida em console.groq.com |
-| `GROQ_MODEL` | Não | Modelo principal; o sistema tem fallback automático para 4 modelos |
 
 ### `frontend/.env` (opcional)
 

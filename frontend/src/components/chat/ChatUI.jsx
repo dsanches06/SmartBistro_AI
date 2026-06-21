@@ -399,6 +399,7 @@ export function ChatUI({ isOpen, onClose }) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onSubmit={handleSend}
+              onVoiceSend={(text) => doSend(text)}
               disabled={loading}
               inputRef={inputRef}
             />

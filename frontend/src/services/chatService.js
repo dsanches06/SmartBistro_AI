@@ -1,5 +1,4 @@
 import BaseService from "../services/BaseService.js";
-import { Order } from "../models/Order.js";
 
 // Mapeia códigos HTTP para tipos de erro mais legíveis.
 function httpStatusToErrorType(status) {
@@ -184,17 +183,17 @@ class ChatService extends BaseService {
 
   extractOrderDataFromFunctionResult(functionResult) {
     if (!functionResult?.result) return null;
-    return Order.fromObject(functionResult.result)?.toPayload() || null;
+    return functionResult.result ? { ...functionResult.result } : null;
   }
 
   extractOrderData(providerResponse) {
     if (!providerResponse) return null;
     if (typeof providerResponse === "object")
-      return Order.fromObject(providerResponse)?.toPayload() || null;
+      return typeof providerResponse === 'object' ? { ...providerResponse } : null;
     try {
       const jsonMatch = providerResponse.match(/\{[\s\S]*\}/);
       if (jsonMatch)
-        return Order.fromObject(JSON.parse(jsonMatch[0]))?.toPayload() || null;
+        return { ...JSON.parse(jsonMatch[0]) };
     } catch { /* ignore */ }
     return null;
   }
