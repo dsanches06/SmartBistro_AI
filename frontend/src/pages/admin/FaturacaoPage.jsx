@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageSection, Pagination, StatCard } from "@/components";
 import { SortTh } from "@/components/ui/shared/SortTh.jsx";
@@ -12,6 +12,12 @@ import {
   fmtInvoiceNumber, exportInvoicesCSV,
 } from "@/utils";
 import { useTheme } from "@/context/ThemeContext";
+import { useAuth } from "@/context/AuthContext";
+import { fetchForecast } from "@/services/forecastService.js";
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler } from "chart.js";
+import { Line } from "react-chartjs-2";
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler);
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -165,17 +171,42 @@ export default function FaturacaoPage() {
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const queryClient = useQueryClient();
+  const { token } = useAuth();
 
   const [dateFrom, setDateFrom]     = useState(THIRTY_DAYS_AGO);
   const [dateTo, setDateTo]         = useState(TODAY);
   const [page, setPage]             = useState(1);
   const [selectedInv, setSelectedInv] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [sortCol, setSortCol] = useState(null);
-  const [sortDir, setSortDir] = useState("desc"); // default: mais recente primeiro
+  const [sortDir, setSortDir] = useState("desc");
   const handleSort = (col) => {
     if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc");
     else { setSortCol(col); setSortDir(col === "date" ? "desc" : "asc"); }
+  };
+
+  // Previsão de receitas — um único request por sessão
+  const [forecastData, setForecastData]     = useState(null);
+  const [forecastLoading, setForecastLoading] = useState(false);
+  const forecastFetched = useRef(false);
+  useEffect(() => {
+    if (forecastFetched.current || !token) return;
+    forecastFetched.current = true;
+    setForecastLoading(true);
+    fetchForecast(token, 30).then(setForecastData).catch(() => {}).finally(() => setForecastLoading(false));
+  }, [token]);
+
+  // Apagar fatura
+  const handleDelete = async (inv) => {
+    if (!window.confirm(`Apagar fatura ${fmtInvoiceNumber(inv)}?`)) return;
+    setDeletingId(inv.id);
+    try {
+      await invoiceService.remove(inv.id);
+      if (selectedInv?.id === inv.id) setSelectedInv(null);
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    } catch { alert("Erro ao apagar fatura."); }
+    finally { setDeletingId(null); }
   };
 
   const { data: invoices   = [] } = useQuery({ queryKey: ["invoices"],    queryFn: invoiceService.getAll,    refetchInterval: 30_000 });
@@ -354,11 +385,11 @@ export default function FaturacaoPage() {
         <StatCard label="IVA Total"       value={fmtEur(kpis.taxTotal)} />
       </div>
 
-      {/* Table + Detail */}
-      <div className={`grid gap-4 ${selectedInv ? "lg:grid-cols-5" : "lg:grid-cols-1"}`}>
+      {/* Table + Detail + Forecast */}
+      <div className={`grid gap-4 ${selectedInv ? "lg:grid-cols-5" : "lg:grid-cols-3"}`}>
 
         {/* Invoice table */}
-        <div className={`${selectedInv ? "lg:col-span-3" : ""} rounded-[20px] bg-[var(--surface)] p-5 shadow-sm`}>
+        <div className={`${selectedInv ? "lg:col-span-3" : "lg:col-span-2"} rounded-[20px] bg-[var(--surface)] p-5 shadow-sm`}>
           <h3 className="font-semibold text-sm mb-4" style={{ color: "var(--text)" }}>Nº Fatura</h3>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -368,13 +399,14 @@ export default function FaturacaoPage() {
                   <SortTh col="client" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} className="pr-3 hidden sm:table-cell">Cliente</SortTh>
                   <SortTh col="date"   sortCol={sortCol} sortDir={sortDir} onSort={handleSort} className="pr-3 hidden md:table-cell">Data</SortTh>
                   <SortTh col="valor"  sortCol={sortCol} sortDir={sortDir} onSort={handleSort} className="pr-3">Valor</SortTh>
-                  <SortTh col="status" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Estado</SortTh>
+                  <SortTh col="status" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} className="pr-3">Estado</SortTh>
+                  <th className="py-2.5 w-8" />
                 </tr>
               </thead>
               <tbody>
                 {pagedInvoices.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-xs" style={{ color: "var(--text-muted)" }}>
+                    <td colSpan={6} className="py-8 text-center text-xs" style={{ color: "var(--text-muted)" }}>
                       Sem faturas no período seleccionado
                     </td>
                   </tr>
@@ -388,9 +420,7 @@ export default function FaturacaoPage() {
                         className={`cursor-pointer${!active ? " hover:bg-[var(--surface-2)]" : ""}`}
                         style={{
                           borderBottom: "1px solid var(--border)",
-                          background: active
-                            ? (isDark ? "rgba(37,99,235,0.12)" : "rgba(37,99,235,0.07)")
-                            : "",
+                          background: active ? (isDark ? "rgba(37,99,235,0.12)" : "rgba(37,99,235,0.07)") : "",
                         }}
                       >
                         <td className="py-2.5 pr-3 text-xs font-semibold" style={{ color: "var(--primary)" }}>
@@ -400,18 +430,26 @@ export default function FaturacaoPage() {
                           {inv.customerName}
                         </td>
                         <td className="py-2.5 pr-3 text-xs hidden md:table-cell" style={{ color: "var(--text-muted)" }}>
-                          {inv.issued_at
-                            ? new Date(inv.issued_at).toLocaleDateString("pt-PT", {
-                                day: "2-digit", month: "2-digit", year: "numeric",
-                                hour: "2-digit", minute: "2-digit",
-                              })
-                            : "—"}
+                          {inv.issued_at ? new Date(inv.issued_at).toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
                         </td>
                         <td className="py-2.5 pr-3 text-xs font-semibold" style={{ color: "var(--text)" }}>
                           {fmtEur(Number(inv.total_amount || 0))}
                         </td>
-                        <td className="py-2.5">
+                        <td className="py-2.5 pr-3">
                           <PayBadge status={inv.paymentStatus} />
+                        </td>
+                        <td className="py-2.5 text-right">
+                          <button
+                            onClick={e => { e.stopPropagation(); handleDelete(inv); }}
+                            disabled={deletingId === inv.id}
+                            className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors hover:bg-red-500 hover:text-white disabled:opacity-40 ml-auto"
+                            style={{ background: "var(--surface-2)", color: "#ef4444" }}
+                            title="Apagar fatura"
+                          >
+                            {deletingId === inv.id
+                              ? <i className="fa-solid fa-spinner fa-spin text-[10px]" />
+                              : <i className="fa-solid fa-trash text-[10px]" />}
+                          </button>
                         </td>
                       </tr>
                     );
@@ -423,19 +461,80 @@ export default function FaturacaoPage() {
 
           {/* Pagination */}
           <div className="flex flex-wrap items-center justify-between gap-2 mt-4 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
-            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-              {filteredInvoices.length} faturas no total
-            </p>
-            <Pagination
-              page={page}
-              total={filteredInvoices.length}
-              pageSize={FATURACAO_PAGE_SIZE}
-              onChange={setPage}
-            />
+            <p className="text-xs" style={{ color: "var(--text-muted)" }}>{filteredInvoices.length} faturas no total</p>
+            <Pagination page={page} total={filteredInvoices.length} pageSize={FATURACAO_PAGE_SIZE} onChange={setPage} />
           </div>
         </div>
 
-        {/* Detail panel — only rendered when a invoice is selected */}
+        {/* Forecast panel — ao lado da tabela, empilha em mobile */}
+        {!selectedInv && (
+          <div className="rounded-[20px] bg-[var(--surface)] p-5 shadow-sm flex flex-col gap-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-sm" style={{ color: "var(--text)" }}>Previsão de Receitas</h3>
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
+                  style={{ background: "rgba(99,102,241,0.1)", color: "var(--primary)", border: "1px solid rgba(99,102,241,0.2)" }}>
+                  ✨ AI
+                </span>
+              </div>
+              {forecastData?.trend && (
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                  style={{
+                    background: forecastData.trend === "crescimento" ? "rgba(34,197,94,0.1)" : forecastData.trend === "queda" ? "rgba(239,68,68,0.1)" : "rgba(148,163,184,0.1)",
+                    color: forecastData.trend === "crescimento" ? "#22c55e" : forecastData.trend === "queda" ? "#ef4444" : "var(--text-muted)",
+                  }}>
+                  {forecastData.trend === "crescimento" ? "📈" : forecastData.trend === "queda" ? "📉" : "➡️"} {forecastData.trend}
+                </span>
+              )}
+            </div>
+            {forecastLoading ? (
+              <div className="flex items-center justify-center gap-2 py-10 text-xs" style={{ color: "var(--text-muted)" }}>
+                <i className="fa-solid fa-spinner fa-spin" /> A gerar previsão com IA...
+              </div>
+            ) : forecastData ? (
+              <>
+                {forecastData.summary && (
+                  <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
+                    <i className="fa-solid fa-robot mr-1" style={{ color: "var(--primary)" }} />
+                    {forecastData.summary}
+                  </p>
+                )}
+                <div style={{ height: 200 }}>
+                  <Line
+                    data={{
+                      labels: [
+                        ...(forecastData.historical || []).map(d => d.date.slice(5)),
+                        ...(forecastData.forecast   || []).map(d => d.date.slice(5)),
+                      ],
+                      datasets: [
+                        {
+                          label: "Real (€)", data: [...(forecastData.historical || []).map(d => d.total), ...(forecastData.forecast || []).map(() => null)],
+                          borderColor: "rgba(99,102,241,0.9)", backgroundColor: "rgba(99,102,241,0.08)", fill: true, tension: 0.4, pointRadius: 2,
+                        },
+                        {
+                          label: "Previsão (€)", data: [...(forecastData.historical || []).map(() => null), ...(forecastData.forecast || []).map(d => d.predicted)],
+                          borderColor: "rgba(251,146,60,0.9)", backgroundColor: "rgba(251,146,60,0.08)", borderDash: [5, 4], fill: true, tension: 0.4, pointRadius: 2,
+                        },
+                      ],
+                    }}
+                    options={{
+                      responsive: true, maintainAspectRatio: false,
+                      plugins: { legend: { labels: { color: isDark ? "#ccc" : "#444", font: { size: 10 } } }, tooltip: { mode: "index", intersect: false } },
+                      scales: {
+                        x: { ticks: { color: isDark ? "#888" : "#666", font: { size: 9 }, maxTicksLimit: 8 }, grid: { color: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" } },
+                        y: { ticks: { color: isDark ? "#888" : "#666", font: { size: 9 }, callback: v => `€${v}` }, grid: { color: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" } },
+                      },
+                    }}
+                  />
+                </div>
+              </>
+            ) : (
+              <p className="text-xs py-4 text-center" style={{ color: "var(--text-muted)" }}>Sem dados suficientes para previsão.</p>
+            )}
+          </div>
+        )}
+
+        {/* Detail panel — só quando uma fatura está seleccionada */}
         {selectedInv && (
         <div className="lg:col-span-2 rounded-[20px] bg-[var(--surface)] p-5 shadow-sm flex flex-col">
           <>
