@@ -41,12 +41,12 @@ function IconRegister() {
 // Botão de controlo para abrir ou fechar a navegação móvel.
 function NavTab({ onClick, open = false, isDark }) {
   const bg     = isDark ? "rgba(28,28,30,0.97)"  : "rgba(208,214,220,0.97)";
-  const border = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.12)";
-  const iconBg = isDark ? "#3a3a3c" : "#b8c0c8";
+  const border = isDark ? "#2a2a2a" : "#c8cfd8";
+  const iconBg = isDark ? "#1f1f1f" : "#e2e8f0";
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-2 select-none whitespace-nowrap"
+      className="flex items-center gap-2 select-none whitespace-nowrap pointer-events-auto"
       style={{
         background: bg,
         color: "var(--text)",
@@ -55,7 +55,7 @@ function NavTab({ onClick, open = false, isDark }) {
         borderRight: `1px solid ${border}`,
         borderBottom: "none",
         borderRadius: "20px 20px 0 0",
-        padding: "10px 28px 11px",
+        padding: "8px 20px 8px",
         boxShadow: "0 -4px 14px rgba(0,0,0,0.13)",
         cursor: "pointer",
       }}
@@ -64,9 +64,9 @@ function NavTab({ onClick, open = false, isDark }) {
         className="flex items-center justify-center w-6 h-6 rounded-lg flex-shrink-0"
         style={{ background: iconBg }}
       >
-        <i className={`fa-solid fa-chevron-${open ? "down" : "up"} text-[10px]`} style={{ color: "var(--primary)" }} />
+        <i className={`fa-solid fa-chevron-${open ? "down" : "up"} text-[10px] text-[var(--primary)]`} />
       </span>
-      <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--text)" }}>
+      <span className="text-xs font-bold uppercase tracking-widest text-[var(--text)]">
         {open ? "Ocultar Menu" : "Mostrar Menu"}
       </span>
     </button>
@@ -159,16 +159,8 @@ export default function MainPage({ onNavChange }) {
   const [showRegister, setShowRegister] = useState(false);
   const [showRegisterSuccess, setShowRegisterSuccess] = useState(false);
   const [navOpen, setNavOpen]           = useState(false);
-  const [isMobile, setIsMobile]         = useState(() => window.innerWidth < 640);
 
   useEffect(() => { onNavChange?.(navOpen); }, [navOpen, onNavChange]);
-
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 639.98px)');
-    const handler = (e) => setIsMobile(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
   const [cart, setCart]                 = useState({});
   const [showCart, setShowCart]               = useState(false);
   const [showAllergyModal, setShowAllergyModal] = useState(false);
@@ -486,16 +478,7 @@ export default function MainPage({ onNavChange }) {
       </div>
 
       {/* Content */}
-      <main
-        className="px-4 sm:px-8 py-6 max-w-5xl mx-auto sm:pb-12"
-        style={{
-          paddingBottom: isMobile
-            ? navOpen
-              ? 'calc(15rem + 1.25rem)'
-              : 'calc(var(--safe-bottom, 0px) + 2rem)'
-            : undefined,
-        }}
-      >
+      <main className="px-4 sm:px-8 py-6 max-w-5xl mx-auto pb-40 sm:pb-12">
         {orderSuccess && (
           <div className="mb-4 flex items-center gap-2 px-4 py-3 rounded-2xl text-sm font-semibold"
             style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", color: "#22c55e" }}>
@@ -793,14 +776,14 @@ export default function MainPage({ onNavChange }) {
 
         {navOpen && (
           <nav
-            className="fixed bottom-0 left-0 right-0 z-50 flex flex-col items-center px-3"
+            className="fixed bottom-0 left-0 right-0 z-50 flex flex-col"
             style={{
+              height: '15rem',
               background: isDark ? "rgba(28,28,30,0.97)" : "rgba(208,214,220,0.97)",
               backdropFilter: "blur(12px)",
               WebkitBackdropFilter: "blur(12px)",
-              borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.12)"}`,
-              boxShadow: "0 -4px 20px rgba(0,0,0,0.2)",
-              padding: "0.75rem 0.625rem calc(var(--safe-bottom) + 0.75rem)",
+              borderTop: `1px solid ${isDark ? '#2a2a2a' : '#c8cfd8'}`,
+              paddingBottom: 'calc(var(--safe-bottom) + 0.9rem)',
             }}
           >
             <div
