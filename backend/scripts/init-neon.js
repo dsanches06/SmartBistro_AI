@@ -2,9 +2,14 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import { Pool } from "pg";
+import dotenv from "dotenv";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Carrega .env.local primeiro, depois .env
+dotenv.config({ path: path.resolve(__dirname, "../.env.local") });
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const schemaPath = path.resolve(__dirname, "../../database/neon_vercel/schema_neon.sql");
 const seedPath = path.resolve(__dirname, "../../database/neon_vercel/seed_default_neon.sql");
