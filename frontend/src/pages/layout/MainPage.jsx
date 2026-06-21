@@ -851,7 +851,7 @@ export default function MainPage({ onNavChange }) {
             className="fixed inset-x-0 bottom-0 z-50 flex justify-center pointer-events-none"
             style={{ height: 0 }}
           >
-            <div style={{ position: "absolute", bottom: 8, pointerEvents: "auto" }}>
+            <div style={{ position: "absolute", bottom: 'max(8px, env(safe-area-inset-bottom, 0px))', pointerEvents: "auto" }}>
               <NavTab onClick={() => setNavOpen(true)} isDark={isDark} />
             </div>
           </div>
@@ -942,12 +942,9 @@ function ItemCard({ item, isDark, qty, isClient, onAdd, onRemove }) {
           ) : (
             <button
               onClick={onAdd}
-              className="text-[10px] sm:text-xs font-semibold text-white px-2 py-1 rounded-lg transition-opacity hover:opacity-85 whitespace-nowrap"
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-sm text-white transition-opacity hover:opacity-85 flex-shrink-0"
               style={{ background: "var(--primary)" }}
-            >
-              <span className="sm:hidden">+</span>
-              <span className="hidden sm:inline">+ Adicionar</span>
-            </button>
+            >+</button>
           )
         )}
       </div>

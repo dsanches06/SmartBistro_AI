@@ -156,7 +156,9 @@ function AppContent() {
                 ? isStaff
                   ? `calc(${NAV_OPEN_H} + 1rem)`
                   : '10rem'
-                : '4rem'
+                : isStaff
+                  ? '0.75rem'
+                  : '4rem'
               : '1rem',
           }}
           aria-label="Abrir chat IA"
