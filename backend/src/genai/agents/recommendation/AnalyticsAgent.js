@@ -1,4 +1,5 @@
 import { BaseAgentAI } from '../../models/index.js';
+import { buildRecommendationMessage, buildForecastMessage } from './analyticsMessages.js';
 
 const ANALYTICS_PROMPT = `És um agente de análise de dados para um restaurante.
 Duas responsabilidades:
@@ -16,7 +17,6 @@ class AnalyticsAgent extends BaseAgentAI {
   // Gera recomendações de itens a partir de dados SQL pré-processados.
   // Devolve [{ item_id, label }] ou [] em caso de erro.
   async recommend(data) {
-    const { buildRecommendationMessage } = await import('./analyticsMessages.js');
     const message = buildRecommendationMessage(data);
     const result  = await this._call(message);
     return this._parseRecommendations(result.text, data.menuItems.map(i => i.id));
@@ -25,7 +25,6 @@ class AnalyticsAgent extends BaseAgentAI {
   // Gera previsão de receitas e texto de tendência a partir de dados históricos.
   // Devolve { forecast: [...], summary: "texto" } ou null em caso de erro.
   async forecast(data) {
-    const { buildForecastMessage } = await import('./analyticsMessages.js');
     const message = buildForecastMessage(data);
     const result  = await this._call(message);
     try {
