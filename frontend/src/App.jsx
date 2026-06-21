@@ -94,7 +94,8 @@ function AppContent() {
   const [bottomNavOpen, setBottomNavOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const { pathname } = useLocation();
-  const isPublicPage = pathname === "/" || pathname === "/login";
+  const { user } = useAuth();
+  const isStaff = user?.role_id === 1;
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 767.98px)');
@@ -152,7 +153,9 @@ function AppContent() {
           style={{
             bottom: isMobile
               ? bottomNavOpen
-                ? `calc(${NAV_OPEN_H} + 1rem)`
+                ? isStaff
+                  ? `calc(${NAV_OPEN_H} + 1rem)`
+                  : '10rem'
                 : '4rem'
               : '1rem',
           }}

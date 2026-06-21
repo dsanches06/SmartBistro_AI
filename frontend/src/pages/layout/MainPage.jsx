@@ -778,7 +778,6 @@ export default function MainPage({ onNavChange }) {
           <nav
             className="fixed bottom-0 left-0 right-0 z-50 flex flex-col"
             style={{
-              height: '15rem',
               background: isDark ? "rgba(28,28,30,0.97)" : "rgba(208,214,220,0.97)",
               backdropFilter: "blur(12px)",
               WebkitBackdropFilter: "blur(12px)",
@@ -950,7 +949,8 @@ function ItemCard({ item, isDark, qty, isClient, onAdd, onRemove }) {
               <span className="hidden sm:inline">+ Adicionar</span>
             </button>
           )
-      )}
+        )}
+      </div>
     </div>
   );
 }

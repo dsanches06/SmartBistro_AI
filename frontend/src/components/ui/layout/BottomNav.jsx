@@ -88,7 +88,6 @@ export function BottomNav({ onOpenChange }) {
           <div
             className="fixed bottom-0 left-0 right-0 z-40 flex flex-col"
             style={{
-              height: NAV_OPEN_H,
               background: bg,
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)',
