@@ -14,6 +14,7 @@ import ForgotPasswordModal from "@/components/ui/modals/ForgotPasswordModal.jsx"
 import { getInitials, getPalette } from "@/components/users/UserCard.jsx";
 import { useClickOutside } from "@/components/ui/shared/useClickOutside.jsx";
 import { NotificationBell } from "@/components/ui/layout/Header.jsx";
+import { fetchPoints, redeemPoints } from "@/services/pointsService.js";
 
 /* ── Icons ── */
 // Ícone usado para abrir o modal de autenticação.

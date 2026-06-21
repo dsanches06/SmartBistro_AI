@@ -10,6 +10,7 @@ import {
   deletePayment,
   getInvoiceById,
 } from "../services/index.js";
+import { addPoints } from '../services/pointsService.js';
 
 const PAYMENT_METHODS = ["MB Way", "Multibanco", "Credit Card", "Cash"];
 const PAYMENT_STATUS_OPTIONS = ["Pending", "Completed", "Failed"];
@@ -83,6 +84,14 @@ export const create = async (req, res) => {
       payment_status,
       processed_at: payment_status === 'Completed' ? new Date() : null,
     });
+
+    // Adiciona pontos automaticamente quando o pagamento é concluído
+    if (payment_status === 'Completed' && user_id) {
+      addPoints(user_id, amount, invoice?.order_id).catch(err =>
+        console.error('[Points] Erro ao adicionar pontos:', err.message)
+      );
+    }
+
     res.status(201).json(payment);
   } catch (err) {
     console.error('[Payment] Erro ao criar pagamento:', err.message, err.code ?? '');

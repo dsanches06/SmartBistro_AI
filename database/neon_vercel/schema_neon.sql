@@ -2,6 +2,8 @@
 -- customers → users + nova tabela staff + user_id → user_id
 
 -- Drop existing objects
+DROP TABLE IF EXISTS points_transactions CASCADE;
+DROP TABLE IF EXISTS user_points CASCADE;
 DROP TABLE IF EXISTS logs CASCADE;
 DROP TABLE IF EXISTS payments CASCADE;
 DROP TABLE IF EXISTS invoices CASCADE;
@@ -227,6 +229,28 @@ CREATE TABLE logs (
     output_payload JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL
+);
+
+-- Programa de pontos — saldo por utilizador (1€ pago = 1 ponto)
+CREATE TABLE user_points (
+    id             INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id        INTEGER NOT NULL UNIQUE,
+    balance        INTEGER DEFAULT 0,
+    total_earned   INTEGER DEFAULT 0,
+    total_redeemed INTEGER DEFAULT 0,
+    updated_at     TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Histórico de transações de pontos
+CREATE TABLE points_transactions (
+    id          INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id     INTEGER NOT NULL,
+    amount      INTEGER NOT NULL,
+    description VARCHAR(200),
+    order_id    INTEGER,
+    created_at  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- Triggers para updated_at

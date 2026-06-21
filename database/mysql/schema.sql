@@ -204,3 +204,25 @@ CREATE TABLE logs (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL
 );
+
+-- Programa de pontos — saldo por utilizador (1€ pago = 1 ponto)
+CREATE TABLE user_points (
+    id             INT PRIMARY KEY AUTO_INCREMENT,
+    user_id        INT NOT NULL UNIQUE,
+    balance        INT DEFAULT 0,
+    total_earned   INT DEFAULT 0,
+    total_redeemed INT DEFAULT 0,
+    updated_at     DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Histórico de transações de pontos
+CREATE TABLE points_transactions (
+    id          INT PRIMARY KEY AUTO_INCREMENT,
+    user_id     INT NOT NULL,
+    amount      INT NOT NULL,
+    description VARCHAR(200),
+    order_id    INT,
+    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);

@@ -19,3 +19,4 @@ export { default as logRoutes } from "./logRoutes.js";
 export { default as reservationRoutes } from "./reservationRoutes.js";
 export { default as recommendationRoutes } from "./recommendationRoutes.js";
 export { default as forecastRoutes }        from "./forecastRoutes.js";
+export { default as pointsRoutes }          from "./pointsRoutes.js";
