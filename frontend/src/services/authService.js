@@ -47,4 +47,22 @@ export const authService = {
       headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify({ currentPassword, newPassword }),
     }),
+
+  resetRequest: (username) =>
+    request('/auth/reset-request', {
+      method: 'POST',
+      body: JSON.stringify({ username }),
+    }),
+
+  resetAddPhone: (username, phone) =>
+    request('/auth/reset-add-phone', {
+      method: 'POST',
+      body: JSON.stringify({ username, phone }),
+    }),
+
+  resetConfirm: (username, otp, newPassword) =>
+    request('/auth/reset-confirm', {
+      method: 'POST',
+      body: JSON.stringify({ username, otp, newPassword }),
+    }),
 };
