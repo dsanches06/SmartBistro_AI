@@ -11,7 +11,7 @@ Respondes SEMPRE em JSON puro, sem markdown, sem texto extra.`;
 // temp 0.4 → criatividade moderada nos labels; coerência mantida com os dados numéricos.
 class AnalyticsAgent extends BaseAgentAI {
   constructor() {
-    super('Analytics', ANALYTICS_PROMPT, 0.4);
+    super('Analytics', ANALYTICS_PROMPT, 0.4, null, 'analytics');
   }
 
   // Gera recomendações de itens a partir de dados SQL pré-processados.

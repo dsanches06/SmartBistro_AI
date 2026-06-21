@@ -1,6 +1,8 @@
 import {
   groq,
   chatWithFallback,
+  AGENT_MODEL_QUEUES,
+  GROQ_MODEL_QUEUE,
 } from '../config/index.js';
 import {
   normalizeGroqResponse,
@@ -11,10 +13,13 @@ import { PipelineError } from '../../utils/pipelineError.js';
 
 // ── Superclasse base para todos os agentes do SmartBistro ─────────────────────
 class BaseAgentAI {
-  constructor(name, instruction, temperature = 0.25, tools = null) {
+  // agentKey: chave em AGENT_MODEL_QUEUES para usar a fila de modelos própria do agente.
+  // Se não fornecida, usa a fila global GROQ_MODEL_QUEUE.
+  constructor(name, instruction, temperature = 0.25, tools = null, agentKey = null) {
     this.name        = name;
     this.temperature = temperature;
     this.tools       = tools;
+    this._modelQueue = (agentKey && AGENT_MODEL_QUEUES[agentKey]) || GROQ_MODEL_QUEUE;
     this._messages   = [{ role: "system", content: instruction }];
   }
 
@@ -28,7 +33,7 @@ class BaseAgentAI {
     };
 
     try {
-      const response   = await chatWithFallback(messages, options);
+      const response   = await chatWithFallback(messages, options, this._modelQueue);
       const normalized = normalizeGroqResponse(response);
 
       // Mantém histórico para chamadas multi-turn no mesmo agente (ex: Maître retry)

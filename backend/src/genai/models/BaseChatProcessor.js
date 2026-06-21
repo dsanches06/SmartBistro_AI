@@ -4,10 +4,14 @@
 
 import {
   groq,
+  AGENT_MODEL_QUEUES,
   GROQ_MODEL_QUEUE,
   chatWithFallback,
   CHATBOT_SYSTEM_PROMPT,
 } from '../config/index.js';
+
+// Fila de modelos do chatbot — usa a sua própria para não competir com os outros agentes
+const _CHATBOT_QUEUE = AGENT_MODEL_QUEUES.chatbot || GROQ_MODEL_QUEUE;
 import {
   normalizeGroqTools,
   normalizeGroqResponse,
@@ -106,8 +110,8 @@ export class BaseChatProcessor {
     // com o próximo modelo comece com estado limpo. Isto permite recuperar de
     // erros de validação de schema durante a iteração do stream (ex: llama-4-scout
     // que passa string onde o schema espera integer).
-    for (let i = 0; i < GROQ_MODEL_QUEUE.length; i++) {
-      const model        = GROQ_MODEL_QUEUE[i];
+    for (let i = 0; i < _CHATBOT_QUEUE.length; i++) {
+      const model        = _CHATBOT_QUEUE[i];
       let   fullContent  = '';
       const toolCallsAcc = {};
 
@@ -173,7 +177,7 @@ export class BaseChatProcessor {
         return { functionCalls, roundText: fullContent, assistantMsg };
 
       } catch (err) {
-        if (isRetryableGroqError(err) && i < GROQ_MODEL_QUEUE.length - 1) {
+        if (isRetryableGroqError(err) && i < _CHATBOT_QUEUE.length - 1) {
           console.warn(`[ChatProcessor] ${model} indisponível no stream. A tentar próximo...`);
           continue;
         }
