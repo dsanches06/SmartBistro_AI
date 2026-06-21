@@ -101,8 +101,7 @@ function GestaoRow({ item, togglingId, onEdit, onToggle }) {
             style={{ color: "var(--primary)", borderColor: "var(--border)", background: "var(--surface-2)" }}
           >
             <i className="fa-solid fa-pen text-xs mr-1" />Preço
-            </button>
-          )}
+          </button>
           <button onClick={() => onToggle(item)} disabled={isToggling}
             className="text-xs px-2.5 py-1.5 rounded-lg border transition-colors disabled:opacity-50"
             style={{
