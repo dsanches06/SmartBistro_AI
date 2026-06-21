@@ -942,7 +942,7 @@ function ItemCard({ item, isDark, qty, isClient, onAdd, onRemove }) {
           ) : (
             <button
               onClick={onAdd}
-              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-sm text-white transition-opacity hover:opacity-85 flex-shrink-0"
+              className="px-4 h-7 rounded-lg flex items-center justify-center font-bold text-sm text-white transition-opacity hover:opacity-85 flex-shrink-0"
               style={{ background: "var(--primary)" }}
             >+</button>
           )
