@@ -1,6 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
+import { fetchForecast } from "@/services/forecastService.js";
+import { useAuth } from "@/context/AuthContext";
 import {
   Chart as ChartJS,
   CategoryScale, LinearScale, PointElement, LineElement,
@@ -47,8 +49,24 @@ export default function DashboardPage() {
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const navigate = useNavigate();
+  const { token } = useAuth();
   const [ordersPage, setOrdersPage] = useState(1);
   const [alertsPage, setAlertsPage] = useState(1);
+
+  // Previsão de receitas — chamada única ao AnalyticsAgent por sessão
+  const [forecastData, setForecastData]   = useState(null);
+  const [forecastLoading, setForecastLoading] = useState(false);
+  const forecastFetched = useRef(false);
+
+  useEffect(() => {
+    if (forecastFetched.current || !token) return;
+    forecastFetched.current = true;
+    setForecastLoading(true);
+    fetchForecast(token, 30)
+      .then(setForecastData)
+      .catch(() => {})
+      .finally(() => setForecastLoading(false));
+  }, [token]);
 
   const { data: orders      = [] } = useQuery({ queryKey: ["orders"],      queryFn: orderService.getAll,      refetchInterval: 30_000 });
   const { data: tables      = [] } = useQuery({ queryKey: ["tables"],      queryFn: tableService.getAll,      refetchInterval: 30_000 });
@@ -391,6 +409,86 @@ export default function DashboardPage() {
         </div>
 
       </div>
+
+      {/* Previsão de receitas — AnalyticsAgent */}
+      <div className="rounded-[20px] bg-[var(--surface)] p-5 shadow-sm mt-4">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-sm" style={{ color: "var(--text)" }}>Previsão de Receitas</h3>
+            <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
+              style={{ background: "rgba(99,102,241,0.1)", color: "var(--primary)", border: "1px solid rgba(99,102,241,0.2)" }}>
+              ✨ AI
+            </span>
+          </div>
+          {forecastData?.trend && (
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
+              style={{
+                background: forecastData.trend === "crescimento" ? "rgba(34,197,94,0.1)" : forecastData.trend === "queda" ? "rgba(239,68,68,0.1)" : "rgba(148,163,184,0.1)",
+                color: forecastData.trend === "crescimento" ? "#22c55e" : forecastData.trend === "queda" ? "#ef4444" : "var(--text-muted)",
+              }}>
+              {forecastData.trend === "crescimento" ? "📈" : forecastData.trend === "queda" ? "📉" : "➡️"} {forecastData.trend}
+            </span>
+          )}
+        </div>
+
+        {forecastLoading ? (
+          <div className="flex items-center gap-2 py-8 justify-center text-xs" style={{ color: "var(--text-muted)" }}>
+            <i className="fa-solid fa-spinner fa-spin" /> A gerar previsão com IA...
+          </div>
+        ) : forecastData ? (
+          <>
+            {forecastData.summary && (
+              <p className="text-xs mb-4" style={{ color: "var(--text-secondary)" }}>
+                <i className="fa-solid fa-robot mr-1.5" style={{ color: "var(--primary)" }} />
+                {forecastData.summary}
+              </p>
+            )}
+            <div style={{ height: 220 }}>
+              <Line
+                data={{
+                  labels: [
+                    ...(forecastData.historical || []).map(d => d.date.slice(5)),
+                    ...(forecastData.forecast   || []).map(d => d.date.slice(5)),
+                  ],
+                  datasets: [
+                    {
+                      label: "Faturação real (€)",
+                      data: [
+                        ...(forecastData.historical || []).map(d => d.total),
+                        ...(forecastData.forecast   || []).map(() => null),
+                      ],
+                      borderColor: "rgba(99,102,241,0.9)",
+                      backgroundColor: "rgba(99,102,241,0.08)",
+                      fill: true, tension: 0.4, pointRadius: 3,
+                    },
+                    {
+                      label: "Previsão AI (€)",
+                      data: [
+                        ...(forecastData.historical || []).map(() => null),
+                        ...(forecastData.forecast   || []).map(d => d.predicted),
+                      ],
+                      borderColor: "rgba(251,146,60,0.9)",
+                      backgroundColor: "rgba(251,146,60,0.08)",
+                      borderDash: [5, 4], fill: true, tension: 0.4, pointRadius: 3,
+                    },
+                  ],
+                }}
+                options={{
+                  responsive: true, maintainAspectRatio: false,
+                  plugins: { legend: { labels: { color: isDark ? "#ccc" : "#444", font: { size: 11 } } }, tooltip: { mode: "index", intersect: false } },
+                  scales: {
+                    x: { ticks: { color: isDark ? "#888" : "#666", font: { size: 10 }, maxTicksLimit: 10 }, grid: { color: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" } },
+                    y: { ticks: { color: isDark ? "#888" : "#666", font: { size: 10 }, callback: v => `€${v}` }, grid: { color: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" } },
+                  },
+                }}
+              />
+            </div>
+          </>
+        ) : (
+          <p className="text-xs py-4 text-center" style={{ color: "var(--text-muted)" }}>Sem dados suficientes para previsão.</p>
+        )}
+      </div>
+
     </PageSection>
   );
 }
