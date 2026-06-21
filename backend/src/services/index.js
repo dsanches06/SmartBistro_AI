@@ -19,3 +19,4 @@ export * from "./conversationService.js";
 export * from "./chatHistoryService.js";
 export * from "./logService.js";
 export * from "./reservationService.js";
+export * from "./recommendationService.js";
