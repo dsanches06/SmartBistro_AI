@@ -134,7 +134,7 @@ export function BottomNav({ onOpenChange }) {
 
         {!open && (
           <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center pointer-events-none" style={{ height: 0 }}>
-            <div style={{ position: 'absolute', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)', pointerEvents: 'auto' }}>
+            <div style={{ position: 'absolute', bottom: 'calc(env(safe-area-inset-bottom, 60px) + 8px)', pointerEvents: 'auto' }}>
               <Tab
                 onClick={() => setOpen(true)}
                 icon="fa-chevron-up"
@@ -208,7 +208,7 @@ export function BottomNav({ onOpenChange }) {
 
       {!open && (
         <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center pointer-events-none" style={{ height: 0 }}>
-          <div style={{ position: 'absolute', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)', pointerEvents: 'auto' }}>
+          <div style={{ position: 'absolute', bottom: 'calc(env(safe-area-inset-bottom, 60px) + 8px)', pointerEvents: 'auto' }}>
             <Tab
               onClick={() => setOpen(true)}
               icon="fa-chevron-up"

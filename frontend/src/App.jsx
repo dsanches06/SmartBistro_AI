@@ -157,8 +157,8 @@ function AppContent() {
                   ? `calc(${NAV_OPEN_H} + 1rem)`
                   : '10rem'
                 : isStaff
-                  ? 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)'
-                  : 'calc(env(safe-area-inset-bottom, 0px) + 4rem)'
+                  ? 'calc(env(safe-area-inset-bottom, 60px) + 0.75rem)'
+                  : 'calc(env(safe-area-inset-bottom, 60px) + 4rem)'
               : '1rem',
           }}
           aria-label="Abrir chat IA"
