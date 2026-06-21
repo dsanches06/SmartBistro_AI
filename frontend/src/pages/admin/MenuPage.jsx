@@ -155,7 +155,6 @@ function GestaoCard({ item, togglingId, onEdit, onToggle }) {
           {isToggling ? <i className="fa-solid fa-spinner fa-spin text-xs" /> : item.is_active ? "Desativar" : "Ativar"}
         </button>
       </div>
-      )}
     </ListCard>
   );
 }
