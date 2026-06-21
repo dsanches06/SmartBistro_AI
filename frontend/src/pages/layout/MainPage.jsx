@@ -769,7 +769,7 @@ export default function MainPage({ onNavChange }) {
       </Modal>
 
       {/* BottomNav mobile — show/hide */}
-      <div className="sm:hidden">
+      <div className="md:hidden">
         {navOpen && (
           <div className="fixed inset-0 z-40" onClick={() => setNavOpen(false)} />
         )}
