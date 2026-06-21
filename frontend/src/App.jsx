@@ -156,7 +156,7 @@ function AppContent() {
                 ? isStaff
                   ? `calc(${NAV_OPEN_H} + 1rem)`
                   : '10rem'
-                : isStaff
+                : user
                   ? 'calc(env(safe-area-inset-bottom, 60px) + 0.75rem)'
                   : 'calc(env(safe-area-inset-bottom, 60px) + 4rem)'
               : '1rem',
