@@ -9,9 +9,30 @@ frontend/.env
 frontend/dist
 
 .vercel
-
-# Ignore local verification and temporary files
 .vercel.env
-tmp_check_neon.js
-backend/check_*.mjs
+
+# Test coverage
+coverage/
+backend/coverage/
+frontend/coverage/
+.nyc_output/
+
+# Local environment overrides
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
