@@ -28,11 +28,14 @@ export async function getRecommendations(req, res) {
     const popular     = popularResult[0];
     const userHistory = histResult[0];
 
+    // cacheKey = total de linhas no histórico do utilizador (muda quando faz novo pedido)
+    const cacheKey = userHistory.reduce((sum, h) => sum + Number(h.times), 0);
+
     // Um único request ao AnalyticsAgent (sem pipeline, sem tools)
     const agent           = new AnalyticsAgent();
     const recommendations = await agent.recommend({ menuItems, userHistory, popular, userId });
 
-    return res.json({ recommendations });
+    return res.json({ recommendations, cacheKey });
   } catch (err) {
     console.error('[Recommendations]', err.message);
     return res.status(500).json({ message: 'Erro ao gerar recomendações.' });

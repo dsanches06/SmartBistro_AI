@@ -162,8 +162,10 @@ export default function MainPage({ onNavChange }) {
   const [showRegisterSuccess, setShowRegisterSuccess] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [navOpen, setNavOpen]           = useState(false);
-  // Map item_id → label gerado pela AI (um único request por sessão)
+  // Map item_id → label gerado pela AI
   const [recommendations, setRecommendations] = useState(new Map());
+  // Cache: só faz novo request ao Groq se o histórico de pedidos mudou
+  const recCacheRef = useRef({ userId: null, cacheKey: -1 });
 
   useEffect(() => { onNavChange?.(navOpen); }, [navOpen, onNavChange]);
   const [cart, setCart]                 = useState({});
@@ -300,11 +302,15 @@ export default function MainPage({ onNavChange }) {
       .finally(() => setLoading(false));
   }, []);
 
-  // Fetch único de recomendações após itens carregarem (userId opcional para personalização)
+  // Recomendações: só chama o Groq se o userId mudou ou se os pedidos mudaram (cacheKey diferente)
   useEffect(() => {
-    fetchRecommendations(user?.id ?? null)
-      .then(setRecommendations)
-      .catch(() => setRecommendations(new Map()));
+    const uid = user?.id ?? null;
+    fetchRecommendations(uid).then(({ map, cacheKey }) => {
+      const cached = recCacheRef.current;
+      if (cached.userId === uid && cached.cacheKey === cacheKey) return; // sem alterações
+      recCacheRef.current = { userId: uid, cacheKey };
+      setRecommendations(map);
+    }).catch(() => {});
   }, [user?.id]);
 
   // Admin/manager vai para o dashboard; cliente fica no cardápio.
