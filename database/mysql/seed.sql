@@ -432,3 +432,52 @@ INSERT INTO payments (invoice_id, user_id, amount, payment_method, payment_statu
 (20, 5, 27.50, 'Credit Card', 'Completed', DATE_SUB(NOW(), INTERVAL  3 DAY)),
 (21, 3, 34.00, 'Cash',        'Completed', DATE_SUB(NOW(), INTERVAL  2 DAY)),
 (22, 6, 25.00, 'MB Way',      'Completed', DATE_SUB(NOW(), INTERVAL  1 DAY));
+
+-- =========================================================================
+-- 19. PEDIDOS HISTÓRICOS DO DANILSON (user_id=19) — para Meus Pedidos + Recomendações
+-- IDs: 33–39 (após os 32 existentes)
+-- =========================================================================
+INSERT INTO orders (user_id, table_id, service_type, allergy_restrictions, kitchen_sequence_json, order_status, created_at) VALUES
+(19, NULL, 'Takeaway', NULL, '[{"name":"Hamburguer Gourmet","quantity":2,"price":14.00},{"name":"Batatas Fritas","quantity":1,"price":4.00},{"name":"Coca-Cola","quantity":1,"price":2.50}]',  'Delivered', DATE_SUB(NOW(), INTERVAL  3 DAY)),
+(19, NULL, 'Takeaway', NULL, '[{"name":"Hamburguer Gourmet","quantity":1,"price":14.00},{"name":"Chocolate Mousse","quantity":1,"price":6.00}]',                                              'Delivered', DATE_SUB(NOW(), INTERVAL  6 DAY)),
+(19, NULL, 'Takeaway', NULL, '[{"name":"Frango Assado","quantity":1,"price":14.50},{"name":"Batatas Fritas","quantity":1,"price":4.00},{"name":"Sumol","quantity":1,"price":2.00}]',          'Delivered', DATE_SUB(NOW(), INTERVAL 10 DAY)),
+(19, NULL, 'Takeaway', NULL, '[{"name":"Hamburguer Gourmet","quantity":1,"price":14.00},{"name":"Caesar Salad","quantity":1,"price":9.00}]',                                                  'Delivered', DATE_SUB(NOW(), INTERVAL 14 DAY)),
+(19, NULL, 'Takeaway', NULL, '[{"name":"Bacalhau à Brás","quantity":1,"price":17.00},{"name":"Café","quantity":1,"price":1.50}]',                                                             'Delivered', DATE_SUB(NOW(), INTERVAL 18 DAY)),
+(19, NULL, 'Takeaway', NULL, '[{"name":"Frango Assado","quantity":1,"price":14.50},{"name":"Coca-Cola","quantity":1,"price":2.50},{"name":"Chocolate Mousse","quantity":1,"price":6.00}]',    'Delivered', DATE_SUB(NOW(), INTERVAL 22 DAY)),
+(19, NULL, 'Takeaway', NULL, '[{"name":"Hamburguer Gourmet","quantity":1,"price":14.00},{"name":"Batatas Fritas","quantity":2,"price":4.00}]',                                                'Delivered', DATE_SUB(NOW(), INTERVAL 26 DAY));
+
+-- =========================================================================
+-- 20. ORDER ITEMS DO DANILSON (espelham kitchen_sequence_json acima)
+-- =========================================================================
+INSERT INTO order_items (order_id, item_id, quantity) VALUES
+(33,  2, 2), (33, 19, 1), (33, 25, 1),
+(34,  2, 1), (34, 10, 1),
+(35, 23, 1), (35, 19, 1), (35, 26, 1),
+(36,  2, 1), (36,  4, 1),
+(37, 21, 1), (37, 27, 1),
+(38, 23, 1), (38, 25, 1), (38, 10, 1),
+(39,  2, 1), (39, 19, 2);
+
+-- =========================================================================
+-- 21. FATURAS DO DANILSON (invoice IDs 23–29)
+-- =========================================================================
+INSERT INTO invoices (order_id, subtotal_amount, tax_amount, total_amount, profit_margin, issued_at) VALUES
+(33, 34.50,  4.49, 38.99, 0, DATE_SUB(NOW(), INTERVAL  3 DAY)),
+(34, 20.00,  2.60, 22.60, 0, DATE_SUB(NOW(), INTERVAL  6 DAY)),
+(35, 20.50,  2.67, 23.17, 0, DATE_SUB(NOW(), INTERVAL 10 DAY)),
+(36, 23.00,  2.99, 25.99, 0, DATE_SUB(NOW(), INTERVAL 14 DAY)),
+(37, 18.50,  2.41, 20.91, 0, DATE_SUB(NOW(), INTERVAL 18 DAY)),
+(38, 23.00,  2.99, 25.99, 0, DATE_SUB(NOW(), INTERVAL 22 DAY)),
+(39, 22.00,  2.86, 24.86, 0, DATE_SUB(NOW(), INTERVAL 26 DAY));
+
+-- =========================================================================
+-- 22. PAGAMENTOS DO DANILSON (invoice IDs 23–29, user_id=19)
+-- =========================================================================
+INSERT INTO payments (invoice_id, user_id, amount, payment_method, payment_status, processed_at) VALUES
+(23, 19, 38.99, 'MB Way',      'Completed', DATE_SUB(NOW(), INTERVAL  3 DAY)),
+(24, 19, 22.60, 'Cash',        'Completed', DATE_SUB(NOW(), INTERVAL  6 DAY)),
+(25, 19, 23.17, 'MB Way',      'Completed', DATE_SUB(NOW(), INTERVAL 10 DAY)),
+(26, 19, 25.99, 'Credit Card', 'Completed', DATE_SUB(NOW(), INTERVAL 14 DAY)),
+(27, 19, 20.91, 'Cash',        'Completed', DATE_SUB(NOW(), INTERVAL 18 DAY)),
+(28, 19, 25.99, 'MB Way',      'Completed', DATE_SUB(NOW(), INTERVAL 22 DAY)),
+(29, 19, 24.86, 'Credit Card', 'Completed', DATE_SUB(NOW(), INTERVAL 26 DAY));
