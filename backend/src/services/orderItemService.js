@@ -36,16 +36,18 @@ export const createOrderItem = async (data) => {
   });
 };
 
-// Cria múltiplos itens de pedido de uma vez (bulk insert)
+// Cria múltiplos itens de pedido de uma vez (bulk insert — compatível com MySQL e PostgreSQL)
 export const createOrderItems = async (orderId, items) => {
   if (!items.length) return [];
-  const values = items.map((i) => [orderId, i.item_id, i.quantity ?? 1]);
+  const rows = items.map((i) => [orderId, i.item_id, i.quantity ?? 1]);
+  const placeholders = rows.map(() => '(?,?,?)').join(', ');
+  const flatValues = rows.flat();
   const [result] = await db.query(
-    "INSERT INTO order_items (order_id, item_id, quantity) VALUES ?",
-    [values],
+    `INSERT INTO order_items (order_id, item_id, quantity) VALUES ${placeholders}`,
+    flatValues,
   );
   return items.map((i, idx) => mapOrderitemDTOResponse({
-    id: result.insertId + idx,
+    id: result.insertId ? result.insertId + idx : null,
     order_id: orderId,
     item_id: i.item_id,
     quantity: i.quantity ?? 1,

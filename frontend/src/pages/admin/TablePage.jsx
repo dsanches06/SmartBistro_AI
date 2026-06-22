@@ -716,7 +716,7 @@ export default function TablePage() {
 
       for (const order of (Array.isArray(orders) ? orders : [])) {
         if (!order.table_id) continue;
-        if (['Cancelled', 'Delivered', 'Done'].includes(order.order_status)) continue;
+        if (['Cancelled', 'Done'].includes(order.order_status)) continue;
 
         if (!map[order.table_id]) map[order.table_id] = { emojis: [], customerName: null };
 
@@ -1213,7 +1213,7 @@ export default function TablePage() {
                         <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-secondary)] mb-3">
                           Itens Pedidos
                         </p>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 gap-2 max-h-[180px] overflow-y-auto pr-1">
                           {items.map((name, i) => (
                             <div key={i} className="flex items-center gap-2.5 rounded-xl px-3 py-2"
                               style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
@@ -1230,24 +1230,24 @@ export default function TablePage() {
                   {isOccupied && !detailsLoading && (
                     <div className="mt-6 flex flex-col gap-3">
                       {(activeOrder?.items ?? 0) > 0 ? (
-                        <>
+                        <div className="flex gap-2">
                           <button
                             onClick={() => setShowFazerPedido(true)}
-                            className="w-full rounded-full px-4 py-3 text-sm font-semibold text-white transition"
+                            className="flex-1 rounded-full px-3 py-2 text-xs font-semibold text-white transition"
                             style={{ background: "var(--primary)" }}
                           >
-                            <i className="fa-solid fa-plus mr-2 text-xs" />
-                            Fazer mais pedido
+                            <i className="fa-solid fa-plus mr-1 text-[10px]" />
+                            Mais pedido
                           </button>
                           <button
                             onClick={handleFecharMesa}
                             disabled={actionLoading}
-                            className="w-full rounded-full px-4 py-3 text-sm font-semibold text-white transition disabled:opacity-60"
+                            className="flex-1 rounded-full px-3 py-2 text-xs font-semibold text-white transition disabled:opacity-60"
                             style={{ background: "#ef4444" }}
                           >
-                            {actionLoading ? "A processar..." : "Fechar Mesa e Pagar"}
+                            {actionLoading ? "A processar..." : "Fechar e Pagar"}
                           </button>
-                        </>
+                        </div>
                       ) : (
                         <div className="flex flex-col gap-3 sm:flex-row">
                           <button

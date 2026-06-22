@@ -1,12 +1,13 @@
-import { db } from '../db.js';
+import { db, IS_POSTGRES } from '../db.js';
 
 // Devolve a faturação diária dos últimos N dias (data + total em €).
 export const getDailyRevenue = async (days = 30) => {
+  const intervalExpr = IS_POSTGRES ? "(? || ' days')::interval" : "INTERVAL ? DAY";
   const [rows] = await db.query(
-    `SELECT DATE(created_at) AS date, SUM(total_amount) AS total
+    `SELECT DATE(issued_at) AS date, SUM(total_amount) AS total
      FROM invoices
-     WHERE created_at >= NOW() - (? || ' days')::interval
-     GROUP BY DATE(created_at)
+     WHERE issued_at >= NOW() - ${intervalExpr}
+     GROUP BY DATE(issued_at)
      ORDER BY date ASC`,
     [days]
   );

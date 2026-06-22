@@ -105,36 +105,37 @@ export default function CustomerOrdersPage() {
     finally { setConfirmDeleteId(null); }
   };
 
-  // Passo 1: recolher alergias e calcular total → abre modal de pagamento
-  const handleRepeatAllergyConfirm = async (allergies) => {
+  // Passo 1: recolher alergias e calcular total → abre modal de pagamento.
+  // Usa kitchen_sequence_json como fonte de verdade — sem API calls para não bloquear os botões.
+  const handleRepeatAllergyConfirm = (allergies) => {
     if (!repeatAllergyOrder) return;
-    setRepeatPayLoading(true);
     try {
-      const [originalItems, menuItems] = await Promise.all([
-        orderItemService.getByOrder(repeatAllergyOrder.id).catch(() => []),
-        itemService.getAll().catch(() => []),
-      ]);
-      const priceMap = new Map((Array.isArray(menuItems) ? menuItems : []).map(i => [i.id, i]));
-      const kitchenSeq = (Array.isArray(originalItems) ? originalItems : [])
-        .map(oi => {
-          const m = priceMap.get(oi.item_id);
-          return m ? { name: m.name, quantity: oi.quantity, price: Number(m.price), item_id: oi.item_id } : null;
-        })
-        .filter(Boolean);
+      const rawSeq = typeof repeatAllergyOrder.kitchen_sequence_json === 'string'
+        ? JSON.parse(repeatAllergyOrder.kitchen_sequence_json)
+        : (repeatAllergyOrder.kitchen_sequence_json ?? []);
+
+      const kitchenSeq = (Array.isArray(rawSeq) ? rawSeq : [])
+        .map(item => ({
+          name: item.name,
+          quantity: Number(item.quantity),
+          price: Number(item.price),
+        }))
+        .filter(i => i.name && i.price > 0 && i.quantity > 0);
+
+      if (!kitchenSeq.length) return;
 
       const total = kitchenSeq.reduce((s, i) => s + i.price * i.quantity, 0);
       setRepeatPayInfo({
         originalOrder: repeatAllergyOrder,
         allergies,
         kitchenSeq,
-        originalItems: (Array.isArray(originalItems) ? originalItems : []).filter(oi => priceMap.has(oi.item_id)),
+        originalItems: [],
         total,
       });
       setRepeatAllergyOrder(null);
       setAllergyText("");
       setRepeatPayError("");
     } catch { /* silent */ }
-    finally { setRepeatPayLoading(false); }
   };
 
   // Passo 2: criar pedido + fatura + pagamento atomicamente
@@ -164,12 +165,15 @@ export default function CustomerOrdersPage() {
       const subtotal = Number((total / 1.13).toFixed(2)); // IVA 13% taxa intermédia restauração
       const tax      = Number((total - subtotal).toFixed(2));
 
-      let inv;
-      try {
-        inv = await invoiceService.create({ order_id: order.id, subtotal_amount: subtotal, tax_amount: tax, total_amount: total, profit_margin: 0 });
-      } catch (err) {
-        if (!err?.message?.includes("409")) throw err;
-        inv = await invoiceService.getByOrder(order.id);
+      // Backend auto-cria fatura para Takeaway — tentar GET antes de criar (evita 409)
+      let inv = await invoiceService.getByOrder(order.id).catch(() => null);
+      if (!inv?.id) {
+        try {
+          inv = await invoiceService.create({ order_id: order.id, subtotal_amount: subtotal, tax_amount: tax, total_amount: total, profit_margin: 0 });
+        } catch (err) {
+          if (!err?.message?.includes("409")) throw err;
+          inv = await invoiceService.getByOrder(order.id);
+        }
       }
       if (!inv?.id) throw new Error("Não foi possível obter a fatura.");
 
@@ -425,15 +429,15 @@ export default function CustomerOrdersPage() {
               style={{ background: "var(--surface-2)", border: "1.5px solid var(--border)", color: "var(--text)" }}
             />
             <div className="flex gap-2">
-              <button onClick={() => handleRepeatAllergyConfirm(null)} disabled={repeatPayLoading}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-60"
+              <button onClick={() => handleRepeatAllergyConfirm(null)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
                 style={{ background: "var(--surface-2)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}>
                 Sem alergias
               </button>
-              <button onClick={() => handleRepeatAllergyConfirm(allergyText.trim() || null)} disabled={repeatPayLoading}
-                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-60"
+              <button onClick={() => handleRepeatAllergyConfirm(allergyText.trim() || null)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white"
                 style={{ background: "var(--primary)" }}>
-                {repeatPayLoading ? "A carregar..." : "Continuar"}
+                Continuar
               </button>
             </div>
           </div>

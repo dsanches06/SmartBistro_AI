@@ -19,7 +19,7 @@ import { useTableRefresh } from "@/context/TableRefreshContext";
 
 
 /* ── Ecrã de actividade ── */
-function ActivityScreen({ events }) {
+function ActivityScreen({ events, height = 280 }) {
   const logRef = useRef(null);
 
   useEffect(() => {
@@ -58,8 +58,8 @@ function ActivityScreen({ events }) {
       <div
         ref={logRef}
         style={{
-          height: 72,
-          overflowY: "scroll",
+          height,
+          overflowY: "auto",
           padding: "5px 8px",
           display: "flex",
           flexDirection: "column",
@@ -221,22 +221,25 @@ export default function KdsPage() {
       const ts   = Date.now();
 
       // Aplica overrides, filtra ocultos e ordens já entregues (Delivered não aparece no load)
-      const list = raw
-        .filter(o => !hiddenFromKanban.current.has(o.id))
+      // allForLog: inclui Delivered recentes (últimas 2h) para o ecrã de actividade
+      const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+      const allForLog = raw
+        .filter(o => o.order_status !== 'Cancelled')
         .map(o => {
           const override = statusOverridesRef.current.get(o.id);
           if (override && (KDS_STATUS_ORDER[override] ?? -1) > (KDS_STATUS_ORDER[o.order_status] ?? -1)) {
             return { ...o, order_status: override };
           }
           return o;
-        })
-        .filter(o => o.order_status !== "Delivered");
+        });
+
+      // list: apenas pedidos activos para o kanban (sem Delivered, sem hidden)
+      const list = allForLog
+        .filter(o => !hiddenFromKanban.current.has(o.id) && o.order_status !== 'Delivered');
 
       /* firstSeenAt — registar novos IDs (mutação directa, não reseta ao navegar) */
       for (const o of list) {
         if (!firstSeenAt.current.has(o.id)) {
-          // Para pedidos já em "In Preparation" usa o updated_at real do pedido,
-          // para que orders de seed data (muito antigas) avancem imediatamente
           if (o.order_status === 'In Preparation' && o.updated_at) {
             firstSeenAt.current.set(o.id, new Date(o.updated_at).getTime());
           } else {
@@ -245,37 +248,37 @@ export default function KdsPage() {
         }
       }
 
-      /* Gerar eventos de actividade */
+      /* Gerar eventos de actividade a partir de allForLog (inclui Delivered) */
       const prevMap = new Map(prevOrdersRef.current.map(o => [o.id, o]));
       const newEvts = [];
 
       if (isFirstLoad.current) {
-        /* Primeiro carregamento — snapshot do estado actual (mais recentes primeiro) */
-        const active = list
-          .filter(o => o.order_status && o.order_status !== "Cancelled")
-          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        /* Primeiro carregamento — snapshot recente (últimas 2h, mais recentes primeiro) */
+        const recent = allForLog
+          .filter(o => (ts - new Date(o.updated_at || o.created_at).getTime()) < TWO_HOURS_MS)
+          .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at))
           .slice(0, 20);
-        for (const o of active) {
+        for (const o of recent) {
           const evtType = KDS_STATUS_TO_EVENT[o.order_status];
           if (evtType) newEvts.push(makeKdsEvent(evtType, o));
         }
         isFirstLoad.current = false;
       } else {
-        /* Refreshes seguintes — só mudanças */
-        for (const o of list) {
+        /* Refreshes seguintes — detecta mudanças em todos os estados incluindo Delivered */
+        for (const o of allForLog) {
           const prev = prevMap.get(o.id);
-          if (!prev) {
-            newEvts.push(makeKdsEvent("new_order", o));
-          } else if (prev.order_status !== o.order_status) {
+          if (!prev && o.order_status !== 'Delivered') {
+            newEvts.push(makeKdsEvent('new_order', o));
+          } else if (prev && prev.order_status !== o.order_status) {
             const evtType = KDS_STATUS_TO_EVENT[o.order_status];
             if (evtType) newEvts.push(makeKdsEvent(evtType, o));
           }
         }
       }
 
-      prevOrdersRef.current = list;
+      prevOrdersRef.current = allForLog;
       if (newEvts.length > 0) {
-        setActivityLog(prev => [...newEvts, ...prev].slice(0, 100));
+        setActivityLog(prev => [...newEvts, ...prev].slice(0, 50));
       }
 
       setOrders(list);
@@ -289,7 +292,7 @@ export default function KdsPage() {
 
   useEffect(() => {
     loadData();
-    const id = setInterval(loadData, 30_000);
+    const id = setInterval(loadData, 10_000);
     return () => clearInterval(id);
   }, [loadData]);
 
@@ -334,7 +337,7 @@ export default function KdsPage() {
             color:   '#f59e0b',
             time:    new Date(ts).toTimeString().slice(0, 5),
             message: `Pedido #${order.id} · Mesa ${order.table_id ?? 'Takeaway'} entrou em preparação (${secs}s)`,
-          }, ...prev].slice(0, 100));
+          }, ...prev].slice(0, 50));
 
           triggerOrdersRefresh();
           console.log(`[KDS] Chef → Pedido #${order.id} Em Preparação (${secs}s)`);
@@ -371,89 +374,103 @@ export default function KdsPage() {
   // O KDS é apenas ferramenta de monitorização; os estados avançam automaticamente
   // via OrderAutoAdvance em App.jsx (corre para qualquer utilizador autenticado).
 
-  return (
-    <PageSection>
-
-      {/* ── Linha 1: Título (esq) + Ecrã de Actividade (dir) ── */}
-      <div className="flex flex-col md:flex-row items-start gap-4">
-
-        {/* Card título */}
-        <div className="rounded-[32px] bg-surface px-6 py-4 shadow-sm flex items-center justify-between w-full md:flex-1">
-          <div>
-            <h2 className="text-xl font-semibold">KDS — Cozinha</h2>
-            <p className="mt-0.5 text-sm" style={{ color: "var(--text-secondary)" }}>
-              Pedidos em produção · <span style={{ color: "var(--primary)" }}>🤖 Bot Chef IA</span>
-            </p>
+  const kanbanContent = loading && orders.length === 0 ? (
+    <div className="p-8 text-center text-sm" style={{ color: "var(--text-secondary)" }}>
+      <i className="fa-solid fa-spinner fa-spin mr-2" />A carregar pedidos…
+    </div>
+  ) : error ? (
+    <div className="p-8 text-center text-sm" style={{ background: "#fef2f2", color: "#991b1b" }}>
+      {error}
+      <button onClick={loadData} className="ml-3 underline font-semibold">Tentar novamente</button>
+    </div>
+  ) : (
+    <div className="flex flex-col md:flex-row gap-3 p-4">
+      {KDS_STATUS_COLUMNS.map(col => {
+        const colOrders  = groupedOrders[col.status] || [];
+        const colBg      = isDark ? col.bgDark : col.bg;
+        const labelColor = isDark ? "var(--text)" : "#374151";
+        const emptyColor = isDark ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.18)";
+        return (
+          <div key={col.status} className="w-full md:flex-1" style={{ borderRadius: 12, overflow: "hidden", border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)", boxShadow: "0 1px 3px rgba(0,0,0,0.05)", display: "flex", flexDirection: "column" }}>
+            <div style={{ backgroundColor: colBg, padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)" }}>
+              <div>
+                <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", color: labelColor }}>
+                  {KDS_STATUS_ICON[col.status]} {col.title}
+                </span>
+                {col.subtitle && (
+                  <p style={{ fontSize: 9, color: col.cardBorder, margin: "2px 0 0", fontWeight: 600, letterSpacing: "0.04em" }}>
+                    {col.subtitle}
+                  </p>
+                )}
+              </div>
+              <span style={{ backgroundColor: col.cardBorder, color: "#fff", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+                {colOrders.length}
+              </span>
+            </div>
+            <div style={{ backgroundColor: colBg, padding: 8, minHeight: 160, flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+              {colOrders.map(order => (
+                <OrderCard key={order.id} order={order} cardBorder={col.cardBorder} now={now} firstSeenAt={firstSeenAt.current} estimatedSecsMap={_estimatedSecsMap} />
+              ))}
+              {colOrders.length === 0 && <p style={{ textAlign: "center", color: emptyColor, fontSize: 12, paddingTop: 20 }}>—</p>}
+            </div>
           </div>
-        </div>
+        );
+      })}
+    </div>
+  );
 
-        {/* Card actividade */}
-        <div className="rounded-[32px] bg-surface p-2 shadow-sm w-full md:w-[280px] md:flex-shrink-0">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-semibold" style={{ color: "var(--text)" }}>Ecrã de Actividade</h2>
-            {activityLog.length > 0 && (
-              <button
-                onClick={() => setActivityLog([])}
-                style={{ fontSize: 11, color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer" }}
-              >
-                Limpar
-              </button>
-            )}
-          </div>
-          <ActivityScreen events={activityLog} />
-        </div>
-
-      </div>
-
-      {/* ── Card 2: Kanban ── */}
-      <div className="rounded-[32px] bg-surface shadow-sm" style={{ overflow: "hidden" }}>
-        {loading && orders.length === 0 ? (
-          <div className="rounded-3xl p-8 text-center text-sm" style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
-            <i className="fa-solid fa-spinner fa-spin mr-2" />A carregar pedidos…
-          </div>
-        ) : error ? (
-          <div className="rounded-3xl p-8 text-center text-sm" style={{ background: "#fef2f2", color: "#991b1b" }}>
-            {error}
-            <button onClick={loadData} className="ml-3 underline font-semibold">Tentar novamente</button>
-          </div>
-        ) : (
-          <div className="flex flex-col md:flex-row md:overflow-x-auto gap-3 p-4"
-               style={{ scrollbarWidth: "thin", scrollbarColor: "var(--border) transparent" }}>
-            {KDS_STATUS_COLUMNS.map(col => {
-              const colOrders  = groupedOrders[col.status] || [];
-              const colBg      = isDark ? col.bgDark : col.bg;
-              const labelColor = isDark ? "var(--text)" : "#374151";
-              const emptyColor = isDark ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.18)";
-              return (
-                <div key={col.status} className="w-full md:w-[260px] md:flex-shrink-0" style={{ borderRadius: 12, overflow: "hidden", border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)", boxShadow: "0 1px 3px rgba(0,0,0,0.05)", display: "flex", flexDirection: "column" }}>
-                  <div style={{ backgroundColor: colBg, padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.06)" }}>
-                    <div>
-                      <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", color: labelColor }}>
-                        {KDS_STATUS_ICON[col.status]} {col.title}
-                      </span>
-                      {col.subtitle && (
-                        <p style={{ fontSize: 9, color: col.cardBorder, margin: "2px 0 0", fontWeight: 600, letterSpacing: "0.04em" }}>
-                          {col.subtitle}
-                        </p>
-                      )}
-                    </div>
-                    <span style={{ backgroundColor: col.cardBorder, color: "#fff", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
-                      {colOrders.length}
-                    </span>
-                  </div>
-                  <div style={{ backgroundColor: colBg, padding: 8, minHeight: 160, flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-                    {colOrders.map(order => (
-                      <OrderCard key={order.id} order={order} cardBorder={col.cardBorder} now={now} firstSeenAt={firstSeenAt.current} estimatedSecsMap={_estimatedSecsMap} />
-                    ))}
-                    {colOrders.length === 0 && <p style={{ textAlign: "center", color: emptyColor, fontSize: 12, paddingTop: 20 }}>—</p>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+  const makeLogPanel = (logHeight) => (
+    <div className="rounded-[32px] bg-surface p-3 shadow-sm">
+      <div className="flex items-center justify-between mb-2 px-1">
+        <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>Ecrã de Actividade</span>
+        {activityLog.length > 0 && (
+          <button
+            onClick={() => setActivityLog([])}
+            style={{ fontSize: 10, color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer" }}
+          >
+            Limpar
+          </button>
         )}
       </div>
+      <ActivityScreen events={activityLog} height={logHeight} />
+    </div>
+  );
 
+  const titleCard = (
+    <div className="rounded-[32px] bg-surface px-6 py-4 shadow-sm">
+      <h2 className="text-xl font-semibold">KDS — Cozinha</h2>
+      <p className="mt-0.5 text-sm" style={{ color: "var(--text-secondary)" }}>
+        Pedidos em produção · <span style={{ color: "var(--primary)" }}>🤖 Bot Chef IA</span>
+      </p>
+    </div>
+  );
+
+  const kanbanCard = (
+    <div className="rounded-[32px] bg-surface shadow-sm" style={{ overflow: "hidden" }}>
+      {kanbanContent}
+    </div>
+  );
+
+  return (
+    <PageSection>
+      {/* Mobile: título → log (4 eventos) → kanban */}
+      <div className="flex flex-col gap-4 md:hidden">
+        {titleCard}
+        {makeLogPanel(155)}
+        {kanbanCard}
+      </div>
+
+      {/* Desktop: esq (título + kanban) | dir (log 280px) */}
+      <div className="hidden md:flex md:flex-row md:items-start gap-4">
+        <div className="flex-1 min-w-0 flex flex-col gap-4">
+          {titleCard}
+          {kanbanCard}
+        </div>
+        <div className="w-[280px] flex-shrink-0 self-start">
+          {makeLogPanel(280)}
+        </div>
+      </div>
     </PageSection>
   );
+
 }

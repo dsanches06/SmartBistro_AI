@@ -318,6 +318,24 @@ export const autoAdvance = async (req, res) => {
       if (elapsed >= TARGETS_S[order.order_status]) {
         await updateOrderStatus(order.id, next);
         advanced.push({ id: order.id, from: order.order_status, to: next });
+
+        // Notificações ao cliente: apenas para Takeaway (mesa = Maître entrega presencialmente)
+        const isTakeaway = order.service_type === 'Takeaway';
+        if (isTakeaway && order.user_id) {
+          if (next === 'Ready') {
+            createNotification({
+              user_id: order.user_id,
+              title:   'O teu pedido está pronto! 🍽️',
+              message: `O pedido #${order.id} está pronto. O Maître irá entregá-lo em breve.`,
+            }).catch(() => {});
+          } else if (next === 'Delivered') {
+            createNotification({
+              user_id: order.user_id,
+              title:   'Pedido entregue! 🚀',
+              message: `O pedido #${order.id} foi entregue pelo Maître. Bom apetite!`,
+            }).catch(() => {});
+          }
+        }
       }
     }
 

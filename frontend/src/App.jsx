@@ -145,8 +145,8 @@ function AppContent() {
         </Routes>
       </Suspense>
 
-      {/* Floating chat button */}
-      {!showChat && (
+      {/* Floating chat button — oculto para staff/admin */}
+      {!isStaff && !showChat && (
         <button
           onClick={() => setShowChat(true)}
           className="fixed right-4 z-50 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white flex items-center justify-center shadow-2xl transition-all active:scale-95"
@@ -167,8 +167,8 @@ function AppContent() {
         </button>
       )}
 
-      {/* ChatUI persists across page navigation */}
-      <ChatUI isOpen={showChat} onClose={() => setShowChat(false)} />
+      {/* ChatUI — apenas para visitantes e clientes, não para staff/admin */}
+      {!isStaff && <ChatUI isOpen={showChat} onClose={() => setShowChat(false)} />}
     </TableRefreshProvider>
   );
 }

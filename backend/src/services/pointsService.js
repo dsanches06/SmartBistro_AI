@@ -1,4 +1,4 @@
-import { db } from '../db.js';
+import { db, IS_POSTGRES } from '../db.js';
 
 const MIN_REDEEM  = 50;    // pontos mínimos para resgatar
 const POINT_VALUE = 0.10;  // 1 ponto = €0.10 de desconto
@@ -18,14 +18,25 @@ export async function addPoints(userId, euroAmount, orderId = null) {
   const pts = Math.floor(euroAmount);
   if (pts <= 0) return;
 
-  await db.query(`
-    INSERT INTO user_points (user_id, balance, total_earned)
-    VALUES (?, ?, ?)
-    ON DUPLICATE KEY UPDATE
-      balance      = balance + VALUES(balance),
-      total_earned = total_earned + VALUES(total_earned),
-      updated_at   = CURRENT_TIMESTAMP
-  `, [userId, pts, pts]);
+  if (IS_POSTGRES) {
+    await db.query(`
+      INSERT INTO user_points (user_id, balance, total_earned)
+      VALUES (?, ?, ?)
+      ON CONFLICT (user_id) DO UPDATE SET
+        balance      = user_points.balance + EXCLUDED.balance,
+        total_earned = user_points.total_earned + EXCLUDED.total_earned,
+        updated_at   = CURRENT_TIMESTAMP
+    `, [userId, pts, pts]);
+  } else {
+    await db.query(`
+      INSERT INTO user_points (user_id, balance, total_earned)
+      VALUES (?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        balance      = balance + VALUES(balance),
+        total_earned = total_earned + VALUES(total_earned),
+        updated_at   = CURRENT_TIMESTAMP
+    `, [userId, pts, pts]);
+  }
 
   await db.query(
     'INSERT INTO points_transactions (user_id, amount, description, order_id) VALUES (?, ?, ?, ?)',

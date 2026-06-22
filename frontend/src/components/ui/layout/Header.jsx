@@ -290,7 +290,6 @@ export function Header() {
 
         {/* Controls */}
         <div className="flex items-center gap-1 sm:gap-2">
-          <ThemeToggle />
           {user?.role_id !== 1 && pointsBalance !== null && pointsBalance > 0 && (
             <span className="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold select-none"
               style={{ background: 'rgba(99,102,241,0.12)', color: 'var(--primary)', border: '1px solid rgba(99,102,241,0.2)' }}
@@ -300,6 +299,7 @@ export function Header() {
           )}
           {user?.role_id !== 1 && <NotificationBell user={user} />}
           {user && <UserMenu user={user} onLogout={logout} />}
+          <ThemeToggle />
         </div>
       </header>
     </>
