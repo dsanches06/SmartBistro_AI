@@ -884,7 +884,7 @@ export default function TablePage() {
 
       for (const order of (Array.isArray(orders) ? orders : [])) {
         if (!order.table_id) continue;
-        if (['Cancelled', 'Done'].includes(order.order_status)) continue;
+        if (['Cancelled', 'Done', 'Delivered'].includes(order.order_status)) continue;
 
         if (!map[order.table_id]) map[order.table_id] = { emojis: [], customerName: null };
 
