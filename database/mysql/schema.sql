@@ -83,6 +83,21 @@ CREATE TABLE tables (
     status ENUM('Available', 'Occupied', 'Reserved') DEFAULT 'Available'
 );
 
+-- 8a. Grupos de mesas juntadas
+CREATE TABLE table_groups (
+    id         INT AUTO_INCREMENT PRIMARY KEY,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 8b. Membros de cada grupo
+CREATE TABLE table_group_members (
+    group_id INT NOT NULL,
+    table_id INT NOT NULL,
+    PRIMARY KEY (group_id, table_id),
+    FOREIGN KEY (group_id) REFERENCES table_groups(id) ON DELETE CASCADE,
+    FOREIGN KEY (table_id) REFERENCES tables(id)       ON DELETE CASCADE
+);
+
 -- 9. Reservas
 CREATE TABLE reservations (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -148,6 +163,7 @@ CREATE TABLE orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NULL,
     table_id INT NULL,
+    group_id INT NULL,
     service_type ENUM('Table', 'Takeaway') NOT NULL,
     allergy_restrictions TEXT,
     kitchen_sequence_json JSON NOT NULL,
@@ -155,7 +171,8 @@ CREATE TABLE orders (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-    FOREIGN KEY (table_id) REFERENCES tables(id) ON DELETE SET NULL
+    FOREIGN KEY (table_id) REFERENCES tables(id) ON DELETE SET NULL,
+    FOREIGN KEY (group_id) REFERENCES table_groups(id) ON DELETE SET NULL
 );
 
 -- Itens do Pedido

@@ -28,6 +28,7 @@ import {
   getReservationFunctionDeclaration,
   createReservationFunctionDeclaration,
   cancelReservationFunctionDeclaration,
+  createGroupReservationFunctionDeclaration,
 } from "../functions/reservations/index.js";
 import {
   getCustomerPointsFunctionDeclaration,
@@ -49,6 +50,8 @@ import {
   getReservationsByTableId, createReservation, cancelReservation,
 } from "../../services/index.js";
 
+const fmtTable = (n) => `T${String(n).replace(/^[Tt]/, "").padStart(2, "0")}`;
+
 // ── Ferramentas expostas ao Groq (chatbot orquestrador) ───────────────────────
 const ALL_DECLARATIONS = [
   findOrCreateUserFunctionDeclaration,   // identificar cliente
@@ -59,9 +62,10 @@ const ALL_DECLARATIONS = [
   updateOrderStatusFunctionDeclaration,  // actualizar estado do pedido
   submitOrderFunctionDeclaration,        // submeter pedido ao pipeline Maître→Chef
   generateInvoiceFunctionDeclaration,    // gerar fatura via Cashier (quando cliente pede conta)
-  getReservationFunctionDeclaration,     // consultar reserva
-  createReservationFunctionDeclaration,  // criar reserva
-  cancelReservationFunctionDeclaration,  // cancelar reserva
+  getReservationFunctionDeclaration,              // consultar reserva
+  createReservationFunctionDeclaration,           // criar reserva (1 mesa)
+  cancelReservationFunctionDeclaration,           // cancelar reserva
+  createGroupReservationFunctionDeclaration,      // reserva com mesas juntadas
   getCustomerPointsFunctionDeclaration,  // consultar pontos de fidelidade
   redeemCustomerPointsFunctionDeclaration, // resgatar pontos
 ];
@@ -101,16 +105,36 @@ export const FUNCTION_HANDLERS = {
         ) ?? null
       );
     }
-    // Filtra por status — por defeito só devolve mesas Available (segurança contra modelo sem argumento)
     const statusFilter = args.status || "Available";
-    let filtered = tables.filter((t) => t.status === statusFilter);
-    if (args.min_capacity)
-      filtered = filtered.filter(
-        (t) => t.capacity >= Number(args.min_capacity),
-      );
-    // Ordena por capacidade crescente para atribuir a mesa mais adequada
-    filtered.sort((a, b) => a.capacity - b.capacity);
-    return filtered[0] ?? null;
+    const available = tables.filter((t) => t.status === statusFilter);
+    const minCap = args.min_capacity ? Number(args.min_capacity) : null;
+
+    if (minCap) {
+      const fits = available.filter((t) => t.capacity >= minCap);
+      if (fits.length) {
+        fits.sort((a, b) => a.capacity - b.capacity);
+        return fits[0];
+      }
+      // Nenhuma mesa tem capacidade suficiente sozinha — devolve lista para combinar
+      available.sort((a, b) => b.capacity - a.capacity);
+      const totalCap = available.reduce((s, t) => s + t.capacity, 0);
+      return {
+        no_single_table: true,
+        party_size_requested: minCap,
+        total_combined_capacity: totalCap,
+        available_tables: available.map((t) => ({
+          id: t.id,
+          table_number: t.table_number,
+          capacity: t.capacity,
+        })),
+        suggestion: totalCap >= minCap
+          ? `Juntar mesas: usa create_group_reservation com table_ids que somem >= ${minCap} lugares.`
+          : `Capacidade total insuficiente (${totalCap} lugares para ${minCap} pessoas).`,
+      };
+    }
+
+    available.sort((a, b) => a.capacity - b.capacity);
+    return available[0] ?? null;
   },
   update_table_status: async (args) =>
     updateTableStatus(args.table_id, args.status),
@@ -220,6 +244,52 @@ export const FUNCTION_HANDLERS = {
   },
 
   create_reservation: async (args) => createReservation(args),
+
+  // Reserva para grupo grande: mesa principal + mesas extra marcadas como Reserved
+  create_group_reservation: async (args) => {
+    const { table_ids, user_id, reservation_date, party_size, phone, notes } = args;
+    if (!Array.isArray(table_ids) || table_ids.length < 2)
+      return { error: "São necessárias pelo menos 2 mesas para uma reserva de grupo." };
+
+    const primaryId = table_ids[0];
+    const extraIds  = table_ids.slice(1);
+
+    // Obter nomes das mesas extra para nota
+    const allTables = await getAllTables();
+    const extraLabels = extraIds.map((id) => {
+      const t = allTables.find((t) => t.id === id);
+      return t ? fmtTable(t.table_number) : `#${id}`;
+    });
+    const primaryLabel = (() => {
+      const t = allTables.find((t) => t.id === primaryId);
+      return t ? fmtTable(t.table_number) : `#${primaryId}`;
+    })();
+
+    const groupNote = `Mesas agrupadas: ${[primaryLabel, ...extraLabels].join(", ")} para ${party_size} pessoas.`;
+    const finalNotes = notes ? `${notes} | ${groupNote}` : groupNote;
+
+    // Criar reserva na mesa principal
+    const reservation = await createReservation({
+      user_id: user_id ?? null,
+      table_id: primaryId,
+      reservation_date,
+      party_size,
+      phone: phone ?? null,
+      notes: finalNotes,
+    });
+
+    // Marcar todas as mesas como Reserved
+    await Promise.all(table_ids.map((id) => updateTableStatus(id, "Reserved")));
+
+    return {
+      success: true,
+      reservation_id: reservation.id,
+      primary_table: primaryLabel,
+      extra_tables: extraLabels,
+      party_size,
+      message: `Reserva #${reservation.id} criada para ${party_size} pessoas nas mesas ${[primaryLabel, ...extraLabels].join(" + ")}.`,
+    };
+  },
 
   cancel_reservation: async (args) => {
     const reservation = await getReservationById(args.reservation_id);

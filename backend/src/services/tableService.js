@@ -1,15 +1,17 @@
 import { db } from "../db.js";
 import { mapTableDTOResponse } from "../dto/mapDTO.js";
 
-// Devolve todas as mesas; filtra por status se fornecido
+// Devolve todas as mesas; filtra por status se fornecido; inclui group_id se em grupo
 export const getAllTables = async (status) => {
-  let q = "SELECT * FROM tables";
+  let q = `SELECT t.*, tgm.group_id
+           FROM tables t
+           LEFT JOIN table_group_members tgm ON tgm.table_id = t.id`;
   const p = [];
   if (status) {
-    q += " WHERE status = ?";
+    q += " WHERE t.status = ?";
     p.push(status);
   }
-  q += " ORDER BY table_number ASC";
+  q += " ORDER BY t.table_number ASC";
   const [r] = await db.query(q, p);
   return r.map(mapTableDTOResponse);
 };
@@ -35,10 +37,30 @@ export const getTableReservationById = async (id) => {
 };
 
 export const getTableDetailsById = async (id) => {
-  const [tableRows] = await db.query("SELECT * FROM tables WHERE id = ?", [id]);
+  const [tableRows] = await db.query(
+    `SELECT t.*, tgm.group_id
+     FROM tables t
+     LEFT JOIN table_group_members tgm ON tgm.table_id = t.id
+     WHERE t.id = ?`,
+    [id],
+  );
   if (!tableRows[0]) return null;
 
   const table = mapTableDTOResponse(tableRows[0]);
+  const groupId = tableRows[0].group_id ?? null;
+
+  // Mesas irmãs no grupo (excluindo a própria)
+  let groupInfo = null;
+  if (groupId) {
+    const [siblingRows] = await db.query(
+      `SELECT tgm.table_id, t.table_number, t.capacity
+       FROM table_group_members tgm
+       JOIN tables t ON t.id = tgm.table_id
+       WHERE tgm.group_id = ? AND tgm.table_id != ?`,
+      [groupId, id],
+    );
+    groupInfo = { id: groupId, siblings: siblingRows };
+  }
 
   const [reservationRows] = await db.query(
     `SELECT r.id, r.reservation_date, r.party_size, r.status, r.phone, r.notes,
@@ -51,14 +73,16 @@ export const getTableDetailsById = async (id) => {
     [id],
   );
 
+  // Procurar o pedido activo: pode estar na mesa directamente ou via group_id
   const [orderRows] = await db.query(
     `SELECT o.*, u.name AS user_name
      FROM orders o
      LEFT JOIN users u ON u.id = o.user_id
-     WHERE o.table_id = ? AND o.order_status NOT IN ('Done', 'Cancelled', 'Delivered')
+     WHERE (o.table_id = ? OR (? IS NOT NULL AND o.group_id = ?))
+       AND o.order_status NOT IN ('Done', 'Cancelled', 'Delivered')
      ORDER BY o.created_at DESC
      LIMIT 1`,
-    [id],
+    [id, groupId, groupId],
   );
 
   const activeReservation = reservationRows[0]
@@ -74,7 +98,7 @@ export const getTableDetailsById = async (id) => {
     : null;
 
   if (!orderRows[0]) {
-    return { ...table, activeOrder: null, activeReservation };
+    return { ...table, group: groupInfo, activeOrder: null, activeReservation };
   }
 
   const order = orderRows[0];
@@ -90,6 +114,7 @@ export const getTableDetailsById = async (id) => {
 
   return {
     ...table,
+    group: groupInfo,
     activeReservation,
     activeOrder: {
       id: order.id,

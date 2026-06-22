@@ -19,3 +19,4 @@ export * as chatBotController from "./chatBotController.js";
 export * as logController from "./logController.js";
 export * as reservationController from "./reservationController.js";
 export * as kdsController from "./kdsController.js";
+export * as tableGroupController from "./tableGroupController.js";

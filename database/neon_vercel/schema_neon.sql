@@ -14,6 +14,8 @@ DROP TABLE IF EXISTS stock CASCADE;
 DROP TABLE IF EXISTS ingredients CASCADE;
 DROP TABLE IF EXISTS items CASCADE;
 DROP TABLE IF EXISTS reservations CASCADE;
+DROP TABLE IF EXISTS table_group_members CASCADE;
+DROP TABLE IF EXISTS table_groups CASCADE;
 DROP TABLE IF EXISTS tables CASCADE;
 DROP TABLE IF EXISTS notification CASCADE;
 DROP TABLE IF EXISTS chat_history CASCADE;
@@ -117,6 +119,21 @@ CREATE TABLE tables (
     status table_status DEFAULT 'Available'
 );
 
+-- 8a. Grupos de mesas juntadas
+CREATE TABLE table_groups (
+    id         INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 8b. Membros de cada grupo
+CREATE TABLE table_group_members (
+    group_id INTEGER NOT NULL,
+    table_id INTEGER NOT NULL,
+    PRIMARY KEY (group_id, table_id),
+    FOREIGN KEY (group_id) REFERENCES table_groups(id) ON DELETE CASCADE,
+    FOREIGN KEY (table_id) REFERENCES tables(id)       ON DELETE CASCADE
+);
+
 -- 9. Reservas
 CREATE TABLE reservations (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -174,6 +191,7 @@ CREATE TABLE orders (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id INTEGER,
     table_id INTEGER,
+    group_id INTEGER,
     service_type service_type NOT NULL,
     allergy_restrictions TEXT,
     kitchen_sequence_json JSONB NOT NULL,
@@ -181,7 +199,8 @@ CREATE TABLE orders (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-    FOREIGN KEY (table_id) REFERENCES tables(id) ON DELETE SET NULL
+    FOREIGN KEY (table_id) REFERENCES tables(id) ON DELETE SET NULL,
+    FOREIGN KEY (group_id) REFERENCES table_groups(id) ON DELETE SET NULL
 );
 
 -- 15. Itens do Pedido

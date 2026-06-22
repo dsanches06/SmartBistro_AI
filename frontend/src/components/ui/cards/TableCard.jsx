@@ -13,6 +13,7 @@ export function TableCard({ mesa, isSelected, onSelect, occupancy }) {
   const formato         = getFormatFromCapacity(mesa.capacity ?? 4);
   const isOccupied      = mesa.status === "Occupied";
   const isReserved      = mesa.status === "Reserved";
+  const isGrouped       = !!mesa.group_id;
   const emojis          = occupancy?.emojis ?? [];
   const firstName       = occupancy?.customerName?.split(' ')[0] ?? null;
   const label           = fmtLabel(mesa.table_number);
@@ -40,8 +41,19 @@ export function TableCard({ mesa, isSelected, onSelect, occupancy }) {
     >
       <div className="relative flex h-[72px] w-[72px] items-center justify-center">
 
+        {/* Badge de grupo */}
+        {isGrouped && (
+          <div
+            className="absolute top-0 right-0 z-10 w-4 h-4 rounded-full flex items-center justify-center"
+            style={{ background: "#7c3aed", transform: "translate(20%, -20%)" }}
+            title="Mesa agrupada"
+          >
+            <i className="fa-solid fa-link" style={{ fontSize: 7, color: "#fff" }} />
+          </div>
+        )}
+
         {/* Mesa */}
-        <div className={`flex flex-col items-center justify-center border-2 ${formatoClasse} ${config.mesa}`}>
+        <div className={`flex flex-col items-center justify-center border-2 ${formatoClasse} ${isGrouped ? "border-purple-500" : config.mesa}`}>
           {isOccupied ? (
             <div className="flex flex-wrap items-center justify-center leading-none" style={{ fontSize: 11 }}>
               {emojis.length > 0

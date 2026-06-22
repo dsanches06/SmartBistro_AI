@@ -38,7 +38,13 @@ PAGAMENTO (quando o cliente pedir "conta", "quero pagar", "vou embora"):
 RESERVAS ("quero reservar", "marcar mesa"):
   1. find_or_create_user({ name }) se necessário.
   2. Pergunta nº pessoas, data/hora, telefone (uma pergunta de cada vez).
-  3. get_table({ min_capacity, status: "Available" }) → create_reservation → update_table_status(id, "Reserved").
+  3. get_table({ min_capacity: N, status: "Available" }).
+     - SE devolver uma mesa normal → create_reservation({ table_id, ... }) → update_table_status(id, "Reserved").
+     - SE devolver { no_single_table: true, available_tables: [...] } → nenhuma mesa cabe sozinha:
+       a) Escolhe a combinação mínima de mesas que some >= party_size (prefere menos mesas).
+       b) Informa o cliente: "Vou reservar as mesas X e Y juntas para acomodar o vosso grupo."
+       c) create_group_reservation({ table_ids: [id1, id2, ...], user_id, reservation_date, party_size, phone, notes }).
+          NÃO chames update_table_status separadamente — create_group_reservation já marca todas como Reserved.
 
 Data/hora actual: ${new Date().toLocaleString('pt-PT', { timeZone: 'Europe/Lisbon' })}`.trim();
 };

@@ -314,7 +314,7 @@ function CustomerCombobox({ customers, loading, err, onSelect, placeholder = "Pe
 
 /* ── AtribuirMesaModal ── */
 function AtribuirMesaModal({ table, onClose, onAssigned }) {
-  const [step, setStep]               = useState(1);      // 1=cliente, 2=nº pessoas
+  const [step, setStep]               = useState(1);  // 1=cliente, 2=nº pessoas
   const [customers, setCustomers]     = useState([]);
   const [allTables, setAllTables]     = useState([]);
   const [loading, setLoading]         = useState(true);
@@ -322,6 +322,7 @@ function AtribuirMesaModal({ table, onClose, onAssigned }) {
   const [err, setErr]                 = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
   const [partySize, setPartySize]     = useState("");
+  const [extraTables, setExtraTables] = useState([]); // mesas extra para juntar
 
   useEffect(() => {
     (async () => {
@@ -354,38 +355,68 @@ function AtribuirMesaModal({ table, onClose, onAssigned }) {
   const handleSelectUser = (user) => {
     setSelectedUser(user);
     setPartySize("");
+    setExtraTables([]);
     setErr("");
     setStep(2);
   };
 
-  // Encontra a melhor mesa disponível para o nº de pessoas
   const findBestTable = (size) => {
     const available = allTables.filter(t => t.status === "Available" && t.capacity >= size);
     if (!available.length) return null;
-    // Melhor encaixe: mesa disponível com menor capacidade que ainda caiba o grupo
     return available.sort((a, b) => a.capacity - b.capacity)[0];
   };
 
+  const size = parseInt(partySize) || 0;
+  const previewTable = size >= 1 ? findBestTable(size) : null;
+  const sizeOk = previewTable?.id === table.id;
+  const noSingleFits = size >= 1 && !previewTable;
+
+  // Mesas disponíveis para juntar (exclui a mesa principal e as já seleccionadas)
+  const availableToMerge = allTables.filter(
+    t => t.status === "Available" && t.id !== table.id && !extraTables.find(e => e.id === t.id),
+  );
+  const combinedCapacity = table.capacity + extraTables.reduce((s, t) => s + t.capacity, 0);
+  const isMerging = extraTables.length > 0;
+
+  const toggleExtra = (t) => {
+    setExtraTables(prev =>
+      prev.find(e => e.id === t.id) ? prev.filter(e => e.id !== t.id) : [...prev, t],
+    );
+    setErr("");
+  };
+
   const handleConfirm = async () => {
-    const size = parseInt(partySize);
     if (!size || size < 1) return setErr("Indica o número de pessoas.");
 
-    const assignTable = findBestTable(size);
-    if (!assignTable) {
-      return setErr(`Não há mesa disponível para ${size} ${size === 1 ? "pessoa" : "pessoas"}. Liberta uma mesa com capacidade suficiente.`);
+    if (isMerging) {
+      if (combinedCapacity < size)
+        return setErr(`Capacidade combinada (${combinedCapacity}) insuficiente para ${size} pessoas.`);
+      setAssigning(true); setErr("");
+      try {
+        await tableService.createGroup([table.id, ...extraTables.map(t => t.id)], selectedUser.id);
+        onAssigned();
+        onClose();
+      } catch (e) {
+        setErr(e.message || "Erro ao juntar mesas.");
+        setAssigning(false);
+      }
+      return;
     }
+
+    if (!previewTable)
+      return setErr(`Não há mesa disponível para ${size} ${size === 1 ? "pessoa" : "pessoas"}.`);
 
     setAssigning(true); setErr("");
     try {
       await orderService.create({
         user_id: selectedUser.id,
-        table_id: assignTable.id,
+        table_id: previewTable.id,
         service_type: "Table",
         order_status: "Pending",
         kitchen_sequence_json: [],
         allergy_restrictions: "",
       });
-      await tableService.updateStatus(assignTable.id, "Occupied");
+      await tableService.updateStatus(previewTable.id, "Occupied");
       onAssigned();
       onClose();
     } catch {
@@ -394,22 +425,18 @@ function AtribuirMesaModal({ table, onClose, onAssigned }) {
     }
   };
 
-  // Preview da mesa que vai ser atribuída
-  const previewTable = partySize && parseInt(partySize) >= 1 ? findBestTable(parseInt(partySize)) : null;
-  const sizeOk = previewTable?.id === table.id;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.5)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="rounded-[24px] p-6 w-full max-w-sm shadow-2xl flex flex-col gap-4"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+        style={{ background: "var(--surface)", border: "1px solid var(--border)", maxHeight: "90vh", overflowY: "auto" }}>
 
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {step === 2 && (
-              <button onClick={() => { setStep(1); setSelectedUser(null); setErr(""); }}
+              <button onClick={() => { setStep(1); setSelectedUser(null); setExtraTables([]); setErr(""); }}
                 className="w-7 h-7 flex items-center justify-center rounded-lg"
                 style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
                 <i className="fa-solid fa-arrow-left text-xs" />
@@ -433,13 +460,12 @@ function AtribuirMesaModal({ table, onClose, onAssigned }) {
 
         {assigning ? (
           <p className="text-center text-sm py-6" style={{ color: "var(--text-muted)" }}>
-            <i className="fa-solid fa-spinner fa-spin mr-2" />A atribuir mesa...
+            <i className="fa-solid fa-spinner fa-spin mr-2" />
+            {isMerging ? "A juntar mesas..." : "A atribuir mesa..."}
           </p>
         ) : step === 1 ? (
-          /* Passo 1 — Escolher cliente */
           <CustomerCombobox customers={customers} loading={loading} err={err} onSelect={handleSelectUser} />
         ) : (
-          /* Passo 2 — Nº de pessoas */
           <div className="flex flex-col gap-4">
             {/* Cliente seleccionado */}
             <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
@@ -460,9 +486,9 @@ function AtribuirMesaModal({ table, onClose, onAssigned }) {
                 Quantas pessoas?
               </label>
               <input
-                type="number" min="1" max="20"
+                type="number" min="1" max="50"
                 value={partySize}
-                onChange={e => { setPartySize(e.target.value); setErr(""); }}
+                onChange={e => { setPartySize(e.target.value); setExtraTables([]); setErr(""); }}
                 placeholder="Ex: 2"
                 className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
                 style={{ background: "var(--surface-2)", border: "1.5px solid var(--border)", color: "var(--text)" }}
@@ -470,8 +496,8 @@ function AtribuirMesaModal({ table, onClose, onAssigned }) {
               />
             </div>
 
-            {/* Preview da mesa atribuída */}
-            {previewTable && (
+            {/* Preview mesa única */}
+            {previewTable && !isMerging && (
               <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
                 style={{
                   background: sizeOk ? "rgba(34,197,94,0.08)" : "rgba(245,158,11,0.08)",
@@ -481,17 +507,74 @@ function AtribuirMesaModal({ table, onClose, onAssigned }) {
                 <i className={`fa-solid ${sizeOk ? "fa-circle-check" : "fa-triangle-exclamation"} text-sm`} />
                 {sizeOk
                   ? `Mesa ${table.table_number} tem capacidade (${table.capacity} lugares) ✓`
-                  : `Mesa ${table.table_number} só tem ${table.capacity} lugares. Será atribuída a mesa ${previewTable.table_number} (${previewTable.capacity} lugares).`
+                  : `Será atribuída a mesa ${previewTable.table_number} (${previewTable.capacity} lugares).`
                 }
               </div>
             )}
 
-            {/* Sem mesa disponível */}
-            {partySize && parseInt(partySize) >= 1 && !previewTable && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
-                style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444" }}>
-                <i className="fa-solid fa-circle-xmark text-sm" />
-                Sem mesa disponível para {partySize} {parseInt(partySize) === 1 ? "pessoa" : "pessoas"}.
+            {/* Sem mesa individual — oferecer juntar */}
+            {noSingleFits && (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
+                  style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444" }}>
+                  <i className="fa-solid fa-circle-xmark text-sm" />
+                  Nenhuma mesa tem capacidade para {size} {size === 1 ? "pessoa" : "pessoas"}.
+                  {availableToMerge.length > 0 && " Selecione mesas adicionais para juntar:"}
+                </div>
+              </div>
+            )}
+
+            {/* Seleção de mesas para juntar (mostrado quando sem mesa individual OU quando já escolheu extras) */}
+            {(noSingleFits || isMerging) && availableToMerge.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs font-semibold" style={{ color: "var(--text-secondary)" }}>
+                  <i className="fa-solid fa-link mr-1" style={{ color: "#7c3aed" }} />
+                  Juntar com:
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {/* Mesa principal sempre visível como base */}
+                  <div className="flex flex-col items-center justify-center rounded-xl py-2 px-1 text-center"
+                    style={{ background: "rgba(99,102,241,0.12)", border: "1.5px solid var(--primary)" }}>
+                    <i className="fa-solid fa-lock text-xs mb-0.5" style={{ color: "var(--primary)" }} />
+                    <p className="text-xs font-bold" style={{ color: "var(--primary)" }}>
+                      {formatTableLabel(table.table_number)}
+                    </p>
+                    <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>{table.capacity} lug.</p>
+                  </div>
+                  {availableToMerge.map(t => {
+                    const sel = !!extraTables.find(e => e.id === t.id);
+                    return (
+                      <button key={t.id} type="button" onClick={() => toggleExtra(t)}
+                        className="flex flex-col items-center justify-center rounded-xl py-2 px-1 text-center transition-all"
+                        style={{
+                          background: sel ? "rgba(124,58,237,0.12)" : "var(--surface-2)",
+                          border: sel ? "1.5px solid #7c3aed" : "1px solid var(--border)",
+                        }}>
+                        <i className={`fa-solid ${sel ? "fa-circle-check" : "fa-plus"} text-xs mb-0.5`}
+                          style={{ color: sel ? "#7c3aed" : "var(--text-muted)" }} />
+                        <p className="text-xs font-bold" style={{ color: sel ? "#7c3aed" : "var(--text)" }}>
+                          {formatTableLabel(t.table_number)}
+                        </p>
+                        <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>{t.capacity} lug.</p>
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* Capacidade combinada */}
+                {isMerging && (
+                  <div className="flex items-center justify-between px-3 py-2 rounded-xl text-xs"
+                    style={{
+                      background: combinedCapacity >= size ? "rgba(34,197,94,0.08)" : "rgba(245,158,11,0.08)",
+                      border: `1px solid ${combinedCapacity >= size ? "rgba(34,197,94,0.3)" : "rgba(245,158,11,0.3)"}`,
+                      color: combinedCapacity >= size ? "#22c55e" : "#f59e0b",
+                    }}>
+                    <span><i className="fa-solid fa-users mr-1" />Capacidade combinada: <strong>{combinedCapacity}</strong> lugares</span>
+                    {combinedCapacity >= size
+                      ? <i className="fa-solid fa-circle-check" />
+                      : <span className="font-semibold">({size - combinedCapacity} em falta)</span>
+                    }
+                  </div>
+                )}
               </div>
             )}
 
@@ -499,11 +582,13 @@ function AtribuirMesaModal({ table, onClose, onAssigned }) {
 
             <button
               onClick={handleConfirm}
-              disabled={!partySize || parseInt(partySize) < 1 || !previewTable}
+              disabled={!size || size < 1 || (!previewTable && !isMerging) || (isMerging && combinedCapacity < size)}
               className="w-full py-3 rounded-2xl text-sm font-bold text-white disabled:opacity-40 transition-opacity"
-              style={{ background: "var(--primary)" }}>
-              <i className="fa-solid fa-chair mr-2" />
-              Confirmar Atribuição
+              style={{ background: isMerging ? "#7c3aed" : "var(--primary)" }}>
+              {isMerging
+                ? <><i className="fa-solid fa-link mr-2" />Juntar e Confirmar ({extraTables.length + 1} mesas)</>
+                : <><i className="fa-solid fa-chair mr-2" />Confirmar Atribuição</>
+              }
             </button>
           </div>
         )}
@@ -516,18 +601,23 @@ function AtribuirMesaModal({ table, onClose, onAssigned }) {
 function ReservarModal({ table, onClose, onReserved }) {
   const [step, setStep] = useState(1);
   const [customers, setCustomers] = useState([]);
+  const [allTables, setAllTables] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const todayStr = new Date().toISOString().split("T")[0];
   const [form, setForm] = useState({ date: "", time: "19:00", party_size: "2", phone: "" });
+  const [extraTables, setExtraTables] = useState([]); // mesas extra a reservar juntas
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   useEffect(() => {
-    userService.getAll()
-      .then(data => setCustomers(Array.isArray(data) ? data.filter(c => c.active && c.role_id !== 1) : []))
-      .catch(() => setErr("Erro ao carregar clientes."))
+    Promise.all([userService.getAll(), tableService.getAll()])
+      .then(([users, tables]) => {
+        setCustomers(Array.isArray(users) ? users.filter(c => c.active && c.role_id !== 1) : []);
+        setAllTables(Array.isArray(tables) ? tables : []);
+      })
+      .catch(() => setErr("Erro ao carregar dados."))
       .finally(() => setLoading(false));
   }, []);
 
@@ -538,21 +628,45 @@ function ReservarModal({ table, onClose, onReserved }) {
     setStep(2);
   };
 
+  const partySize = parseInt(form.party_size) || 0;
+  const needsMerge = partySize > table.capacity;
+  const availableToMerge = allTables.filter(
+    t => t.status === "Available" && t.id !== table.id && !extraTables.find(e => e.id === t.id),
+  );
+  const combinedCapacity = table.capacity + extraTables.reduce((s, t) => s + t.capacity, 0);
+
+  const toggleExtra = (t) =>
+    setExtraTables(prev =>
+      prev.find(e => e.id === t.id) ? prev.filter(e => e.id !== t.id) : [...prev, t],
+    );
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.date) return setErr("Data obrigatória.");
     if (!form.time) return setErr("Hora obrigatória.");
+    if (extraTables.length > 0 && combinedCapacity < partySize)
+      return setErr(`Capacidade combinada (${combinedCapacity}) insuficiente para ${partySize} pessoas.`);
+
     setSaving(true); setErr("");
     try {
+      const notes = extraTables.length > 0
+        ? `Mesas agrupadas: ${extraTables.map(t => formatTableLabel(t.table_number)).join(", ")}`
+        : undefined;
+
       await reservationService.create({
         user_id: selectedCustomer.id,
         table_id: table.id,
         reservation_date: `${form.date}T${form.time}:00`,
-        party_size: parseInt(form.party_size) || 2,
+        party_size: partySize || 2,
         phone: form.phone || selectedCustomer.phone || null,
         status: "Pending",
+        notes,
       });
+      // Marcar todas as mesas seleccionadas como Reserved
       await tableService.updateStatus(table.id, "Reserved");
+      for (const t of extraTables) {
+        await tableService.updateStatus(t.id, "Reserved");
+      }
       onReserved();
       onClose();
     } catch {
@@ -567,7 +681,7 @@ function ReservarModal({ table, onClose, onReserved }) {
       style={{ background: "rgba(0,0,0,0.5)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="rounded-[24px] p-6 w-full max-w-sm shadow-2xl"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+        style={{ background: "var(--surface)", border: "1px solid var(--border)", maxHeight: "90vh", overflowY: "auto" }}>
 
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
@@ -596,14 +710,12 @@ function ReservarModal({ table, onClose, onReserved }) {
           ))}
         </div>
 
-        {/* Step 1 — select customer */}
         {step === 1 && (
           <div className="flex flex-col gap-3">
             <CustomerCombobox customers={customers} loading={loading} err={step === 1 ? err : ""} onSelect={handleSelectCustomer} />
           </div>
         )}
 
-        {/* Step 2 — date, time, party size */}
         {step === 2 && (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="rounded-xl px-3 py-2.5" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
@@ -628,11 +740,67 @@ function ReservarModal({ table, onClose, onReserved }) {
             </div>
             <div>
               <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Nº de Pessoas</label>
-              <input type="number" min="1" max="20" value={form.party_size}
-                onChange={e => set("party_size", e.target.value)}
+              <input type="number" min="1" max="50" value={form.party_size}
+                onChange={e => { set("party_size", e.target.value); setExtraTables([]); }}
                 className="w-full rounded-xl px-3 py-2 text-sm outline-none"
                 style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
             </div>
+
+            {/* Aviso + seleção de mesas extra quando party_size > capacity */}
+            {needsMerge && (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
+                  style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.3)", color: "#f59e0b" }}>
+                  <i className="fa-solid fa-triangle-exclamation text-sm" />
+                  Mesa {formatTableLabel(table.table_number)} só tem {table.capacity} lugares. Selecione mesas adicionais:
+                </div>
+                {availableToMerge.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="flex flex-col items-center justify-center rounded-xl py-2 px-1 text-center"
+                      style={{ background: "rgba(99,102,241,0.12)", border: "1.5px solid var(--primary)" }}>
+                      <i className="fa-solid fa-lock text-xs mb-0.5" style={{ color: "var(--primary)" }} />
+                      <p className="text-xs font-bold" style={{ color: "var(--primary)" }}>
+                        {formatTableLabel(table.table_number)}
+                      </p>
+                      <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>{table.capacity} lug.</p>
+                    </div>
+                    {availableToMerge.map(t => {
+                      const sel = !!extraTables.find(e => e.id === t.id);
+                      return (
+                        <button key={t.id} type="button" onClick={() => toggleExtra(t)}
+                          className="flex flex-col items-center justify-center rounded-xl py-2 px-1 text-center transition-all"
+                          style={{
+                            background: sel ? "rgba(124,58,237,0.12)" : "var(--surface-2)",
+                            border: sel ? "1.5px solid #7c3aed" : "1px solid var(--border)",
+                          }}>
+                          <i className={`fa-solid ${sel ? "fa-circle-check" : "fa-plus"} text-xs mb-0.5`}
+                            style={{ color: sel ? "#7c3aed" : "var(--text-muted)" }} />
+                          <p className="text-xs font-bold" style={{ color: sel ? "#7c3aed" : "var(--text)" }}>
+                            {formatTableLabel(t.table_number)}
+                          </p>
+                          <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>{t.capacity} lug.</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {extraTables.length > 0 && (
+                  <div className="flex items-center justify-between px-3 py-2 rounded-xl text-xs"
+                    style={{
+                      background: combinedCapacity >= partySize ? "rgba(34,197,94,0.08)" : "rgba(245,158,11,0.08)",
+                      border: `1px solid ${combinedCapacity >= partySize ? "rgba(34,197,94,0.3)" : "rgba(245,158,11,0.3)"}`,
+                      color: combinedCapacity >= partySize ? "#22c55e" : "#f59e0b",
+                    }}>
+                    <span>Capacidade combinada: <strong>{combinedCapacity}</strong> lugares</span>
+                    {combinedCapacity >= partySize
+                      ? <i className="fa-solid fa-circle-check" />
+                      : <span className="font-semibold">({partySize - combinedCapacity} em falta)</span>
+                    }
+                  </div>
+                )}
+              </div>
+            )}
+
             <div>
               <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Contacto</label>
               <input type="tel" value={form.phone} placeholder={selectedCustomer?.phone || "555-0000"}
@@ -649,8 +817,8 @@ function ReservarModal({ table, onClose, onReserved }) {
               </button>
               <button type="submit" disabled={saving}
                 className="flex-1 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
-                style={{ background: "var(--primary)" }}>
-                {saving ? <i className="fa-solid fa-spinner fa-spin" /> : "Reservar"}
+                style={{ background: extraTables.length > 0 ? "#7c3aed" : "var(--primary)" }}>
+                {saving ? <i className="fa-solid fa-spinner fa-spin" /> : (extraTables.length > 0 ? `Reservar (${extraTables.length + 1} mesas)` : "Reservar")}
               </button>
             </div>
           </form>
@@ -824,8 +992,13 @@ export default function TablePage() {
 
   const handleFecharMesaPaid = async () => {
     try {
-      if (activeOrder?.id)   await orderService.updateStatus(activeOrder.id, "Delivered");
-      if (selectedTable?.id) await tableService.updateStatus(selectedTable.id, "Available");
+      if (activeOrder?.id) await orderService.updateStatus(activeOrder.id, "Delivered");
+      // Se a mesa pertence a um grupo → dissolver o grupo (liberta todas as mesas)
+      if (tableDetails?.group?.id) {
+        await tableService.dissolveGroup(tableDetails.group.id);
+      } else if (selectedTable?.id) {
+        await tableService.updateStatus(selectedTable.id, "Available");
+      }
       await Promise.all([fetchMesas({ silent: true }), fetchOccupancy()]);
       setSelectedTableId(null);
     } catch { /* silently ignore */ }
@@ -888,9 +1061,24 @@ export default function TablePage() {
       ? tableDetails.activeOrder
       : null;
   const activeReservation = tableDetails?.activeReservation ?? null;
+  const tableGroup        = tableDetails?.group ?? null;
   const isReserved        = selectedTable?.status === "Reserved";
   const isAvailable       = selectedTable?.status === "Available";
   const isOccupied        = selectedTable?.status === "Occupied";
+
+  const handleDissolveGroup = async () => {
+    if (!tableGroup?.id) return;
+    setActionLoading(true); setDetailsError(null);
+    try {
+      await tableService.dissolveGroup(tableGroup.id);
+      await Promise.all([fetchMesas({ silent: true }), fetchOccupancy()]);
+      setSelectedTableId(null);
+    } catch (err) {
+      setDetailsError(err.message || "Erro ao dissolver grupo.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const formatReservationDate = (dateStr) => {
     if (!dateStr) return "--";
@@ -1070,6 +1258,15 @@ export default function TablePage() {
                   {selectedTable ? selectedStatusConfig?.label : "--"}
                 </span>
               </div>
+
+              {/* Badge de grupo */}
+              {tableGroup && (
+                <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-2xl text-xs font-semibold"
+                  style={{ background: "rgba(124,58,237,0.10)", border: "1px solid rgba(124,58,237,0.3)", color: "#7c3aed" }}>
+                  <i className="fa-solid fa-link" />
+                  Juntada com {tableGroup.siblings.map(s => formatTableLabel(s.table_number)).join(", ")}
+                </div>
+              )}
 
               {detailsError && (
                 <div className="rounded-[24px] border border-red-200 bg-red-50 p-4 text-sm text-red-700 shadow-sm">
@@ -1266,7 +1463,6 @@ export default function TablePage() {
                             Fazer Pedido
                           </button>
                           {(selectedTable?.capacity ?? 3) <= 2 ? (
-                            // Mesa pequena (≤2 lug.) — consumo opcional
                             <button
                               onClick={handleLiberarMesa}
                               disabled={actionLoading}
@@ -1277,7 +1473,6 @@ export default function TablePage() {
                               {actionLoading ? "A libertar..." : "Fechar Mesa"}
                             </button>
                           ) : (
-                            // Mesa grande (>2 lug.) — consumo obrigatório
                             <button
                               onClick={() => setDetailsError("Consumo obrigatório para mesas com mais de 2 lugares. Regista um pedido primeiro.")}
                               className="flex-1 rounded-full px-4 py-3 text-sm font-semibold transition opacity-50 cursor-not-allowed"
@@ -1288,6 +1483,19 @@ export default function TablePage() {
                             </button>
                           )}
                         </div>
+                      )}
+
+                      {/* Dissolver grupo (só visível quando mesa pertence a grupo) */}
+                      {tableGroup && (
+                        <button
+                          onClick={handleDissolveGroup}
+                          disabled={actionLoading}
+                          className="w-full rounded-full px-4 py-2 text-xs font-semibold transition disabled:opacity-60"
+                          style={{ background: "rgba(124,58,237,0.10)", color: "#7c3aed", border: "1px solid rgba(124,58,237,0.3)" }}
+                        >
+                          <i className="fa-solid fa-link-slash mr-2" />
+                          {actionLoading ? "A dissolver..." : "Dissolver Grupo"}
+                        </button>
                       )}
                     </div>
                   )}

@@ -19,5 +19,6 @@ export * from "./conversationService.js";
 export * from "./chatHistoryService.js";
 export * from "./logService.js";
 export * from "./reservationService.js";
+export * from "./tableGroupService.js";
 export * from "./recommendationService.js";
 export * from "./forecastService.js";

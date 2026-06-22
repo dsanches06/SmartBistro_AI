@@ -87,6 +87,7 @@ export function mapTableDTOResponse(data) {
     table_number: data.table_number,
     capacity: data.capacity,
     status: data.status,
+    group_id: data.group_id ?? null,
   };
 }
 
