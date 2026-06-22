@@ -881,9 +881,10 @@ export default function TablePage() {
 
   // Só mostra o pedido activo se o seu estado não for terminal — evita mostrar
   // dados de pedidos antigos quando a mesa já está livre.
+  // O backend devolve o campo como "status" (não "order_status").
   const TERMINAL_ORDER_STATUSES = ['Delivered', 'Cancelled', 'Done'];
   const activeOrder = tableDetails?.activeOrder &&
-    !TERMINAL_ORDER_STATUSES.includes(tableDetails.activeOrder.order_status)
+    !TERMINAL_ORDER_STATUSES.includes(tableDetails.activeOrder.status)
       ? tableDetails.activeOrder
       : null;
   const activeReservation = tableDetails?.activeReservation ?? null;

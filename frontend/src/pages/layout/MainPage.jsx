@@ -1057,15 +1057,8 @@ function ItemCard({ item, isDark, qty, isClient, onAdd, onRemove, recLabel }) {
         boxShadow: qty > 0 ? "0 2px 12px rgba(99,102,241,0.15)" : "0 2px 8px rgba(0,0,0,0.06)",
       }}
     >
-      {/* Pill de recomendação gerado pela AI */}
-      {recLabel && (
-        <span className="self-start text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full"
-          style={{ background: "rgba(99,102,241,0.12)", color: "var(--primary)", border: "1px solid rgba(99,102,241,0.3)" }}>
-          ✨ {recLabel}
-        </span>
-      )}
-      {/* Icon + name/category */}
-      <div className="flex items-center gap-2">
+      {/* Icon + name/category + pill de recomendação (direita) */}
+      <div className="flex items-start gap-2">
         <div
           className="flex-shrink-0 w-9 h-9 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl text-lg sm:text-2xl"
           style={{ background: isDark ? (meta.bgDark ?? "var(--surface-2)") : (meta.bg ?? "var(--surface-2)") }}
@@ -1080,6 +1073,12 @@ function ItemCard({ item, isDark, qty, isClient, onAdd, onRemove, recLabel }) {
             {meta.label ?? item.category}
           </p>
         </div>
+        {recLabel && (
+          <span className="flex-shrink-0 text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full"
+            style={{ background: "rgba(99,102,241,0.12)", color: "var(--primary)", border: "1px solid rgba(99,102,241,0.3)" }}>
+            ✨ {recLabel}
+          </span>
+        )}
       </div>
 
       {/* Price + action */}

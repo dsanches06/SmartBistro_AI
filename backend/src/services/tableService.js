@@ -55,7 +55,7 @@ export const getTableDetailsById = async (id) => {
     `SELECT o.*, u.name AS user_name
      FROM orders o
      LEFT JOIN users u ON u.id = o.user_id
-     WHERE o.table_id = ? AND o.order_status NOT IN ('Done', 'Cancelled')
+     WHERE o.table_id = ? AND o.order_status NOT IN ('Done', 'Cancelled', 'Delivered')
      ORDER BY o.created_at DESC
      LIMIT 1`,
     [id],
