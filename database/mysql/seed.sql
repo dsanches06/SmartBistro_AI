@@ -302,42 +302,36 @@ INSERT INTO notification (user_id, title, message, is_read, sent_at) VALUES
 (12, 'A sua conta está pronta', 'A sua fatura de 10,74 € está disponível. Pode pagar ao balcão ou via app.',   FALSE, NOW() - INTERVAL 15 MINUTE);
 
 -- =========================================================================
--- 14. PROGRAMA DE PONTOS (1€ pago = 1 ponto | mínimo 50 para resgatar)
+-- 14. PROGRAMA DE PONTOS (1€ pago = 1 ponto | calculados dos pagamentos do seed)
+-- Secção 12 Completed: user16=31pts, user15=21pts
+-- Secção 18 Completed: user3=89, user4=71, user5=84, user6=91, user7=44, user8=32
+-- Secção 22 Completed: user19(Danilson)=177
 -- =========================================================================
-
--- Saldos acumulados por cliente (histórico de pedidos anteriores + pedidos do seed)
 INSERT INTO user_points (user_id, balance, total_earned, total_redeemed) VALUES
-(3,  62,  72,  10),   -- Hugo Neto       — 62 pts (pode resgatar)
-(4,  85,  85,   0),   -- Ana Silva        — 85 pts (pode resgatar)
-(5,  30,  30,   0),   -- Joana Luz        — 30 pts (ainda não pode resgatar)
-(6,  55,  65,  10),   -- Bruno Costa      — 55 pts (pode resgatar)
-(7,  15,  15,   0),   -- Igor Lima        — 15 pts
-(8,  48,  48,   0),   -- Carla Dias       — 48 pts (quase a atingir)
-(9,  20,  30,  10),   -- Filipe Gil       — 20 pts
-(10, 73,  83,  10),   -- Elena Vaz        — 73 pts (pode resgatar)
-(11, 10,  10,   0),   -- David Reas       — 10 pts
-(12, 10,  10,   0),   -- Gina Rosa        — 10 pts (pedido atual pendente)
-(13, 22,  22,   0),   -- Ana Pereira      — 22 pts (pedido atual pendente)
-(14, 41,  41,   0),   -- Carlos Silva     — 41 pts (pedido atual pendente)
-(15, 52,  73,  21),   -- Manuel Santos    — 52 pts (pode resgatar; +21 do pedido atual pago)
-(16, 55,  86,  31);   -- Mariana Costa    — 55 pts (pode resgatar; +31 do pedido atual pago)
+(3,  89,  89,  0),   -- Hugo Neto:    17+19+19+34=89 pts
+(4,  71,  71,  0),   -- Ana Silva:    33+18+20=71 pts
+(5,  84,  84,  0),   -- Joana Luz:    27+30+27=84 pts
+(6,  91,  91,  0),   -- Bruno Costa:  25+41+25=91 pts
+(7,  44,  44,  0),   -- Igor Lima:    24+20=44 pts
+(8,  32,  32,  0),   -- Carla Dias:   16+16=32 pts
+(15, 21,  21,  0),   -- Manuel Santos: 21 pts
+(16, 31,  31,  0),   -- Mariana Costa: 31 pts
+(19, 177, 177, 0);   -- Danilson:     38+22+23+25+20+25+24=177 pts
 
--- Histórico de transações de pontos (últimos movimentos relevantes)
+-- Transações de pontos (uma por pagamento efectuado)
 INSERT INTO points_transactions (user_id, amount, description, order_id) VALUES
-(3,  50, 'Compra anterior',                NULL),
-(3,  22, 'Compra anterior',                NULL),
-(3, -10, 'Desconto resgatado (10 pts)',     NULL),
-(4,  85, 'Acumulado ao longo de vários pedidos', NULL),
-(5,  30, 'Compra anterior',                NULL),
-(6,  65, 'Acumulado ao longo de vários pedidos', NULL),
-(6, -10, 'Desconto resgatado (10 pts)',     NULL),
-(8,  48, 'Acumulado ao longo de vários pedidos', NULL),
-(10, 83, 'Acumulado ao longo de vários pedidos', NULL),
-(10,-10, 'Desconto resgatado (10 pts)',     NULL),
-(15, 52, 'Pedidos anteriores',             NULL),
-(15, 21, 'Compra #2',                      2),
-(16, 55, 'Pedidos anteriores',             NULL),
-(16, 31, 'Compra #1',                      1);
+(3,  17, 'Compra #16', 16), (3,  19, 'Compra #19', 19),
+(3,  19, 'Compra #25', 25), (3,  34, 'Compra #31', 31),
+(4,  33, 'Compra #17', 17), (4,  18, 'Compra #23', 23), (4,  20, 'Compra #29', 29),
+(5,  27, 'Compra #18', 18), (5,  30, 'Compra #24', 24), (5,  27, 'Compra #30', 30),
+(6,  25, 'Compra #20', 20), (6,  41, 'Compra #26', 26), (6,  25, 'Compra #32', 32),
+(7,  24, 'Compra #21', 21), (7,  20, 'Compra #27', 27),
+(8,  16, 'Compra #22', 22), (8,  16, 'Compra #28', 28),
+(15, 21, 'Compra #2',   2),
+(16, 31, 'Compra #1',   1),
+(19, 38, 'Compra #33', 33), (19, 22, 'Compra #34', 34), (19, 23, 'Compra #35', 35),
+(19, 25, 'Compra #36', 36), (19, 20, 'Compra #37', 37), (19, 25, 'Compra #38', 38),
+(19, 24, 'Compra #39', 39);
 
 -- =========================================================================
 -- 15. PEDIDOS HISTÓRICOS (últimos 30 dias — para previsão de receitas e recomendações)
@@ -481,3 +475,4 @@ INSERT INTO payments (invoice_id, user_id, amount, payment_method, payment_statu
 (27, 19, 20.91, 'Cash',        'Completed', DATE_SUB(NOW(), INTERVAL 18 DAY)),
 (28, 19, 25.99, 'MB Way',      'Completed', DATE_SUB(NOW(), INTERVAL 22 DAY)),
 (29, 19, 24.86, 'Credit Card', 'Completed', DATE_SUB(NOW(), INTERVAL 26 DAY));
+
