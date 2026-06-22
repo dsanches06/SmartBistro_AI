@@ -261,8 +261,9 @@ CREATE TABLE weekly_forecast (
     predicted_total  DECIMAL(10,2) NOT NULL,
     actual_total     DECIMAL(10,2) DEFAULT NULL,
     trend            VARCHAR(20) DEFAULT 'estável',
-    summary          TEXT,
-    generated_at     TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    summary               TEXT,
+    forecast_daily_json   TEXT DEFAULT NULL,
+    generated_at          TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (week_start)
 );
 

@@ -64,8 +64,9 @@ export async function generateWeeklyForecast(req, res) {
     const predictedTotal  = forecastDays.slice(0, 7).reduce((s, d) => s + Number(d.predicted ?? 0), 0);
     const trend           = result?.trend   ?? 'estável';
     const summary         = result?.summary ?? '';
+    const forecastDailyJson = forecastDays.slice(0, 7);
 
-    await saveWeeklyForecast({ weekStart, weekEnd, predictedTotal: Math.round(predictedTotal * 100) / 100, trend, summary });
+    await saveWeeklyForecast({ weekStart, weekEnd, predictedTotal: Math.round(predictedTotal * 100) / 100, trend, summary, forecastDailyJson });
 
     // Actualizar actuals de semanas passadas que ainda não têm valor real
     const allForecasts = await getAllWeeklyForecasts();
@@ -78,7 +79,12 @@ export async function generateWeeklyForecast(req, res) {
     }
 
     const saved = await getAllWeeklyForecasts();
-    return res.status(201).json({ weekStart, weekEnd, predictedTotal, trend, summary, allForecasts: saved });
+    return res.status(201).json({
+      weekStart, weekEnd, predictedTotal, trend, summary,
+      historical: dailyRevenue,
+      dailyForecast: forecastDailyJson,
+      allForecasts: saved,
+    });
   } catch (err) {
     console.error('[Forecast Weekly]', err.message);
     return res.status(500).json({ message: 'Erro ao gerar previsão semanal.' });
@@ -91,7 +97,10 @@ export async function getWeeklyForecasts(req, res) {
   try {
     const now = new Date();
     const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-    const allForecasts = await getAllWeeklyForecasts();
+    const [allForecasts, historical] = await Promise.all([
+      getAllWeeklyForecasts(),
+      getDailyRevenue(30),
+    ]);
 
     // Actualizar actuals de semanas passadas sem valor real
     for (const fc of allForecasts) {
@@ -102,7 +111,9 @@ export async function getWeeklyForecasts(req, res) {
       }
     }
 
-    return res.json(allForecasts);
+    // Usar previsão diária guardada do forecast mais recente
+    const latestDailyForecast = allForecasts.find(fc => fc.forecastDaily?.length > 0)?.forecastDaily ?? [];
+    return res.json({ forecasts: allForecasts, historical, dailyForecast: latestDailyForecast });
   } catch (err) {
     console.error('[Forecast Weekly GET]', err.message);
     return res.status(500).json({ message: 'Erro ao obter previsões.' });

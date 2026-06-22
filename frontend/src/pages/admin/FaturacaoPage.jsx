@@ -14,10 +14,10 @@ import {
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { getWeeklyForecasts, generateWeeklyForecast } from "@/services/forecastService.js";
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler } from "chart.js";
-import { Line } from "react-chartjs-2";
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Tooltip, Legend, Filler } from "chart.js";
+import { Line, Doughnut } from "react-chartjs-2";
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Tooltip, Legend, Filler);
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -189,6 +189,8 @@ export default function FaturacaoPage() {
 
   // Previsões semanais — carregadas da BD (não chamam IA automaticamente)
   const [weeklyForecasts, setWeeklyForecasts] = useState([]);
+  const [forecastHistorical, setForecastHistorical] = useState([]);
+  const [forecastDaily, setForecastDaily]     = useState([]);
   const [forecastLoading, setForecastLoading] = useState(false);
   const [forecastError, setForecastError]     = useState("");
   const forecastFetched = useRef(false);
@@ -196,7 +198,11 @@ export default function FaturacaoPage() {
   useEffect(() => {
     if (forecastFetched.current || !token) return;
     forecastFetched.current = true;
-    getWeeklyForecasts(token).then(setWeeklyForecasts).catch(() => {});
+    getWeeklyForecasts(token).then(data => {
+      setWeeklyForecasts(data.forecasts ?? []);
+      setForecastHistorical(data.historical ?? []);
+      setForecastDaily(data.dailyForecast ?? []);
+    }).catch(() => {});
   }, [token]);
 
   const handleGenerateForecast = async () => {
@@ -206,6 +212,8 @@ export default function FaturacaoPage() {
     try {
       const result = await generateWeeklyForecast(token);
       setWeeklyForecasts(result.allForecasts ?? []);
+      setForecastHistorical(result.historical ?? []);
+      setForecastDaily(result.dailyForecast ?? []);
     } catch (err) {
       setForecastError(err.message || "Erro ao gerar previsão.");
     } finally {
@@ -516,7 +524,7 @@ export default function FaturacaoPage() {
         {!selectedInv && (
           <div className="rounded-[20px] bg-[var(--surface)] p-5 shadow-sm flex flex-col gap-4">
             {/* Header */}
-            <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-sm" style={{ color: "var(--text)" }}>Previsão de Receitas</h3>
                 <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
@@ -533,7 +541,7 @@ export default function FaturacaoPage() {
               >
                 {forecastLoading
                   ? <><i className="fa-solid fa-spinner fa-spin" /> A calcular...</>
-                  : <><i className="fa-solid fa-wand-magic-sparkles" /> Calcular próxima semana</>}
+                  : <><i className="fa-solid fa-wand-magic-sparkles" /> Calcular previsão</>}
               </button>
             </div>
 
@@ -546,7 +554,7 @@ export default function FaturacaoPage() {
             {/* Tabela de previsões guardadas */}
             {weeklyForecasts.length === 0 ? (
               <p className="text-xs py-6 text-center" style={{ color: "var(--text-muted)" }}>
-                Ainda não há previsões geradas. Clica em "Calcular próxima semana" para começar.
+                Ainda não há previsões geradas. Clica em "Calcular previsão" para começar.
               </p>
             ) : (
               <div className="overflow-x-auto">
@@ -602,52 +610,97 @@ export default function FaturacaoPage() {
               </div>
             )}
 
-            {/* Gráfico — mostra previsto vs real (null = pontilhado/pendente) */}
-            {weeklyForecasts.length > 0 && (
-              <div style={{ height: 170 }}>
-                <Line
-                  data={{
-                    labels: [...weeklyForecasts].reverse().map(fc => fc.weekStart.slice(5)),
-                    datasets: [
-                      {
-                        label: "Previsto (€)",
-                        data: [...weeklyForecasts].reverse().map(fc => fc.predictedTotal),
-                        borderColor: "rgba(251,146,60,0.9)", backgroundColor: "rgba(251,146,60,0.05)",
-                        borderDash: [5, 4], fill: false, tension: 0.3, pointRadius: 4, pointHoverRadius: 6,
-                      },
-                      {
-                        label: "Real (€)",
-                        data: [...weeklyForecasts].reverse().map(fc => fc.actualTotal),
-                        borderColor: "rgba(99,102,241,0.9)", backgroundColor: "rgba(99,102,241,0.08)",
-                        fill: true, tension: 0.3, pointRadius: 4, pointHoverRadius: 6,
-                        spanGaps: false,
-                      },
-                    ],
-                  }}
-                  options={{
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: {
-                      legend: { labels: { color: isDark ? "#ccc" : "#444", font: { size: 9 } } },
-                      tooltip: {
-                        mode: "index", intersect: false,
-                        callbacks: {
-                          label: ctx => {
-                            const v = ctx.raw;
-                            return `${ctx.dataset.label}: ${v != null ? `€${Number(v).toFixed(2)}` : "pendente"}`;
-                          },
+            {/* Gráfico histórico + previsão diária — aparece assim que há dados */}
+            {(forecastHistorical.length > 0 || forecastDaily.length > 0) && (() => {
+              const histLabels = forecastHistorical.map(d => d.date.slice(5));
+              const fcLabels   = forecastDaily.map(d => (d.date ?? '').slice(5));
+              const labels     = [...histLabels, ...fcLabels];
+              const histData   = forecastHistorical.map(d => d.total);
+              const fcData     = forecastDaily.map(d => Number(d.predicted ?? 0));
+              const nullPad    = forecastHistorical.map(() => null);
+              return (
+                <div style={{ height: 180 }}>
+                  <Line
+                    data={{
+                      labels,
+                      datasets: [
+                        {
+                          label: "Real (€)",
+                          data: [...histData, ...forecastDaily.map(() => null)],
+                          borderColor: "rgba(99,102,241,0.9)", backgroundColor: "rgba(99,102,241,0.08)",
+                          fill: true, tension: 0.4, pointRadius: 2, spanGaps: false,
                         },
+                        {
+                          label: "Previsão (€)",
+                          data: [...nullPad, ...fcData],
+                          borderColor: "rgba(251,146,60,0.9)", backgroundColor: "rgba(251,146,60,0.08)",
+                          borderDash: [5, 4], fill: true, tension: 0.4, pointRadius: 3, spanGaps: false,
+                        },
+                      ],
+                    }}
+                    options={{
+                      responsive: true, maintainAspectRatio: false,
+                      plugins: {
+                        legend: { labels: { color: isDark ? "#ccc" : "#444", font: { size: 9 } } },
+                        tooltip: { mode: "index", intersect: false, callbacks: { label: ctx => `${ctx.dataset.label}: €${Number(ctx.raw ?? 0).toFixed(2)}` } },
                       },
-                    },
-                    scales: {
-                      x: { ticks: { color: isDark ? "#888" : "#666", font: { size: 8 } }, grid: { color: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" } },
-                      y: { ticks: { color: isDark ? "#888" : "#666", font: { size: 8 }, callback: v => `€${v}` }, grid: { color: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" } },
-                    },
-                  }}
-                />
-              </div>
-            )}
+                      scales: {
+                        x: { ticks: { color: isDark ? "#888" : "#666", font: { size: 8 }, maxTicksLimit: 10 }, grid: { color: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" } },
+                        y: { ticks: { color: isDark ? "#888" : "#666", font: { size: 8 }, callback: v => `€${v}` }, grid: { color: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" } },
+                      },
+                    }}
+                  />
+                </div>
+              );
+            })()}
 
-            {/* Última previsão: resumo da IA */}
+            {/* Doughnut: só aparece quando há uma semana passada com real E uma futura com previsão */}
+            {(() => {
+              const futureFC = weeklyForecasts.find(fc => fc.actualTotal == null && fc.predictedTotal > 0);
+              const pastFC   = weeklyForecasts.find(fc => fc.actualTotal != null && fc.predictedTotal > 0);
+              if (!futureFC || !pastFC) return null; // precisa de ambos para comparar
+              const forecast = futureFC.predictedTotal;
+              const actual   = pastFC.actualTotal;
+              if (forecast === 0 && actual === 0) return null;
+              return (
+                <>
+                  <div className="mt-1 mb-0.5">
+                    <span className="text-[10px] font-semibold" style={{ color: "var(--text-muted)" }}>
+                      Receita real vs previsão
+                    </span>
+                  </div>
+                  <div style={{ height: 160 }}>
+                    <Doughnut
+                      data={{
+                        labels: [
+                          `Real (${pastFC?.weekStart ?? '—'})`,
+                          `Previsão (${futureFC?.weekStart ?? '—'})`,
+                        ],
+                        datasets: [{
+                          data: [Number(actual.toFixed(2)), Number(forecast.toFixed(2))],
+                          backgroundColor: ['rgba(99,102,241,0.8)', 'rgba(251,146,60,0.8)'],
+                          borderWidth: 2,
+                          borderColor: isDark ? '#111' : '#fff',
+                        }],
+                      }}
+                      options={{
+                        responsive: true, maintainAspectRatio: false,
+                        cutout: '60%',
+                        plugins: {
+                          legend: {
+                            position: 'bottom',
+                            labels: { color: isDark ? '#ccc' : '#444', font: { size: 9 }, boxWidth: 10, padding: 8 },
+                          },
+                          tooltip: { callbacks: { label: ctx => `${ctx.label}: €${ctx.raw}` } },
+                        },
+                      }}
+                    />
+                  </div>
+                </>
+              );
+            })()}
+
+            {/* Resumo da IA */}
             {weeklyForecasts[0]?.summary && (
               <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
                 <i className="fa-solid fa-robot mr-1" style={{ color: "var(--primary)" }} />

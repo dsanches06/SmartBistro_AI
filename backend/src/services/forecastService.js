@@ -31,28 +31,31 @@ export const getWeeklyActual = async (weekStart, weekEnd) => {
 };
 
 // Guarda ou actualiza a previsão semanal na BD.
-export const saveWeeklyForecast = async ({ weekStart, weekEnd, predictedTotal, trend, summary }) => {
+export const saveWeeklyForecast = async ({ weekStart, weekEnd, predictedTotal, trend, summary, forecastDailyJson = null }) => {
+  const dailyJson = forecastDailyJson ? JSON.stringify(forecastDailyJson) : null;
   if (IS_POSTGRES) {
     await db.query(
-      `INSERT INTO weekly_forecast (week_start, week_end, predicted_total, trend, summary)
-       VALUES (?, ?, ?, ?, ?)
+      `INSERT INTO weekly_forecast (week_start, week_end, predicted_total, trend, summary, forecast_daily_json)
+       VALUES (?, ?, ?, ?, ?, ?)
        ON CONFLICT (week_start) DO UPDATE SET
-         predicted_total = EXCLUDED.predicted_total,
-         trend           = EXCLUDED.trend,
-         summary         = EXCLUDED.summary,
-         generated_at    = CURRENT_TIMESTAMP`,
-      [weekStart, weekEnd, predictedTotal, trend, summary]
+         predicted_total     = EXCLUDED.predicted_total,
+         trend               = EXCLUDED.trend,
+         summary             = EXCLUDED.summary,
+         forecast_daily_json = EXCLUDED.forecast_daily_json,
+         generated_at        = CURRENT_TIMESTAMP`,
+      [weekStart, weekEnd, predictedTotal, trend, summary, dailyJson]
     );
   } else {
     await db.query(
-      `INSERT INTO weekly_forecast (week_start, week_end, predicted_total, trend, summary)
-       VALUES (?, ?, ?, ?, ?)
+      `INSERT INTO weekly_forecast (week_start, week_end, predicted_total, trend, summary, forecast_daily_json)
+       VALUES (?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
-         predicted_total = VALUES(predicted_total),
-         trend           = VALUES(trend),
-         summary         = VALUES(summary),
-         generated_at    = CURRENT_TIMESTAMP`,
-      [weekStart, weekEnd, predictedTotal, trend, summary]
+         predicted_total     = VALUES(predicted_total),
+         trend               = VALUES(trend),
+         summary             = VALUES(summary),
+         forecast_daily_json = VALUES(forecast_daily_json),
+         generated_at        = CURRENT_TIMESTAMP`,
+      [weekStart, weekEnd, predictedTotal, trend, summary, dailyJson]
     );
   }
 };
@@ -78,6 +81,7 @@ export const getAllWeeklyForecasts = async () => {
     actualTotal:    r.actual_total != null ? Number(r.actual_total) : null,
     trend:          r.trend,
     summary:        r.summary,
-    generatedAt:    r.generated_at,
+    generatedAt:   r.generated_at,
+    forecastDaily: r.forecast_daily_json ? JSON.parse(r.forecast_daily_json) : [],
   }));
 };

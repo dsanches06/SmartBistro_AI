@@ -10,11 +10,12 @@ export async function fetchForecast(token, days = 30) {
 }
 
 // Devolve todas as previsões semanais guardadas na BD.
+// Devolve { forecasts, historical, dailyForecast }
 export async function getWeeklyForecasts(token) {
   const res = await fetch(`${BACKEND_URL}/forecast/weekly`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) return [];
+  if (!res.ok) return { forecasts: [], historical: [], dailyForecast: [] };
   return res.json();
 }
 

@@ -1057,7 +1057,7 @@ function ItemCard({ item, isDark, qty, isClient, onAdd, onRemove, recLabel }) {
         boxShadow: qty > 0 ? "0 2px 12px rgba(99,102,241,0.15)" : "0 2px 8px rgba(0,0,0,0.06)",
       }}
     >
-      {/* Icon + name/category + pill de recomendação (direita) */}
+      {/* Linha 1: ícone + nome/categoria + preço (canto direito) */}
       <div className="flex items-start gap-2">
         <div
           className="flex-shrink-0 w-9 h-9 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl text-lg sm:text-2xl"
@@ -1073,19 +1073,21 @@ function ItemCard({ item, isDark, qty, isClient, onAdd, onRemove, recLabel }) {
             {meta.label ?? item.category}
           </p>
         </div>
-        {recLabel && (
-          <span className="flex-shrink-0 text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full"
+        <span className="font-bold text-xs sm:text-sm flex-shrink-0" style={{ color: meta.accent ?? "var(--primary)" }}>
+          {formatMenuPrice(item.price)}
+        </span>
+      </div>
+
+      {/* Linha 2: badge de recomendação (esquerda) + botão carrinho (direita) */}
+      <div className="flex items-center justify-between gap-1">
+        {recLabel ? (
+          <span className="text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full"
             style={{ background: "rgba(99,102,241,0.12)", color: "var(--primary)", border: "1px solid rgba(99,102,241,0.3)" }}>
             ✨ {recLabel}
           </span>
+        ) : (
+          <span />
         )}
-      </div>
-
-      {/* Price + action */}
-      <div className="flex items-center justify-between gap-1">
-        <span className="font-bold text-sm flex-shrink-0" style={{ color: meta.accent ?? "var(--primary)" }}>
-          {formatMenuPrice(item.price)}
-        </span>
         {isClient && (
           qty > 0 ? (
             <div className="flex items-center gap-1">
