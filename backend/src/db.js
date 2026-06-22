@@ -68,4 +68,5 @@ export const mysqlDb = mysql
   .promise();
 
 // Exportação padrão: usa PostgreSQL se DATABASE_URL estiver definido (Vercel/Neon)
-export const db = DATABASE_URL ? { query: pgQuery } : mysqlDb;
+export const IS_POSTGRES = !!DATABASE_URL;
+export const db = IS_POSTGRES ? { query: pgQuery } : mysqlDb;

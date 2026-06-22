@@ -285,19 +285,21 @@ export default function MainPage({ onNavChange }) {
       const subtotal = Number((total / 1.13).toFixed(2)); // IVA 13% taxa intermédia restauração
       const tax      = Number((total - subtotal).toFixed(2));
 
-      // Idempotente: se fatura já existe para este pedido, reutiliza-a
-      let inv;
-      try {
-        inv = await invoiceService.create({
-          order_id:        order.id,
-          subtotal_amount: subtotal,
-          tax_amount:      tax,
-          total_amount:    total,
-          profit_margin:   0,
-        });
-      } catch (err) {
-        if (!err?.message?.includes("409")) throw err;
-        inv = await invoiceService.getByOrder(order.id);
+      // Backend auto-cria fatura para Takeaway — tentar GET antes de criar (evita 409)
+      let inv = await invoiceService.getByOrder(order.id).catch(() => null);
+      if (!inv?.id) {
+        try {
+          inv = await invoiceService.create({
+            order_id:        order.id,
+            subtotal_amount: subtotal,
+            tax_amount:      tax,
+            total_amount:    total,
+            profit_margin:   0,
+          });
+        } catch (err) {
+          if (!err?.message?.includes("409")) throw err;
+          inv = await invoiceService.getByOrder(order.id);
+        }
       }
 
       if (!inv?.id) throw new Error("Não foi possível obter a fatura.");
@@ -487,7 +489,6 @@ export default function MainPage({ onNavChange }) {
               </button>
             </>
           )}
-
           <ThemeToggle />
         </div>
       </header>

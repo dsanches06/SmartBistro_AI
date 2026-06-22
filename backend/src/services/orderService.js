@@ -119,7 +119,7 @@ export const updateOrderStatus = async (id, orderStatus) => {
 // Devolve pedidos que precisam de avançar de estado automaticamente
 export const getOrdersForAutoAdvance = async () => {
   const [r] = await db.query(
-    "SELECT id, order_status, updated_at, created_at FROM orders WHERE order_status IN ('In Preparation', 'Ready')"
+    "SELECT id, user_id, service_type, order_status, updated_at, created_at FROM orders WHERE order_status IN ('In Preparation', 'Ready')"
   );
   return Array.isArray(r) ? r : [];
 };

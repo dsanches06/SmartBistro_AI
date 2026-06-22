@@ -338,3 +338,97 @@ INSERT INTO points_transactions (user_id, amount, description, order_id) VALUES
 (15, 21, 'Compra #2',                      2),
 (16, 55, 'Pedidos anteriores',             NULL),
 (16, 31, 'Compra #1',                      1);
+
+-- =========================================================================
+-- 15. PEDIDOS HISTÓRICOS (últimos 30 dias — para previsão de receitas e recomendações)
+-- Usam utilizadores existentes: 3=Hugo 4=Ana 5=Joana 6=Bruno 7=Igor 8=Carla
+-- Itens: 1=Esparguete(12.50) 2=Hamburguer(14.00) 4=Caesar Salad(9.00)
+--        5=Chicken Wings(11.00) 7=Grilled Salmon(18.50) 10=Choc Mousse(6.00)
+--        11=Tiramisu(7.00) 13=OJ(3.50) 14=Craft Beer(4.50) 17=Bife(16.00)
+--        18=Arroz Marisco(19.50) 19=Batatas(4.00) 23=Frango(14.50) 25=Coca(2.50)
+-- =========================================================================
+INSERT INTO orders (user_id, service_type, kitchen_sequence_json, order_status, created_at) VALUES
+(3, 'Takeaway', '[{"name":"Esparguete Bolonhesa","quantity":1,"price":12.50},{"name":"Craft Beer","quantity":1,"price":4.50}]',     'Delivered', DATE_SUB(NOW(), INTERVAL 29 DAY)),
+(4, 'Takeaway', '[{"name":"Hamburguer Gourmet","quantity":2,"price":14.00},{"name":"Coca-Cola","quantity":2,"price":2.50}]',         'Delivered', DATE_SUB(NOW(), INTERVAL 27 DAY)),
+(5, 'Takeaway', '[{"name":"Grilled Salmon","quantity":1,"price":18.50},{"name":"Caesar Salad","quantity":1,"price":9.00}]',          'Delivered', DATE_SUB(NOW(), INTERVAL 25 DAY)),
+(3, 'Takeaway', '[{"name":"Esparguete Bolonhesa","quantity":1,"price":12.50},{"name":"Tiramisu","quantity":1,"price":7.00}]',        'Delivered', DATE_SUB(NOW(), INTERVAL 23 DAY)),
+(6, 'Takeaway', '[{"name":"Chicken Wings","quantity":2,"price":11.00},{"name":"Batatas Fritas","quantity":1,"price":4.00}]',         'Delivered', DATE_SUB(NOW(), INTERVAL 21 DAY)),
+(7, 'Takeaway', '[{"name":"Arroz de Marisco","quantity":1,"price":19.50},{"name":"Craft Beer","quantity":1,"price":4.50}]',          'Delivered', DATE_SUB(NOW(), INTERVAL 19 DAY)),
+(8, 'Takeaway', '[{"name":"Esparguete Bolonhesa","quantity":1,"price":12.50},{"name":"Orange Juice","quantity":1,"price":3.50}]',    'Delivered', DATE_SUB(NOW(), INTERVAL 17 DAY)),
+(4, 'Takeaway', '[{"name":"Hamburguer Gourmet","quantity":1,"price":14.00},{"name":"Batatas Fritas","quantity":1,"price":4.00}]',    'Delivered', DATE_SUB(NOW(), INTERVAL 15 DAY)),
+(5, 'Takeaway', '[{"name":"Grilled Salmon","quantity":1,"price":18.50},{"name":"Chocolate Mousse","quantity":2,"price":6.00}]',      'Delivered', DATE_SUB(NOW(), INTERVAL 13 DAY)),
+(3, 'Takeaway', '[{"name":"Chicken Wings","quantity":1,"price":11.00},{"name":"Batatas Fritas","quantity":2,"price":4.00}]',         'Delivered', DATE_SUB(NOW(), INTERVAL 11 DAY)),
+(6, 'Takeaway', '[{"name":"Hamburguer Gourmet","quantity":2,"price":14.00},{"name":"Craft Beer","quantity":1,"price":4.50}]',        'Delivered', DATE_SUB(NOW(), INTERVAL  9 DAY)),
+(7, 'Takeaway', '[{"name":"Bife à Casa","quantity":1,"price":16.00},{"name":"Batatas Fritas","quantity":1,"price":4.00}]',           'Delivered', DATE_SUB(NOW(), INTERVAL  7 DAY)),
+(8, 'Takeaway', '[{"name":"Esparguete Bolonhesa","quantity":1,"price":12.50},{"name":"Orange Juice","quantity":1,"price":3.50}]',    'Delivered', DATE_SUB(NOW(), INTERVAL  5 DAY)),
+(4, 'Takeaway', '[{"name":"Bife à Casa","quantity":1,"price":16.00},{"name":"Batatas Fritas","quantity":1,"price":4.00}]',           'Delivered', DATE_SUB(NOW(), INTERVAL  4 DAY)),
+(5, 'Takeaway', '[{"name":"Grilled Salmon","quantity":1,"price":18.50},{"name":"Caesar Salad","quantity":1,"price":9.00}]',          'Delivered', DATE_SUB(NOW(), INTERVAL  3 DAY)),
+(3, 'Takeaway', '[{"name":"Frango Assado","quantity":1,"price":14.50},{"name":"Arroz de Marisco","quantity":1,"price":19.50}]',      'Delivered', DATE_SUB(NOW(), INTERVAL  2 DAY)),
+(6, 'Takeaway', '[{"name":"Hamburguer Gourmet","quantity":1,"price":14.00},{"name":"Chicken Wings","quantity":1,"price":11.00}]',    'Delivered', DATE_SUB(NOW(), INTERVAL  1 DAY));
+
+-- =========================================================================
+-- 16. ORDER ITEMS HISTÓRICOS (espelham kitchen_sequence_json acima)
+-- IDs dos pedidos históricos começam em 16 (após os 15 do seed principal)
+-- =========================================================================
+INSERT INTO order_items (order_id, item_id, quantity) VALUES
+(16, 1,1),(16,14,1),
+(17, 2,2),(17,25,2),
+(18, 7,1),(18, 4,1),
+(19, 1,1),(19,11,1),
+(20, 5,2),(20,19,1),
+(21,18,1),(21,14,1),
+(22, 1,1),(22,13,1),
+(23, 2,1),(23,19,1),
+(24, 7,1),(24,10,2),
+(25, 5,1),(25,19,2),
+(26, 2,2),(26,14,1),
+(27,17,1),(27,19,1),
+(28, 1,1),(28,13,1),
+(29,17,1),(29,19,1),
+(30, 7,1),(30, 4,1),
+(31,23,1),(31,18,1),
+(32, 2,1),(32, 5,1);
+
+-- =========================================================================
+-- 17. FATURAS HISTÓRICAS (IVA 13% — para previsão de receitas funcionar)
+-- =========================================================================
+INSERT INTO invoices (order_id, subtotal_amount, tax_amount, total_amount, profit_margin, issued_at) VALUES
+(16, 15.04,  1.96,  17.00, 0, DATE_SUB(NOW(), INTERVAL 29 DAY)),
+(17, 29.20,  3.80,  33.00, 0, DATE_SUB(NOW(), INTERVAL 27 DAY)),
+(18, 24.34,  3.16,  27.50, 0, DATE_SUB(NOW(), INTERVAL 25 DAY)),
+(19, 17.26,  2.24,  19.50, 0, DATE_SUB(NOW(), INTERVAL 23 DAY)),
+(20, 22.12,  2.88,  25.00, 0, DATE_SUB(NOW(), INTERVAL 21 DAY)),
+(21, 21.24,  2.76,  24.00, 0, DATE_SUB(NOW(), INTERVAL 19 DAY)),
+(22, 14.16,  1.84,  16.00, 0, DATE_SUB(NOW(), INTERVAL 17 DAY)),
+(23, 15.93,  2.07,  18.00, 0, DATE_SUB(NOW(), INTERVAL 15 DAY)),
+(24, 26.99,  3.51,  30.50, 0, DATE_SUB(NOW(), INTERVAL 13 DAY)),
+(25, 16.81,  2.19,  19.00, 0, DATE_SUB(NOW(), INTERVAL 11 DAY)),
+(26, 36.73,  4.77,  41.50, 0, DATE_SUB(NOW(), INTERVAL  9 DAY)),
+(27, 17.70,  2.30,  20.00, 0, DATE_SUB(NOW(), INTERVAL  7 DAY)),
+(28, 14.16,  1.84,  16.00, 0, DATE_SUB(NOW(), INTERVAL  5 DAY)),
+(29, 17.70,  2.30,  20.00, 0, DATE_SUB(NOW(), INTERVAL  4 DAY)),
+(30, 24.34,  3.16,  27.50, 0, DATE_SUB(NOW(), INTERVAL  3 DAY)),
+(31, 30.09,  3.91,  34.00, 0, DATE_SUB(NOW(), INTERVAL  2 DAY)),
+(32, 22.12,  2.88,  25.00, 0, DATE_SUB(NOW(), INTERVAL  1 DAY));
+
+-- =========================================================================
+-- 18. PAGAMENTOS HISTÓRICOS
+-- =========================================================================
+INSERT INTO payments (invoice_id, user_id, amount, payment_method, payment_status, processed_at) VALUES
+(6,  3, 17.00, 'Cash',        'Completed', DATE_SUB(NOW(), INTERVAL 29 DAY)),
+(7,  4, 33.00, 'MB Way',      'Completed', DATE_SUB(NOW(), INTERVAL 27 DAY)),
+(8,  5, 27.50, 'Credit Card', 'Completed', DATE_SUB(NOW(), INTERVAL 25 DAY)),
+(9,  3, 19.50, 'Cash',        'Completed', DATE_SUB(NOW(), INTERVAL 23 DAY)),
+(10, 6, 25.00, 'MB Way',      'Completed', DATE_SUB(NOW(), INTERVAL 21 DAY)),
+(11, 7, 24.00, 'Cash',        'Completed', DATE_SUB(NOW(), INTERVAL 19 DAY)),
+(12, 8, 16.00, 'MB Way',      'Completed', DATE_SUB(NOW(), INTERVAL 17 DAY)),
+(13, 4, 18.00, 'Credit Card', 'Completed', DATE_SUB(NOW(), INTERVAL 15 DAY)),
+(14, 5, 30.50, 'MB Way',      'Completed', DATE_SUB(NOW(), INTERVAL 13 DAY)),
+(15, 3, 19.00, 'Cash',        'Completed', DATE_SUB(NOW(), INTERVAL 11 DAY)),
+(16, 6, 41.50, 'MB Way',      'Completed', DATE_SUB(NOW(), INTERVAL  9 DAY)),
+(17, 7, 20.00, 'Cash',        'Completed', DATE_SUB(NOW(), INTERVAL  7 DAY)),
+(18, 8, 16.00, 'Credit Card', 'Completed', DATE_SUB(NOW(), INTERVAL  5 DAY)),
+(19, 4, 20.00, 'MB Way',      'Completed', DATE_SUB(NOW(), INTERVAL  4 DAY)),
+(20, 5, 27.50, 'Credit Card', 'Completed', DATE_SUB(NOW(), INTERVAL  3 DAY)),
+(21, 3, 34.00, 'Cash',        'Completed', DATE_SUB(NOW(), INTERVAL  2 DAY)),
+(22, 6, 25.00, 'MB Way',      'Completed', DATE_SUB(NOW(), INTERVAL  1 DAY));

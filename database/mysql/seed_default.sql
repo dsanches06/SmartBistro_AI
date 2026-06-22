@@ -184,3 +184,4 @@ INSERT INTO recipe_items (item_id, ingredient_id, required_quantity) VALUES
 (23,  4, 0.30), (23,  8, 0.01), (23, 19, 0.02),
 (24, 34, 0.20), (24, 19, 0.02),
 (25, 35, 0.33), (26, 36, 0.33), (27, 33, 0.01), (28, 17, 1.00);
+

@@ -14,10 +14,10 @@ import {
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { fetchForecast } from "@/services/forecastService.js";
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler } from "chart.js";
-import { Line } from "react-chartjs-2";
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Tooltip, Legend, Filler } from "chart.js";
+import { Line, Doughnut } from "react-chartjs-2";
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Tooltip, Legend, Filler);
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -499,7 +499,8 @@ export default function FaturacaoPage() {
                     {forecastData.summary}
                   </p>
                 )}
-                <div style={{ height: 200 }}>
+                {/* Gráfico de linha: histórico + previsão */}
+                <div style={{ height: 180 }}>
                   <Line
                     data={{
                       labels: [
@@ -527,6 +528,57 @@ export default function FaturacaoPage() {
                     }}
                   />
                 </div>
+
+                {/* Semi-circle: receitas por semana (sempre 4 semanas) */}
+                {(() => {
+                  const hist = forecastData.historical || [];
+                  const COLORS = [
+                    '#FFC300',
+                    '#C0392B',
+                    '#1A7A6E',
+                    '#5B2C6F',
+                  ];
+                  // Sempre 4 semanas: divide os últimos 28 dias em 4 blocos de 7
+                  const last28 = hist.slice(-28);
+                  const weeks = Array.from({ length: 4 }, (_, i) => {
+                    const chunk = last28.slice(i * 7, i * 7 + 7);
+                    return chunk.reduce((s, d) => s + Number(d.total), 0);
+                  });
+                  if (weeks.every(v => v === 0)) return null;
+                  return (
+                    <>
+                      <div className="mt-8 mb-2 flex items-center gap-1.5">
+                        <span className="text-[10px] font-semibold" style={{ color: "var(--text-muted)" }}>
+                          Receitas — últimas 4 semanas
+                        </span>
+                      </div>
+                      <div style={{ height: 170 }}>
+                        <Doughnut
+                          data={{
+                            labels: ['Sem. 1', 'Sem. 2', 'Sem. 3', 'Sem. 4'],
+                            datasets: [{
+                              data: weeks.map(v => Number(v.toFixed(2))),
+                              backgroundColor: COLORS,
+                              borderWidth: 2,
+                              borderColor: isDark ? '#111' : '#fff',
+                            }],
+                          }}
+                          options={{
+                            responsive: true, maintainAspectRatio: false,
+                            cutout: '60%',
+                            plugins: {
+                              legend: {
+                                position: 'right',
+                                labels: { color: isDark ? "#ccc" : "#444", font: { size: 9 }, boxWidth: 10, padding: 8 },
+                              },
+                              tooltip: { callbacks: { label: ctx => `${ctx.label}: €${ctx.raw}` } },
+                            },
+                          }}
+                        />
+                      </div>
+                    </>
+                  );
+                })()}
               </>
             ) : (
               <p className="text-xs py-4 text-center" style={{ color: "var(--text-muted)" }}>Sem dados suficientes para previsão.</p>
