@@ -13,11 +13,11 @@ import {
 } from "@/utils";
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
-import { fetchForecast } from "@/services/forecastService.js";
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Tooltip, Legend, Filler } from "chart.js";
-import { Line, Doughnut } from "react-chartjs-2";
+import { getWeeklyForecasts, generateWeeklyForecast } from "@/services/forecastService.js";
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler } from "chart.js";
+import { Line } from "react-chartjs-2";
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Tooltip, Legend, Filler);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler);
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -179,6 +179,7 @@ export default function FaturacaoPage() {
   const [selectedInv, setSelectedInv] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [deleteConfirmInv, setDeleteConfirmInv] = useState(null);
   const [sortCol, setSortCol] = useState(null);
   const [sortDir, setSortDir] = useState("desc");
   const handleSort = (col) => {
@@ -186,26 +187,45 @@ export default function FaturacaoPage() {
     else { setSortCol(col); setSortDir(col === "date" ? "desc" : "asc"); }
   };
 
-  // Previsão de receitas — um único request por sessão
-  const [forecastData, setForecastData]     = useState(null);
+  // Previsões semanais — carregadas da BD (não chamam IA automaticamente)
+  const [weeklyForecasts, setWeeklyForecasts] = useState([]);
   const [forecastLoading, setForecastLoading] = useState(false);
+  const [forecastError, setForecastError]     = useState("");
   const forecastFetched = useRef(false);
+
   useEffect(() => {
     if (forecastFetched.current || !token) return;
     forecastFetched.current = true;
-    setForecastLoading(true);
-    fetchForecast(token, 30).then(setForecastData).catch(() => {}).finally(() => setForecastLoading(false));
+    getWeeklyForecasts(token).then(setWeeklyForecasts).catch(() => {});
   }, [token]);
 
-  // Apagar fatura
-  const handleDelete = async (inv) => {
-    if (!window.confirm(`Apagar fatura ${fmtInvoiceNumber(inv)}?`)) return;
+  const handleGenerateForecast = async () => {
+    if (forecastLoading) return;
+    setForecastLoading(true);
+    setForecastError("");
+    try {
+      const result = await generateWeeklyForecast(token);
+      setWeeklyForecasts(result.allForecasts ?? []);
+    } catch (err) {
+      setForecastError(err.message || "Erro ao gerar previsão.");
+    } finally {
+      setForecastLoading(false);
+    }
+  };
+
+  // Apagar fatura — abre modal de confirmação
+  const handleDelete = (inv) => setDeleteConfirmInv(inv);
+
+  const handleDeleteConfirm = async () => {
+    const inv = deleteConfirmInv;
+    if (!inv) return;
+    setDeleteConfirmInv(null);
     setDeletingId(inv.id);
     try {
       await invoiceService.remove(inv.id);
       if (selectedInv?.id === inv.id) setSelectedInv(null);
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
-    } catch { alert("Erro ao apagar fatura."); }
+    } catch { /* silent */ }
     finally { setDeletingId(null); }
   };
 
@@ -324,6 +344,32 @@ export default function FaturacaoPage() {
   // ── render ──────────────────────────────────────────────────────────────────
   return (
     <PageSection title="Faturação" description="Faturas, pagamentos e receitas">
+
+      {deleteConfirmInv && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+            <h3 className="text-base font-semibold mb-2" style={{ color: "var(--text)" }}>Apagar fatura</h3>
+            <p className="text-sm mb-5" style={{ color: "var(--text-muted)" }}>
+              Tem a certeza que deseja apagar a fatura{" "}
+              <span className="font-semibold" style={{ color: "var(--text)" }}>{fmtInvoiceNumber(deleteConfirmInv)}</span>?
+              Esta ação não pode ser desfeita.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setDeleteConfirmInv(null)}
+                className="px-4 py-2 text-sm rounded-lg border"
+                style={{ background: "var(--surface-2)", color: "var(--text-muted)", borderColor: "var(--border)" }}>
+                Cancelar
+              </button>
+              <button onClick={handleDeleteConfirm}
+                className="px-4 py-2 text-sm rounded-lg text-white"
+                style={{ background: "#B91C1C" }}>
+                Apagar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showCreate && (
         <NovaFaturaModal
@@ -468,7 +514,8 @@ export default function FaturacaoPage() {
 
         {/* Forecast panel — ao lado da tabela, empilha em mobile */}
         {!selectedInv && (
-          <div className="rounded-[20px] bg-[var(--surface)] p-5 shadow-sm flex flex-col gap-3">
+          <div className="rounded-[20px] bg-[var(--surface)] p-5 shadow-sm flex flex-col gap-4">
+            {/* Header */}
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-sm" style={{ color: "var(--text)" }}>Previsão de Receitas</h3>
@@ -477,111 +524,135 @@ export default function FaturacaoPage() {
                   ✨ AI
                 </span>
               </div>
-              {forecastData?.trend && (
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                  style={{
-                    background: forecastData.trend === "crescimento" ? "rgba(34,197,94,0.1)" : forecastData.trend === "queda" ? "rgba(239,68,68,0.1)" : "rgba(148,163,184,0.1)",
-                    color: forecastData.trend === "crescimento" ? "#22c55e" : forecastData.trend === "queda" ? "#ef4444" : "var(--text-muted)",
-                  }}>
-                  {forecastData.trend === "crescimento" ? "📈" : forecastData.trend === "queda" ? "📉" : "➡️"} {forecastData.trend}
-                </span>
-              )}
+              <button
+                onClick={handleGenerateForecast}
+                disabled={forecastLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white disabled:opacity-60 transition-opacity"
+                style={{ background: "var(--primary)" }}
+                title="Calcular previsão para a próxima semana com IA e guardar na BD"
+              >
+                {forecastLoading
+                  ? <><i className="fa-solid fa-spinner fa-spin" /> A calcular...</>
+                  : <><i className="fa-solid fa-wand-magic-sparkles" /> Calcular próxima semana</>}
+              </button>
             </div>
-            {forecastLoading ? (
-              <div className="flex items-center justify-center gap-2 py-10 text-xs" style={{ color: "var(--text-muted)" }}>
-                <i className="fa-solid fa-spinner fa-spin" /> A gerar previsão com IA...
-              </div>
-            ) : forecastData ? (
-              <>
-                {forecastData.summary && (
-                  <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
-                    <i className="fa-solid fa-robot mr-1" style={{ color: "var(--primary)" }} />
-                    {forecastData.summary}
-                  </p>
-                )}
-                {/* Gráfico de linha: histórico + previsão */}
-                <div style={{ height: 180 }}>
-                  <Line
-                    data={{
-                      labels: [
-                        ...(forecastData.historical || []).map(d => d.date.slice(5)),
-                        ...(forecastData.forecast   || []).map(d => d.date.slice(5)),
-                      ],
-                      datasets: [
-                        {
-                          label: "Real (€)", data: [...(forecastData.historical || []).map(d => d.total), ...(forecastData.forecast || []).map(() => null)],
-                          borderColor: "rgba(99,102,241,0.9)", backgroundColor: "rgba(99,102,241,0.08)", fill: true, tension: 0.4, pointRadius: 2,
-                        },
-                        {
-                          label: "Previsão (€)", data: [...(forecastData.historical || []).map(() => null), ...(forecastData.forecast || []).map(d => d.predicted)],
-                          borderColor: "rgba(251,146,60,0.9)", backgroundColor: "rgba(251,146,60,0.08)", borderDash: [5, 4], fill: true, tension: 0.4, pointRadius: 2,
-                        },
-                      ],
-                    }}
-                    options={{
-                      responsive: true, maintainAspectRatio: false,
-                      plugins: { legend: { labels: { color: isDark ? "#ccc" : "#444", font: { size: 10 } } }, tooltip: { mode: "index", intersect: false } },
-                      scales: {
-                        x: { ticks: { color: isDark ? "#888" : "#666", font: { size: 9 }, maxTicksLimit: 8 }, grid: { color: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" } },
-                        y: { ticks: { color: isDark ? "#888" : "#666", font: { size: 9 }, callback: v => `€${v}` }, grid: { color: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" } },
-                      },
-                    }}
-                  />
-                </div>
 
-                {/* Semi-circle: receitas por semana (sempre 4 semanas) */}
-                {(() => {
-                  const hist = forecastData.historical || [];
-                  const COLORS = [
-                    '#FFC300',
-                    '#C0392B',
-                    '#1A7A6E',
-                    '#5B2C6F',
-                  ];
-                  // Sempre 4 semanas: divide os últimos 28 dias em 4 blocos de 7
-                  const last28 = hist.slice(-28);
-                  const weeks = Array.from({ length: 4 }, (_, i) => {
-                    const chunk = last28.slice(i * 7, i * 7 + 7);
-                    return chunk.reduce((s, d) => s + Number(d.total), 0);
-                  });
-                  if (weeks.every(v => v === 0)) return null;
-                  return (
-                    <>
-                      <div className="mt-8 mb-2 flex items-center gap-1.5">
-                        <span className="text-[10px] font-semibold" style={{ color: "var(--text-muted)" }}>
-                          Receitas — últimas 4 semanas
-                        </span>
-                      </div>
-                      <div style={{ height: 170 }}>
-                        <Doughnut
-                          data={{
-                            labels: ['Sem. 1', 'Sem. 2', 'Sem. 3', 'Sem. 4'],
-                            datasets: [{
-                              data: weeks.map(v => Number(v.toFixed(2))),
-                              backgroundColor: COLORS,
-                              borderWidth: 2,
-                              borderColor: isDark ? '#111' : '#fff',
-                            }],
-                          }}
-                          options={{
-                            responsive: true, maintainAspectRatio: false,
-                            cutout: '60%',
-                            plugins: {
-                              legend: {
-                                position: 'right',
-                                labels: { color: isDark ? "#ccc" : "#444", font: { size: 9 }, boxWidth: 10, padding: 8 },
-                              },
-                              tooltip: { callbacks: { label: ctx => `${ctx.label}: €${ctx.raw}` } },
-                            },
-                          }}
-                        />
-                      </div>
-                    </>
-                  );
-                })()}
-              </>
+            {forecastError && (
+              <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444" }}>
+                {forecastError}
+              </p>
+            )}
+
+            {/* Tabela de previsões guardadas */}
+            {weeklyForecasts.length === 0 ? (
+              <p className="text-xs py-6 text-center" style={{ color: "var(--text-muted)" }}>
+                Ainda não há previsões geradas. Clica em "Calcular próxima semana" para começar.
+              </p>
             ) : (
-              <p className="text-xs py-4 text-center" style={{ color: "var(--text-muted)" }}>Sem dados suficientes para previsão.</p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                      {["Semana", "Previsto", "Real", "Diferença", "Tendência"].map(h => (
+                        <th key={h} className="pb-2 text-left font-semibold pr-3"
+                          style={{ color: "var(--text-muted)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {weeklyForecasts.map(fc => {
+                      const isPast = fc.weekEnd < new Date().toISOString().slice(0, 10);
+                      const diff = fc.actualTotal != null ? fc.actualTotal - fc.predictedTotal : null;
+                      const diffColor = diff == null ? "var(--text-muted)" : diff >= 0 ? "#22c55e" : "#ef4444";
+                      return (
+                        <tr key={fc.id} style={{ borderBottom: "1px solid var(--border)" }}>
+                          <td className="py-2.5 pr-3" style={{ color: "var(--text)" }}>
+                            <div className="font-medium">{fc.weekStart}</div>
+                            <div style={{ color: "var(--text-muted)", fontSize: 9 }}>→ {fc.weekEnd}</div>
+                          </td>
+                          <td className="py-2.5 pr-3 font-semibold" style={{ color: "var(--primary)" }}>
+                            €{Number(fc.predictedTotal).toFixed(2)}
+                          </td>
+                          <td className="py-2.5 pr-3" style={{ color: "var(--text)" }}>
+                            {fc.actualTotal != null
+                              ? <span className="font-semibold">€{Number(fc.actualTotal).toFixed(2)}</span>
+                              : <span style={{ color: "var(--text-muted)" }}>{isPast ? "—" : "pendente"}</span>}
+                          </td>
+                          <td className="py-2.5 pr-3 font-semibold" style={{ color: diffColor }}>
+                            {diff != null
+                              ? `${diff >= 0 ? "+" : ""}€${diff.toFixed(2)}`
+                              : "—"}
+                          </td>
+                          <td className="py-2.5">
+                            <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold"
+                              style={{
+                                background: fc.trend === "crescimento" ? "rgba(34,197,94,0.1)" : fc.trend === "queda" ? "rgba(239,68,68,0.1)" : "rgba(148,163,184,0.1)",
+                                color: fc.trend === "crescimento" ? "#22c55e" : fc.trend === "queda" ? "#ef4444" : "var(--text-muted)",
+                              }}>
+                              {fc.trend === "crescimento" ? "📈" : fc.trend === "queda" ? "📉" : "➡️"} {fc.trend}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Gráfico — mostra previsto vs real (null = pontilhado/pendente) */}
+            {weeklyForecasts.length > 0 && (
+              <div style={{ height: 170 }}>
+                <Line
+                  data={{
+                    labels: [...weeklyForecasts].reverse().map(fc => fc.weekStart.slice(5)),
+                    datasets: [
+                      {
+                        label: "Previsto (€)",
+                        data: [...weeklyForecasts].reverse().map(fc => fc.predictedTotal),
+                        borderColor: "rgba(251,146,60,0.9)", backgroundColor: "rgba(251,146,60,0.05)",
+                        borderDash: [5, 4], fill: false, tension: 0.3, pointRadius: 4, pointHoverRadius: 6,
+                      },
+                      {
+                        label: "Real (€)",
+                        data: [...weeklyForecasts].reverse().map(fc => fc.actualTotal),
+                        borderColor: "rgba(99,102,241,0.9)", backgroundColor: "rgba(99,102,241,0.08)",
+                        fill: true, tension: 0.3, pointRadius: 4, pointHoverRadius: 6,
+                        spanGaps: false,
+                      },
+                    ],
+                  }}
+                  options={{
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                      legend: { labels: { color: isDark ? "#ccc" : "#444", font: { size: 9 } } },
+                      tooltip: {
+                        mode: "index", intersect: false,
+                        callbacks: {
+                          label: ctx => {
+                            const v = ctx.raw;
+                            return `${ctx.dataset.label}: ${v != null ? `€${Number(v).toFixed(2)}` : "pendente"}`;
+                          },
+                        },
+                      },
+                    },
+                    scales: {
+                      x: { ticks: { color: isDark ? "#888" : "#666", font: { size: 8 } }, grid: { color: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" } },
+                      y: { ticks: { color: isDark ? "#888" : "#666", font: { size: 8 }, callback: v => `€${v}` }, grid: { color: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" } },
+                    },
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Última previsão: resumo da IA */}
+            {weeklyForecasts[0]?.summary && (
+              <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
+                <i className="fa-solid fa-robot mr-1" style={{ color: "var(--primary)" }} />
+                {weeklyForecasts[0].summary}
+              </p>
             )}
           </div>
         )}

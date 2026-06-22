@@ -2,10 +2,10 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Chart as ChartJS,
-  CategoryScale, LinearScale, BarElement,
+  CategoryScale, LinearScale, BarElement, PointElement, LineElement,
   ArcElement, Tooltip, Legend, Filler,
 } from "chart.js";
-import { Bar, Doughnut } from "react-chartjs-2";
+import { Bar, Line, Doughnut } from "react-chartjs-2";
 import { PageSection } from "@/components";
 import {
   invoiceService, orderService, orderItemService,
@@ -22,7 +22,7 @@ import {
   DONUT_COLORS, BAR_STATUS_COLORS, STATUS_LABELS,
 } from "@/utils";
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend, Filler);
+ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Tooltip, Legend, Filler);
 
 function TrendBadge({ pct, up }) {
   if (pct === null) return null;
@@ -168,21 +168,30 @@ function PedidosSection({ orders, prevOrders, isDark }) {
   const tableOrders    = orders.filter(o => o.service_type === "Table").length;
   const takeawayOrders = orders.filter(o => o.service_type === "Takeaway").length;
 
-  const statusKeys = Object.keys({ ...statusMap, ...prevStatusMap });
-  const barData = {
-    labels: statusKeys.map(k => STATUS_LABELS[k] ?? k),
-    datasets: [{
-      data: statusKeys.map(k => statusMap[k] || 0),
-      backgroundColor: statusKeys.map(k => BAR_STATUS_COLORS[k] ?? "#9ca3af"),
-      borderRadius: 6,
-    }],
+  // Gráfico de linhas: pedidos por tipo de serviço (Mesa vs Takeaway)
+  const lineData = {
+    labels: ["Mesa", "Takeaway"],
+    datasets: [
+      {
+        label: "Pedidos",
+        data: [tableOrders, takeawayOrders],
+        borderColor: "#6366f1",
+        backgroundColor: "rgba(99,102,241,0.08)",
+        pointBackgroundColor: ["#6366f1", "#f59e0b"],
+        pointBorderColor: ["#6366f1", "#f59e0b"],
+        pointRadius: 6,
+        pointHoverRadius: 8,
+        fill: true,
+        tension: 0.3,
+      },
+    ],
   };
-  const barOpts = {
+  const lineOpts = {
     responsive: true, maintainAspectRatio: false,
     plugins: { legend: { display: false } },
     scales: {
       x: { ticks: { color: chartText, font: { size: 10 } }, grid: { color: chartGrid } },
-      y: { ticks: { color: chartText, font: { size: 10 } }, grid: { color: chartGrid }, min: 0 },
+      y: { ticks: { color: chartText, font: { size: 10 }, stepSize: 1 }, grid: { color: chartGrid }, min: 0 },
     },
   };
 
@@ -209,8 +218,8 @@ function PedidosSection({ orders, prevOrders, isDark }) {
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 rounded-[16px] bg-[var(--surface-2)] p-4">
-          <h4 className="text-sm font-semibold mb-3" style={{ color: "var(--text)" }}>Pedidos por estado</h4>
-          <div style={{ height: 200 }}><Bar data={barData} options={barOpts} /></div>
+          <h4 className="text-sm font-semibold mb-3" style={{ color: "var(--text)" }}>Pedidos por tipo</h4>
+          <div style={{ height: 200 }}><Line data={lineData} options={lineOpts} /></div>
         </div>
         <div className="rounded-[16px] bg-[var(--surface-2)] p-4">
           <h4 className="text-sm font-semibold mb-3" style={{ color: "var(--text)" }}>Tipo de serviço</h4>

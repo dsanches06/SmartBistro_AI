@@ -253,6 +253,19 @@ CREATE TABLE points_transactions (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- Previsões semanais de receitas (geradas manualmente pelo staff)
+CREATE TABLE weekly_forecast (
+    id               INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    week_start       DATE NOT NULL,
+    week_end         DATE NOT NULL,
+    predicted_total  DECIMAL(10,2) NOT NULL,
+    actual_total     DECIMAL(10,2) DEFAULT NULL,
+    trend            VARCHAR(20) DEFAULT 'estável',
+    summary          TEXT,
+    generated_at     TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (week_start)
+);
+
 -- Triggers para updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$

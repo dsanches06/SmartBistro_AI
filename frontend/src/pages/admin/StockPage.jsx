@@ -208,7 +208,7 @@ function AtualizarStockModal({ item, onClose, onSave, saving }) {
 }
 
 /* ── Desktop table row ── */
-function StockRow({ item, onEdit }) {
+function StockRow({ item, onEdit, onDelete }) {
   return (
     <tr className="border-b border-[var(--border)] transition-colors hover:bg-[var(--surface-2)]">
       <td className="py-2 pl-4 pr-2 w-12"><ProductIcon name={item.name} /></td>
@@ -221,19 +221,26 @@ function StockRow({ item, onEdit }) {
       <td className="py-3 px-4 text-sm" style={{ color: "var(--text-secondary)" }}>{item.unit}</td>
       <td className="py-3 px-4"><StatusBadge status={item.status} /></td>
       <td className="py-3 px-4">
-        <button onClick={() => onEdit(item)} title="Atualizar stock"
-          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold border transition-colors hover:bg-[var(--primary)] hover:text-white hover:border-[var(--primary)]"
-          style={{ background: "var(--surface-2)", color: "var(--primary)", borderColor: "var(--border)" }}>
-          <i className="fa-solid fa-pen-to-square text-xs" />
-          Atualizar
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => onEdit(item)} title="Atualizar stock"
+            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold border transition-colors hover:bg-[var(--primary)] hover:text-white hover:border-[var(--primary)]"
+            style={{ background: "var(--surface-2)", color: "var(--primary)", borderColor: "var(--border)" }}>
+            <i className="fa-solid fa-pen-to-square text-xs" />
+            Atualizar
+          </button>
+          <button onClick={() => onDelete(item)} title="Remover produto"
+            className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors hover:bg-red-500 hover:text-white"
+            style={{ background: "var(--surface-2)", color: "#ef4444", border: "1px solid var(--border)" }}>
+            <i className="fa-solid fa-trash text-[10px]" />
+          </button>
+        </div>
       </td>
     </tr>
   );
 }
 
 /* ── Mobile stock card ── */
-function StockCard({ item, onEdit }) {
+function StockCard({ item, onEdit, onDelete }) {
   return (
     <ListCard>
       <div className="flex items-center justify-between gap-2">
@@ -248,12 +255,19 @@ function StockCard({ item, onEdit }) {
           <span className="text-base font-bold tabular-nums" style={{ color: "var(--text)" }}>{formatQty(item.available_quantity)}</span>
           <span className="text-xs" style={{ color: "var(--text-secondary)" }}>{item.unit}</span>
         </div>
-        <button onClick={() => onEdit(item)}
-          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors"
-          style={{ background: "var(--primary)", color: "#fff" }}>
-          <i className="fa-solid fa-pen-to-square text-xs" />
-          Atualizar
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => onEdit(item)}
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors"
+            style={{ background: "var(--primary)", color: "#fff" }}>
+            <i className="fa-solid fa-pen-to-square text-xs" />
+            Atualizar
+          </button>
+          <button onClick={() => onDelete(item)}
+            className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
+            style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444" }}>
+            <i className="fa-solid fa-trash text-xs" />
+          </button>
+        </div>
       </div>
     </ListCard>
   );
@@ -270,6 +284,7 @@ export default function StockPage() {
   const [modalItem, setModalItem] = useState(null);   // item aberto no modal Atualizar
   const [saving,    setSaving]    = useState(false);
   const [showNovoProduto, setShowNovoProduto] = useState(false);
+  const [deleteItem, setDeleteItem] = useState(null); // item a confirmar remoção
   const [sortCol, setSortCol] = useState(null);   // "name"|"qty"|"unit"|"status"
   const [sortDir, setSortDir] = useState("asc");  // "asc"|"desc"
 
@@ -322,6 +337,18 @@ export default function StockPage() {
   }, [stockList, search, sortCol, sortDir]);
   const pageData = filtered.slice((page - 1) * STOCK_PAGE_SIZE, page * STOCK_PAGE_SIZE);
 
+  const handleDeleteConfirm = async () => {
+    if (!deleteItem) return;
+    const item = deleteItem;
+    setDeleteItem(null);
+    try {
+      await stockService.remove(item.id);
+      setStockList(prev => prev.filter(s => s.id !== item.id));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleSave = async (newQty) => {
     if (!modalItem) return;
     setSaving(true);
@@ -348,6 +375,32 @@ export default function StockPage() {
           onClose={() => setShowNovoProduto(false)}
           onCreated={() => { setShowNovoProduto(false); load(); }}
         />
+      )}
+
+      {deleteItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+            <h3 className="text-base font-semibold mb-2" style={{ color: "var(--text)" }}>Remover produto</h3>
+            <p className="text-sm mb-5" style={{ color: "var(--text-muted)" }}>
+              Tem a certeza que deseja remover{" "}
+              <span className="font-semibold" style={{ color: "var(--text)" }}>{deleteItem.name}</span>?
+              Esta ação não pode ser desfeita.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setDeleteItem(null)}
+                className="px-4 py-2 text-sm rounded-lg border"
+                style={{ background: "var(--surface-2)", color: "var(--text-muted)", borderColor: "var(--border)" }}>
+                Cancelar
+              </button>
+              <button onClick={handleDeleteConfirm}
+                className="px-4 py-2 text-sm rounded-lg text-white"
+                style={{ background: "#B91C1C" }}>
+                Remover
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {modalItem && (
@@ -445,7 +498,7 @@ export default function StockPage() {
                   ) : (
                     pageData.map(item => (
                       <StockRow key={item.id} item={item}
-                        onEdit={setModalItem} />
+                        onEdit={setModalItem} onDelete={setDeleteItem} />
                     ))
                   )}
                 </tbody>
@@ -461,7 +514,7 @@ export default function StockPage() {
               ) : (
                 pageData.map(item => (
                   <StockCard key={item.id} item={item}
-                    onEdit={setModalItem} />
+                    onEdit={setModalItem} onDelete={setDeleteItem} />
                 ))
               )}
             </div>

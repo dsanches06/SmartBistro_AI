@@ -226,3 +226,16 @@ CREATE TABLE points_transactions (
     created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+-- Previsões semanais de receitas (geradas manualmente pelo staff)
+CREATE TABLE weekly_forecast (
+    id               INT PRIMARY KEY AUTO_INCREMENT,
+    week_start       DATE NOT NULL,
+    week_end         DATE NOT NULL,
+    predicted_total  DECIMAL(10,2) NOT NULL,
+    actual_total     DECIMAL(10,2) DEFAULT NULL,
+    trend            VARCHAR(20) DEFAULT 'estável',
+    summary          TEXT,
+    generated_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_week (week_start)
+);

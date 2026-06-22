@@ -11,6 +11,7 @@ import {
   getInvoiceById,
 } from "../services/index.js";
 import { addPoints } from '../services/pointsService.js';
+import { createNotification } from '../services/notificationService.js';
 
 const PAYMENT_METHODS = ["MB Way", "Multibanco", "Credit Card", "Cash"];
 const PAYMENT_STATUS_OPTIONS = ["Pending", "Completed", "Failed"];
@@ -85,11 +86,19 @@ export const create = async (req, res) => {
       processed_at: payment_status === 'Completed' ? new Date() : null,
     });
 
-    // Adiciona pontos automaticamente quando o pagamento é concluído
+    // Adiciona pontos e notifica o cliente quando o pagamento é concluído
     if (payment_status === 'Completed' && user_id) {
-      addPoints(user_id, amount, invoice?.order_id).catch(err =>
-        console.error('[Points] Erro ao adicionar pontos:', err.message)
-      );
+      const pts = Math.floor(Number(amount));
+      addPoints(user_id, amount, invoice?.order_id)
+        .then(() => {
+          if (pts <= 0) return;
+          createNotification({
+            user_id,
+            title: `+${pts} pontos adicionados!`,
+            message: `Ganhaste ${pts} ponto${pts !== 1 ? 's' : ''} com a compra #${invoice?.order_id ?? '—'}. Consulta o teu saldo de pontos no perfil.`,
+          }).catch(e => console.error('[Points Notif] Erro:', e.message));
+        })
+        .catch(err => console.error('[Points] Erro ao adicionar pontos:', err.message));
     }
 
     res.status(201).json(payment);

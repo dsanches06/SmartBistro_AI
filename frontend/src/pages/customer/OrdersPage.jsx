@@ -124,7 +124,9 @@ export default function CustomerOrdersPage() {
 
       if (!kitchenSeq.length) return;
 
-      const total = kitchenSeq.reduce((s, i) => s + i.price * i.quantity, 0);
+      // Preços em kitchen_sequence_json são base (sem IVA) — o total real inclui 13% IVA
+      const rawSubtotal = kitchenSeq.reduce((s, i) => s + i.price * i.quantity, 0);
+      const total = Math.round(rawSubtotal * 1.13 * 100) / 100;
       setRepeatPayInfo({
         originalOrder: repeatAllergyOrder,
         allergies,
@@ -154,6 +156,12 @@ export default function CustomerOrdersPage() {
       });
       if (!order?.id) throw new Error("Não foi possível criar o pedido.");
 
+      // Verificar se o backend cancelou o pedido por falta de stock
+      const freshOrder = await orderService.getById(order.id).catch(() => order);
+      if (freshOrder?.order_status === 'Cancelled') {
+        throw new Error("stock_cancelled");
+      }
+
       if (repeatPayInfo.originalItems.length) {
         await orderItemService.createBulk({
           order_id: order.id,
@@ -162,7 +170,7 @@ export default function CustomerOrdersPage() {
       }
 
       const total    = Number(repeatPayInfo.total.toFixed(2));
-      const subtotal = Number((total / 1.13).toFixed(2)); // IVA 13% taxa intermédia restauração
+      const subtotal = Number((total / 1.13).toFixed(2));
       const tax      = Number((total - subtotal).toFixed(2));
 
       // Backend auto-cria fatura para Takeaway — tentar GET antes de criar (evita 409)
@@ -177,8 +185,11 @@ export default function CustomerOrdersPage() {
       }
       if (!inv?.id) throw new Error("Não foi possível obter a fatura.");
 
+      // Usar o total da fatura (valor real com IVA) para o pagamento — garante pontos correctos
+      const payAmount = Number(inv.total_amount);
+
       try {
-        await paymentService.create({ invoice_id: inv.id, user_id: user.id, amount: total, payment_method: "Cash", payment_status: "Completed" });
+        await paymentService.create({ invoice_id: inv.id, user_id: user.id, amount: payAmount, payment_method: "Cash", payment_status: "Completed" });
       } catch (err) {
         if (!err?.message?.includes("409")) throw err;
       }
@@ -186,8 +197,12 @@ export default function CustomerOrdersPage() {
       orderService.chefStart(order.id).catch(() => {});
       setRepeatPayInfo(null);
       load();
-    } catch {
-      setRepeatPayError("Erro ao processar pagamento. Tente novamente.");
+    } catch (err) {
+      if (err?.message === 'stock_cancelled') {
+        setRepeatPayError("Um ou mais artigos estão indisponíveis. Pedido cancelado — verifica as notificações.");
+      } else {
+        setRepeatPayError("Erro ao processar pagamento. Tente novamente.");
+      }
     } finally {
       repeatPayingRef.current = false;
       setRepeatPayLoading(false);

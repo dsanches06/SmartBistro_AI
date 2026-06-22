@@ -16,3 +16,68 @@ export const getDailyRevenue = async (days = 30) => {
     return { date: dateStr, total: Number(r.total) };
   });
 };
+
+// Devolve a receita real de uma semana específica (soma de invoices pagas).
+export const getWeeklyActual = async (weekStart, weekEnd) => {
+  const [rows] = await db.query(
+    `SELECT COALESCE(SUM(i.total_amount), 0) AS total
+     FROM invoices i
+     JOIN payments p ON p.invoice_id = i.id
+     WHERE p.payment_status = 'Completed'
+       AND DATE(i.issued_at) >= ? AND DATE(i.issued_at) <= ?`,
+    [weekStart, weekEnd]
+  );
+  return Number(rows[0]?.total ?? 0);
+};
+
+// Guarda ou actualiza a previsão semanal na BD.
+export const saveWeeklyForecast = async ({ weekStart, weekEnd, predictedTotal, trend, summary }) => {
+  if (IS_POSTGRES) {
+    await db.query(
+      `INSERT INTO weekly_forecast (week_start, week_end, predicted_total, trend, summary)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT (week_start) DO UPDATE SET
+         predicted_total = EXCLUDED.predicted_total,
+         trend           = EXCLUDED.trend,
+         summary         = EXCLUDED.summary,
+         generated_at    = CURRENT_TIMESTAMP`,
+      [weekStart, weekEnd, predictedTotal, trend, summary]
+    );
+  } else {
+    await db.query(
+      `INSERT INTO weekly_forecast (week_start, week_end, predicted_total, trend, summary)
+       VALUES (?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         predicted_total = VALUES(predicted_total),
+         trend           = VALUES(trend),
+         summary         = VALUES(summary),
+         generated_at    = CURRENT_TIMESTAMP`,
+      [weekStart, weekEnd, predictedTotal, trend, summary]
+    );
+  }
+};
+
+// Actualiza o actual_total de uma semana já passada.
+export const updateWeeklyActual = async (weekStart, actualTotal) => {
+  await db.query(
+    'UPDATE weekly_forecast SET actual_total = ? WHERE week_start = ?',
+    [actualTotal, weekStart]
+  );
+};
+
+// Devolve todas as previsões semanais guardadas, da mais recente para a mais antiga.
+export const getAllWeeklyForecasts = async () => {
+  const [rows] = await db.query(
+    'SELECT * FROM weekly_forecast ORDER BY week_start DESC'
+  );
+  return rows.map(r => ({
+    id:             r.id,
+    weekStart:      typeof r.week_start === 'string' ? r.week_start : r.week_start.toISOString().slice(0, 10),
+    weekEnd:        typeof r.week_end   === 'string' ? r.week_end   : r.week_end.toISOString().slice(0, 10),
+    predictedTotal: Number(r.predicted_total),
+    actualTotal:    r.actual_total != null ? Number(r.actual_total) : null,
+    trend:          r.trend,
+    summary:        r.summary,
+    generatedAt:    r.generated_at,
+  }));
+};

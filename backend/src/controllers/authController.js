@@ -123,6 +123,29 @@ export async function register(req, res) {
     }
 
     if (!userId) {
+      // Fallback: vincular por nome exacto a utilizador sem conta (ex: importados via seed/reservas)
+      const [byName] = await db.query(
+        `SELECT u.id FROM users u
+         LEFT JOIN auth_accounts a ON a.user_id = u.id
+         WHERE u.name = ? AND a.id IS NULL
+         LIMIT 1`,
+        [nameTrim]
+      );
+      if (byName.length > 0) {
+        userId = byName[0].id;
+        linked = true;
+        console.log(`[Auth] register: vinculado por nome id=${userId} name="${nameTrim}"`);
+        await db.query(
+          `UPDATE users SET
+             email = COALESCE(email, ?),
+             phone = COALESCE(phone, ?)
+           WHERE id = ?`,
+          [emailTrim, phoneTrim, userId]
+        );
+      }
+    }
+
+    if (!userId) {
       console.log(`[Auth] register: novo utilizador "${nameTrim}"`);
       const [insertResult] = await db.query(
         `INSERT INTO users (name, email, phone, role_id) VALUES (?, ?, ?, 2)`,

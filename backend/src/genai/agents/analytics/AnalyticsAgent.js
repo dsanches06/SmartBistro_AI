@@ -1,6 +1,7 @@
 import { BaseAgentAI } from '../../models/index.js';
 import { buildRecommendationMessage, buildForecastMessage } from './analyticsMessages.js';
 import { ANALYTICS_PROMPT } from './analyticsPrompt.js';
+import { extractJSON } from '../../helpers/index.js';
 
 // Agente de Analytics — recomendações personalizadas e previsão de receitas.
 // temp 0.4 → criatividade moderada nos labels; coerência mantida com os dados numéricos.
@@ -23,8 +24,7 @@ class AnalyticsAgent extends BaseAgentAI {
     const message = buildForecastMessage(data);
     const result  = await this._call(message);
     try {
-      const cleaned = (result.text || '{}').replace(/```json\n?|\n?```/g, '').trim();
-      return JSON.parse(cleaned);
+      return extractJSON(result.text || '{}', 'Analytics');
     } catch {
       return null;
     }
@@ -33,10 +33,19 @@ class AnalyticsAgent extends BaseAgentAI {
   // Valida e filtra o JSON de recomendações para ids do menu actual.
   _parseRecommendations(raw, validIds) {
     try {
-      const cleaned = (raw || '[]').replace(/```json\n?|\n?```/g, '').trim();
-      const parsed  = JSON.parse(cleaned);
-      const idSet   = new Set(validIds);
-      return parsed.filter(r => idSet.has(r.item_id)).slice(0, 6);
+      let parsed;
+      try {
+        parsed = extractJSON(raw || '[]', 'Analytics');
+      } catch {
+        return [];
+      }
+      if (!Array.isArray(parsed)) return [];
+      // Normaliza item_id para número (a IA pode devolver strings)
+      const idSet = new Set(validIds.map(Number));
+      return parsed
+        .map(r => ({ ...r, item_id: Number(r.item_id) }))
+        .filter(r => Number.isFinite(r.item_id) && idSet.has(r.item_id) && r.label)
+        .slice(0, 6);
     } catch {
       return [];
     }

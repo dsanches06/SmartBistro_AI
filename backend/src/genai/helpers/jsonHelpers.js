@@ -96,9 +96,16 @@ function extractJSON(text, agentName = "agent") {
     if (result) return result;
   }
 
-  const match = text.match(/\{[\s\S]*\}/);
-  if (match) {
-    const result = tryParse(match[0]);
+  const objMatch = text.match(/\{[\s\S]*\}/);
+  if (objMatch) {
+    const result = tryParse(objMatch[0]);
+    if (result) return result;
+  }
+
+  // Tenta extrair um array JSON embebido no texto (ex: recomendações)
+  const arrMatch = text.match(/\[[\s\S]*\]/);
+  if (arrMatch) {
+    const result = tryParse(arrMatch[0]);
     if (result) return result;
   }
 

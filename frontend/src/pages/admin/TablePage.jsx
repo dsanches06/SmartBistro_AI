@@ -879,7 +879,13 @@ export default function TablePage() {
       .toFixed(2)
       .replace(".", ",")}`;
 
-  const activeOrder       = tableDetails?.activeOrder       ?? null;
+  // Só mostra o pedido activo se o seu estado não for terminal — evita mostrar
+  // dados de pedidos antigos quando a mesa já está livre.
+  const TERMINAL_ORDER_STATUSES = ['Delivered', 'Cancelled', 'Done'];
+  const activeOrder = tableDetails?.activeOrder &&
+    !TERMINAL_ORDER_STATUSES.includes(tableDetails.activeOrder.order_status)
+      ? tableDetails.activeOrder
+      : null;
   const activeReservation = tableDetails?.activeReservation ?? null;
   const isReserved        = selectedTable?.status === "Reserved";
   const isAvailable       = selectedTable?.status === "Available";
