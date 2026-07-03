@@ -89,7 +89,8 @@ function NovoClienteModal({ onClose, onCreate }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name.trim()) return setErr("Nome obrigatório.");
+    const nameLen = form.name.trim().length;
+    if (nameLen < 3 || nameLen > 20) return setErr("O nome deve ter entre 3 e 20 caracteres.");
     setSaving(true); setErr("");
     try {
       const created = await userService.create({ name: form.name.trim(), phone: form.phone.trim() || null });
@@ -116,7 +117,7 @@ function NovoClienteModal({ onClose, onCreate }) {
           <div>
             <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Nome *</label>
             <input type="text" value={form.name} onChange={e => set("name", e.target.value)}
-              placeholder="Ex: João Silva"
+              placeholder="Ex: João Silva" maxLength={20}
               className="w-full rounded-xl px-3 py-2 text-sm outline-none"
               style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
           </div>

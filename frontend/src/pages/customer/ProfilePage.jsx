@@ -12,7 +12,10 @@ function EditDataModal({ user, onClose, onSaved }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim()) { setError("O nome é obrigatório."); return; }
+    const nameLen = name.trim().length;
+    const usernameLen = username.trim().length;
+    if (nameLen < 3 || nameLen > 20) { setError("O nome deve ter entre 3 e 20 caracteres."); return; }
+    if (usernameLen > 0 && (usernameLen < 3 || usernameLen > 20)) { setError("O username deve ter entre 3 e 20 caracteres."); return; }
     setError("");
     setLoading(true);
     try {
@@ -26,8 +29,8 @@ function EditDataModal({ user, onClose, onSaved }) {
   };
 
   const fields = [
-    { label: "Nome completo *", value: name, set: setName, type: "text", placeholder: "Nome" },
-    { label: "Username", value: username, set: setUsername, type: "text", placeholder: "username" },
+    { label: "Nome completo *", value: name, set: setName, type: "text", placeholder: "Nome", maxLength: 20 },
+    { label: "Username", value: username, set: setUsername, type: "text", placeholder: "username", maxLength: 20 },
     { label: "E-mail", value: email, set: setEmail, type: "email", placeholder: "email" },
     { label: "Telefone", value: phone, set: setPhone, type: "tel", placeholder: "telefone" },
   ];
@@ -46,7 +49,7 @@ function EditDataModal({ user, onClose, onSaved }) {
           </button>
         </div>
         <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-          {fields.map(({ label, value, set, type, placeholder }) => (
+          {fields.map(({ label, value, set, type, placeholder, maxLength }) => (
             <div key={label} className="flex flex-col gap-1">
               <label className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--primary)" }}>{label}</label>
               <input
@@ -54,6 +57,7 @@ function EditDataModal({ user, onClose, onSaved }) {
                 value={value}
                 onChange={(e) => set(e.target.value)}
                 placeholder={placeholder}
+                maxLength={maxLength}
                 className="w-full h-10 rounded-lg px-3 text-sm outline-none"
                 style={{ background: "var(--surface-2)", border: "1.5px solid var(--border)", color: "var(--text)" }}
               />

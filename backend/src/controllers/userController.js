@@ -31,6 +31,8 @@ export const create = async (req, res) => {
     const phone = req.body.phone ? String(req.body.phone).trim()  : null;
 
     if (!name) return res.status(400).json({ error: "name é obrigatório" });
+    if (name.length < 3 || name.length > 20)
+      return res.status(400).json({ error: "O nome deve ter entre 3 e 20 caracteres" });
 
     if (email && await emailExists(email))
       return res.status(409).json({ error: "Já existe um utilizador com esse email" });
@@ -51,6 +53,9 @@ export const update = async (req, res) => {
     const name  = req.body.name  !== undefined ? String(req.body.name).trim()  : undefined;
     const email = req.body.email !== undefined ? (req.body.email ? String(req.body.email).trim()  : null) : undefined;
     const phone = req.body.phone !== undefined ? (req.body.phone ? String(req.body.phone).trim() : null) : undefined;
+
+    if (name !== undefined && (name.length < 3 || name.length > 20))
+      return res.status(400).json({ error: "O nome deve ter entre 3 e 20 caracteres" });
 
     if (email && await emailExists(email, id))
       return res.status(409).json({ error: "Já existe um utilizador com esse email" });

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Modal from "./Modal.jsx";
 
-function Field({ label, type = "text", value, onChange, placeholder, autoFocus }) {
+function Field({ label, type = "text", value, onChange, placeholder, autoFocus, maxLength }) {
   const [show, setShow] = useState(false);
   const isPassword = type === "password";
   const inputType = isPassword ? (show ? "text" : "password") : type;
@@ -18,6 +18,7 @@ function Field({ label, type = "text", value, onChange, placeholder, autoFocus }
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           autoFocus={autoFocus}
+          maxLength={maxLength}
           className="w-full h-10 rounded-lg px-3 text-sm outline-none transition-all"
           style={{
             background: "var(--surface-2)",
@@ -76,7 +77,9 @@ export default function RegisterModal({ open, onClose, onSwitchToLogin, isDark, 
   const [error, setError]       = useState("");
 
   const passwordsMatch = password.length > 0 && password === confirm;
-  const canSubmit = name.trim().length >= 3 && username.trim().length >= 3 && passwordsMatch;
+  const nameLen = name.trim().length;
+  const usernameLen = username.trim().length;
+  const canSubmit = nameLen >= 3 && nameLen <= 20 && usernameLen >= 3 && usernameLen <= 20 && passwordsMatch;
 
   const handleClose = () => {
     setName("");
@@ -97,8 +100,8 @@ export default function RegisterModal({ open, onClose, onSwitchToLogin, isDark, 
       setError("As palavras-passe não coincidem.");
       return;
     }
-    if (name.trim().length < 3) return setError("O nome deve ter pelo menos 3 caracteres.");
-    if (username.trim().length < 3) return setError("O username deve ter pelo menos 3 caracteres.");
+    if (nameLen < 3 || nameLen > 20) return setError("O nome deve ter entre 3 e 20 caracteres.");
+    if (usernameLen < 3 || usernameLen > 20) return setError("O username deve ter entre 3 e 20 caracteres.");
     if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return setError("E-mail inválido. Verifica o formato (ex: nome@dominio.com).");
     setLoading(true);
     try {
@@ -115,14 +118,14 @@ export default function RegisterModal({ open, onClose, onSwitchToLogin, isDark, 
       <form className="flex flex-col gap-3" onSubmit={handleSubmit} noValidate>
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1">
-            <Field label="Nome completo *" value={name} onChange={setName} placeholder="O teu nome" autoFocus />
-            {name.length > 0 && name.trim().length < 3 && (
+            <Field label="Nome completo *" value={name} onChange={setName} placeholder="O teu nome" autoFocus maxLength={20} />
+            {name.length > 0 && nameLen < 3 && (
               <p className="text-[10px]" style={{ color: "#ef4444" }}>Mínimo 3 caracteres</p>
             )}
           </div>
           <div className="flex flex-col gap-1">
-            <Field label="Username *" value={username} onChange={setUsername} placeholder="username" />
-            {username.length > 0 && username.trim().length < 3 && (
+            <Field label="Username *" value={username} onChange={setUsername} placeholder="username" maxLength={20} />
+            {username.length > 0 && usernameLen < 3 && (
               <p className="text-[10px]" style={{ color: "#ef4444" }}>Mínimo 3 caracteres</p>
             )}
           </div>
