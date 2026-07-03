@@ -48,22 +48,22 @@ class BaseService {
           try {
             const p = JSON.parse(data);
             if (p?.text) onChunk(p.text);
-          } catch {}
+          } catch (e) {
+            console.warn(`[${this.baseEndpoint}] evento SSE "message" com JSON inválido:`, e);
+          }
         }
         if (event === "done") {
           try {
             const p = JSON.parse(data);
             donePayload = p;
             if (onDone) onDone(p);
-          } catch {}
+          } catch (e) {
+            console.warn(`[${this.baseEndpoint}] evento SSE "done" com JSON inválido:`, e);
+          }
         }
         if (event === "error") {
-          try {
-            const p = JSON.parse(data);
-            throw new Error(p?.message || "Erro");
-          } catch (e) {
-            throw e;
-          }
+          const p = JSON.parse(data);
+          throw new Error(p?.message || "Erro");
         }
         event = null;
         data = "";

@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router";
 import { useAuth } from "@/context/AuthContext";
 import { orderService } from "@/services/orderService";
 import { orderItemService } from "@/services/orderItemService";
 import { invoiceService } from "@/services/invoiceService";
 import { paymentService } from "@/services/paymentService";
-import { itemService } from "@/services/itemService";
 import { getOrderTarget, getOrderItemCount, ORDER_TABS, filterOrders, ORDER_STATUS_META, ORDER_PAGE_SIZE } from "@/utils/orderUtils";
 import { TrophySpin, OrderStatusModal, PaymentModal } from "@/components/ui";
 import { Pagination } from "@/components/ui/shared/Pagination";
@@ -16,7 +14,6 @@ const PAGE_SIZE = ORDER_PAGE_SIZE;
 // Página que mostra a lista de pedidos do cliente.
 export default function CustomerOrdersPage() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [invoiceMap, setInvoiceMap] = useState({});
   const [paidOrderIds, setPaidOrderIds] = useState(new Set());

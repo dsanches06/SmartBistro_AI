@@ -11,22 +11,6 @@ import CustomerStatsCard from "@/components/ui/customer/CustomerStatsCard";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-function StatusSummary({ counts }) {
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-      {Object.entries(counts).map(([status, value]) => {
-        const meta = ORDER_STATUS_META[status] || { label: status, bg: "#f3f4f6", text: "#374151" };
-        return (
-          <div key={status} className="rounded-2xl p-4" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-            <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: "var(--text-muted)" }}>{meta.label}</p>
-            <p className="mt-2 text-xl font-bold" style={{ color: meta.text }}>{value}</p>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 function parseOrderItems(kitchenJson) {
   try {
     const raw = typeof kitchenJson === 'string' ? JSON.parse(kitchenJson) : kitchenJson;

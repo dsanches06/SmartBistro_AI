@@ -48,12 +48,13 @@ export function getPeriodRange(period, customFrom = null, customTo = null) {
       const s = new Date(now); s.setDate(now.getDate() - 29); s.setHours(0, 0, 0, 0);
       return { from: s, to: now };
     }
-    case "personalizado":
+    case "personalizado": {
       if (customFrom && customTo)
         return { from: new Date(customFrom + "T00:00:00"), to: new Date(customTo + "T23:59:59") };
       // fallback: últimos 30 dias
       const s2 = new Date(now); s2.setDate(now.getDate() - 29); s2.setHours(0, 0, 0, 0);
       return { from: s2, to: now };
+    }
     default:
       return { from: new Date(0), to: now };
   }

@@ -20,7 +20,7 @@ import {
   generateDayLabels, groupByDay, getTopProducts,
   getProductRevenue, countByStatus,
   TODAY_STR, THIRTY_AGO_STR,
-  DONUT_COLORS, BAR_STATUS_COLORS, STATUS_LABELS,
+  DONUT_COLORS,
 } from "@/utils";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Tooltip, Legend, Filler);
@@ -164,7 +164,6 @@ function PedidosSection({ orders, prevOrders, isDark }) {
   const chartGrid = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)";
 
   const statusMap     = countByStatus(orders);
-  const prevStatusMap = countByStatus(prevOrders);
 
   const tableOrders    = orders.filter(o => o.service_type === "Table").length;
   const takeawayOrders = orders.filter(o => o.service_type === "Takeaway").length;

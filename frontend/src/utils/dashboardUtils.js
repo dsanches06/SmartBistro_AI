@@ -55,7 +55,7 @@ export function buildOperationalAlerts(mergedStock = [], orders = []) {
   // ── stock crítico / baixo ──────────────────────────────────────────────────
   mergedStock
     .filter(s => s.status === "Critico" || s.status === "Baixo")
-    .sort((a, b) => (a.status === "Critico" ? -1 : 1))
+    .sort((a, b) => (a.status === "Critico" ? -1 : b.status === "Critico" ? 1 : 0))
     .forEach(s => {
       alerts.push({
         id: `stock-${s.id}`,

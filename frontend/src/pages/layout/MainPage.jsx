@@ -326,7 +326,7 @@ export default function MainPage({ onNavChange }) {
       setShowCheckout(false);
       setOrderSuccess(true);
       setTimeout(() => setOrderSuccess(false), 5000);
-    } catch (err) {
+    } catch {
       setCheckoutError("Erro ao processar pagamento. Tente novamente.");
     } finally {
       payingRef.current = false;
