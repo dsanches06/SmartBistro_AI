@@ -1,11 +1,13 @@
 // Utilitários e constantes do Dashboard
 
+// Verifica se a data indicada é hoje.
 export function isToday(dateStr) {
   const d = new Date(dateStr);
   const n = new Date();
   return d.getDate() === n.getDate() && d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
 }
 
+// Verifica se a data indicada foi ontem.
 export function isYesterday(dateStr) {
   const d = new Date(dateStr);
   const y = new Date();
@@ -13,15 +15,18 @@ export function isYesterday(dateStr) {
   return d.getDate() === y.getDate() && d.getMonth() === y.getMonth() && d.getFullYear() === y.getFullYear();
 }
 
+// Variação percentual entre dois valores (usada nos cartões "vs. ontem").
 export function pctChange(now, prev) {
   if (!prev) return now > 0 ? 100 : 0;
   return Math.round(((now - prev) / prev) * 100);
 }
 
+// Formata um valor numérico como moeda em euros no formato pt-PT.
 export function fmtEur(amount) {
   return Number(amount || 0).toLocaleString("pt-PT", { style: "currency", currency: "EUR" });
 }
 
+// Devolve há quanto tempo ocorreu uma data, em formato compacto ("agora", "5 min", "2h").
 export function timeAgo(dateStr) {
   const mins = Math.round((Date.now() - new Date(dateStr).getTime()) / 60000);
   if (mins < 1) return "agora";
@@ -29,11 +34,13 @@ export function timeAgo(dateStr) {
   return `${Math.round(mins / 60)}h`;
 }
 
+// Rótulos das horas do gráfico "Pedidos por hora" (07:00 às 22:00).
 export const DASHBOARD_HOURS = Array.from(
   { length: 16 },
   (_, i) => `${String(i + 7).padStart(2, "0")}:00`,
 );
 
+// Metadados (rótulo + cor) de cada estado de pedido no donut "Estado dos pedidos".
 export const DASHBOARD_DONUT_META = [
   { key: "Pending",        label: "Novos",         color: "#6366f1" },
   { key: "In Preparation", label: "Em preparação", color: "#f59e0b" },
@@ -42,6 +49,7 @@ export const DASHBOARD_DONUT_META = [
   { key: "Done",           label: "Concluídos",    color: "#9ca3af" },
 ];
 
+// Nº de pedidos e alertas mostrados por página nas tabelas do Dashboard.
 export const DASHBOARD_ORDERS_PER_PAGE = 5;
 export const DASHBOARD_ALERTS_PER_PAGE = 4;
 

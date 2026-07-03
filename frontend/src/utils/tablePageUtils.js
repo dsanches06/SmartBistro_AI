@@ -1,3 +1,6 @@
+// Utilitários e constantes da página de Mesas
+
+// Aparência (rótulo + cores da mesa/cadeiras) por estado da mesa.
 export const STATUS_CONFIG = {
   Available: {
     label: "Livre",
@@ -16,12 +19,14 @@ export const STATUS_CONFIG = {
   },
 };
 
+// Deriva o formato visual da mesa (redonda/quadrada/retangular) a partir da capacidade.
 export const getFormatFromCapacity = (capacity) => {
   if (capacity >= 10) return "retangular";
   if (capacity >= 6) return "quadrada";
   return "redonda";
 };
 
+// Devolve as posições das cadeiras à volta da mesa, consoante a capacidade (2-12+).
 export const getChairPositions = (capacity) => {
   switch (capacity) {
     case 2:
@@ -56,6 +61,7 @@ export const getChairPositions = (capacity) => {
   }
 };
 
+// Classes Tailwind de posicionamento/estilo de uma cadeira, dada a sua posição na mesa.
 export const getChairClass = (position) => {
   const positions = {
     // ── Posições originais (≤8) ────────────────────────────────────────────────

@@ -1,4 +1,6 @@
 // Utilitário KDS: categorias, colunas de status e helpers reutilizáveis
+
+// Categorias de itens usadas para filtrar o kanban do KDS.
 export const KDS_CATEGORIES = [
   { id: "all", label: "Todos" },
   { id: "Appetizer", label: "Entrada" },
@@ -7,12 +9,14 @@ export const KDS_CATEGORIES = [
   { id: "Dessert", label: "Sobremesas" },
 ];
 
+// Definição das colunas do kanban (título, subtítulo e cores por estado).
 export const KDS_STATUS_COLUMNS = [
   { status: "Pending",        title: "Novos",         accent: "bg-[#fef2f2] text-[#991b1b]", bg: "#fef2f2", bgDark: "rgba(239,68,68,0.10)",   cardBorder: "#ef4444" },
   { status: "In Preparation", title: "Em preparação", subtitle: "🤖 Bot Chef IA", accent: "bg-[#fffbeb] text-[#92400e]", bg: "#fffbeb", bgDark: "rgba(245,158,11,0.10)",  cardBorder: "#f59e0b" },
   { status: "Ready",          title: "Prontos",        accent: "bg-[#ecfdf5] text-[#166534]", bg: "#ecfdf5", bgDark: "rgba(34,197,94,0.10)",   cardBorder: "#22c55e" },
 ];
 
+// Normaliza o nome de uma categoria de item (fallback "Unknown" se vazio).
 export function normalizeCategory(value) {
   return value?.trim() || "Unknown";
 }
@@ -24,6 +28,7 @@ export function mapDisplayStatus(orderStatus) {
   return orderStatus;
 }
 
+// Formata uma data/hora como HH:MM (pt-PT), ou "-" se inválida.
 export function formatTime(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";

@@ -1,3 +1,4 @@
+// Mensagem partilhada para qualquer erro classificado como TIMEOUT.
 const _TIMEOUT_MSG = "O assistente demorou demasiado tempo a responder. Tente novamente. ⏱️";
 
 // ── Error classifier — compatível com @anthropic-ai/sdk ─────────────────────

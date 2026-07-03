@@ -7,6 +7,7 @@ export const MAX_AGENTIC_STEPS = 5;
 
 // ── SSE helpers ───────────────────────────────────────────────────────────────
 
+// Mapeia o tipo de erro classificado (classifyClaudeError) para o nome do evento SSE.
 export const SSE_ERROR_EVENT = {
   RATE_LIMIT:      'rate_limit',
   SERVICE_DOWN:    'service_unavailable',
@@ -15,11 +16,13 @@ export const SSE_ERROR_EVENT = {
   INVALID_REQUEST: 'invalid_request',
 };
 
+// Devolve o nome do evento SSE correspondente ao erro, ou 'provider_error' por omissão.
 export function sseErrorEvent(err) {
   const type = err?.aiErrorType;
   return SSE_ERROR_EVENT[type] ?? 'provider_error';
 }
 
+// Escreve um evento SSE "error" e termina a resposta — usado quando a IA falha a meio do stream.
 export function writeSseError(res, err) {
   res.write(
     `event: ${sseErrorEvent(err)}\ndata: ${JSON.stringify({

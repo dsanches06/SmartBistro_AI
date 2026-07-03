@@ -1,6 +1,6 @@
 // Utilitários e constantes da página de Pedidos
 
-export const ORDER_PAGE_SIZE    = 10;
+export const ORDER_PAGE_SIZE    = 10;  // paginação da tabela principal de pedidos
 export const ORDERS_PER_PAGE    = 5;   // paginação em listas compactas (ClientesPage, ProfilePage)
 export const NOTIFS_PER_PAGE    = 5;   // paginação de notificações
 
@@ -14,6 +14,7 @@ export const ORDER_STATUS_STYLE = {
   "Cancelled":      { bg: "#FEF2F2", tx: "#B91C1C" },
 };
 
+// Metadados (rótulo + cores) de cada estado de pedido, para badges/pills na UI.
 export const ORDER_STATUS_META = {
   Pending:          { label: "Novo",          bg: "#eef2ff", color: "#4f46e5", text: "#3730a3" },
   "In Preparation": { label: "Em preparação", bg: "#fffbeb", color: "#f59e0b", text: "#92400e" },
@@ -23,6 +24,7 @@ export const ORDER_STATUS_META = {
   Cancelled:        { label: "Cancelado",      bg: "#fef2f2", color: "#ef4444", text: "#991b1b" },
 };
 
+// Abas de filtro da página de Pedidos (uma por estado, mais "Todos").
 export const ORDER_TABS = [
   { key: "all",            label: "Todos",          icon: "fa-solid fa-list" },
   { key: "Pending",        label: "Novos",          icon: "fa-solid fa-clock" },
@@ -32,6 +34,7 @@ export const ORDER_TABS = [
   { key: "Done",           label: "Concluído",      icon: "fa-solid fa-check-double" },
 ];
 
+// Cabeçalhos da tabela de pedidos, por ordem de coluna.
 export const ORDER_TABLE_HEADERS = ["ID", "Mesa", "Cliente", "Estado", "Itens", "Valor", "Hora"];
 
 /** Número de itens de cozinha de um pedido */
@@ -78,6 +81,7 @@ export function getOrderSteps(order) {
   ];
 }
 
+/** Índice da etapa actual do pedido (para destacar o passo activo em getOrderSteps) */
 export function getOrderStepIndex(order) {
   const status = order.order_status;
   const isTakeaway = !order.table_id;

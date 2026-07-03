@@ -1,7 +1,9 @@
 // Utilitários e constantes do Menu
 
+// Chave usada para representar "todas as categorias" nos filtros do menu.
 export const ALL_KEY = "all";
 
+// Nº de itens do menu mostrados por página.
 export const MENU_PAGE_SIZE = 10;
 
 // Chart.js category colors (usados em ClientesPage e ProfilePage)
@@ -13,6 +15,7 @@ export const CAT_COLORS = {
 };
 export const CAT_FALLBACK = { bg: "rgba(107,114,128,0.7)", border: "#6B7280" };
 
+// Metadados (rótulo, emoji e cores) de cada categoria do menu.
 export const MENU_CATEGORY_META = {
   Appetizer:    { label: "Entradas",          emoji: "🥗", accent: "#22c55e", bg: "#f0fdf4", bgDark: "rgba(34,197,94,0.1)" },
   "Main Course": { label: "Pratos Principais", emoji: "🍽️", accent: "#f59e0b", bg: "#fffbeb", bgDark: "rgba(245,158,11,0.1)" },
@@ -20,8 +23,10 @@ export const MENU_CATEGORY_META = {
   Beverage:     { label: "Bebidas",            emoji: "🥤", accent: "#3b82f6", bg: "#eff6ff", bgDark: "rgba(59,130,246,0.1)" },
 };
 
+// Lista de categorias (com metadados) pronta a mapear em abas/filtros.
 export const MENU_CATEGORIES = Object.entries(MENU_CATEGORY_META).map(([key, val]) => ({ key, ...val }));
 
+// Palavras-chave (por nome de prato) usadas para escolher um emoji ilustrativo.
 const ITEM_EMOJI_MAP = [
   { keys: ["fries", "batata frita", "batatas fritas", "chips"], emoji: "🍟" },
   { keys: ["caesar", "salad", "salada"],                       emoji: "🥗" },
@@ -46,6 +51,7 @@ const ITEM_EMOJI_MAP = [
   { keys: ["cola", "coke", "coca"],                            emoji: "🥤" },
 ];
 
+// Escolhe um emoji ilustrativo para um item do menu com base no seu nome.
 export function getItemEmoji(name = "") {
   const lower = name.toLowerCase();
   for (const { keys, emoji } of ITEM_EMOJI_MAP) {
@@ -54,6 +60,7 @@ export function getItemEmoji(name = "") {
   return "🍴";
 }
 
+// Agrupa os itens do menu por categoria (uma entrada por categoria conhecida).
 export function groupItemsByCategory(items) {
   return Object.keys(MENU_CATEGORY_META).reduce((acc, cat) => {
     acc[cat] = items.filter(i => i.category === cat);

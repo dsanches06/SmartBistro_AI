@@ -1,3 +1,4 @@
+// Aparência (ícone, cor, título) do cartão de erro mostrado no chat por tipo de erro da IA.
 export const ERROR_CONFIG = {
   SERVICE_DOWN: {
     icon: "🔧",

@@ -1,10 +1,12 @@
 // Utilitários e constantes da página de Stock
 
+// Nº de itens de stock mostrados por página.
 export const STOCK_PAGE_SIZE = 12;
 
 /** Limiares de quantidade para determinar o estado do stock */
 export const STOCK_THRESHOLDS = { CRITICO: 3, BAIXO: 10 };
 
+// Metadados (rótulo + cores) de cada estado de stock.
 export const STOCK_STATUS_META = {
   OK:      { label: 'OK',       bg: '#f0fdf4', color: '#22c55e', text: '#166534' },
   Baixo:   { label: 'Baixo',    bg: '#fff7ed', color: '#f97316', text: '#9a3412' },
