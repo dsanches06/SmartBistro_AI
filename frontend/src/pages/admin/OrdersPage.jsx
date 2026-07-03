@@ -4,6 +4,7 @@ import { SortTh } from "@/components/ui/shared/SortTh.jsx";
 import { orderService, tableService, userService, itemService, orderItemService, invoiceService } from "@/services";
 import {
   formatTime,
+  getItemEmoji,
   ORDER_PAGE_SIZE,
   ORDER_STATUS_META,
   ORDER_TABS,
@@ -15,6 +16,7 @@ import {
   getOrderItemCount,
   getOrderTarget,
 } from "@/utils";
+import { MENU_CATEGORY_META } from "@/utils/menuUtils";
 
 /* ── NovoPedidoModal ── */
 function NovoPedidoModal({ onClose, onCreated }) {
@@ -158,38 +160,69 @@ function NovoPedidoModal({ onClose, onCreated }) {
                 placeholder="Pesquisar item…"
                 className="w-full rounded-xl px-3 py-2 text-sm outline-none mb-2"
                 style={inputStyle} />
-              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)", maxHeight: 220, overflowY: "auto" }}>
+              <div className="rounded-xl px-3 py-2" style={{ border: "1px solid var(--border)", maxHeight: 280, overflowY: "auto" }}>
                 {filteredMenu.length === 0 ? (
                   <p className="text-xs text-center py-4" style={{ color: "var(--text-muted)" }}>Nenhum item encontrado.</p>
-                ) : filteredMenu.map(item => {
-                  const sel = selectedItems.find(s => s.item_id === item.id);
-                  return (
-                    <div key={item.id} className="flex items-center justify-between px-3 py-2"
-                      style={{ borderBottom: "1px solid var(--border)" }}>
-                      <div>
-                        <p className="text-sm font-medium" style={{ color: "var(--text)" }}>{item.name}</p>
-                        <p className="text-xs" style={{ color: "var(--text-muted)" }}>{Number(item.price).toFixed(2)} €</p>
-                      </div>
-                      {sel ? (
-                        <div className="flex items-center gap-2">
-                          <button type="button" onClick={() => updateQty(item.id, sel.quantity - 1)}
-                            className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold"
-                            style={{ background: "var(--surface-2)", color: "var(--text)" }}>−</button>
-                          <span className="text-sm font-semibold w-4 text-center" style={{ color: "var(--text)" }}>{sel.quantity}</span>
-                          <button type="button" onClick={() => updateQty(item.id, sel.quantity + 1)}
-                            className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold"
-                            style={{ background: "var(--primary)", color: "#fff" }}>+</button>
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    {Object.entries(MENU_CATEGORY_META).map(([catKey, catMeta]) => {
+                      const catItems = filteredMenu.filter(i => i.category === catKey);
+                      if (!catItems.length) return null;
+                      return (
+                        <div key={catKey}>
+                          <div className="flex items-center gap-2 mb-2">
+                            <span>{catMeta.emoji}</span>
+                            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
+                              {catMeta.label}
+                            </span>
+                            <div className="flex-1 h-px ml-1" style={{ background: "var(--border)" }} />
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            {catItems.map(item => {
+                              const sel = selectedItems.find(s => s.item_id === item.id);
+                              const qty = sel?.quantity || 0;
+                              return (
+                                <div key={item.id}
+                                  className="flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors"
+                                  style={{
+                                    background: qty > 0 ? "rgba(99,102,241,0.08)" : "var(--surface-2)",
+                                    border: qty > 0 ? "1.5px solid var(--primary)" : "1px solid var(--border)",
+                                  }}>
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <span style={{ fontSize: 20 }}>{getItemEmoji(item.name)}</span>
+                                    <div className="min-w-0">
+                                      <p className="text-sm font-semibold truncate" style={{ color: "var(--text)" }}>{item.name}</p>
+                                      <p className="text-xs font-semibold" style={{ color: "var(--primary)" }}>
+                                        {Number(item.price).toFixed(2)} €
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    {qty > 0 && (
+                                      <>
+                                        <button type="button" onClick={() => updateQty(item.id, qty - 1)}
+                                          className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm"
+                                          style={{ background: "var(--surface)", color: "var(--text)", border: "1px solid var(--border)" }}>
+                                          −
+                                        </button>
+                                        <span className="text-sm font-bold w-5 text-center" style={{ color: "var(--primary)" }}>{qty}</span>
+                                      </>
+                                    )}
+                                    <button type="button" onClick={() => addItem(item)}
+                                      className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm text-white"
+                                      style={{ background: "var(--primary)" }}>
+                                      +
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-                      ) : (
-                        <button type="button" onClick={() => addItem(item)}
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-xs"
-                          style={{ background: "var(--primary)", color: "#fff" }}>
-                          <i className="fa-solid fa-plus" />
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -356,9 +389,17 @@ export default function OrdersPage() {
         )}
 
         {/* ── Header ── */}
-        <div className="mb-4">
-          <h2 className="text-xl sm:text-2xl font-bold" style={{ color: "var(--text)" }}>Pedidos</h2>
-          <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>Todos os pedidos activos e histórico.</p>
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold" style={{ color: "var(--text)" }}>Pedidos</h2>
+            <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>Todos os pedidos activos e histórico.</p>
+          </div>
+          <button onClick={() => setShowCreate(true)}
+            className="flex items-center gap-1.5 rounded-xl px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white whitespace-nowrap flex-shrink-0"
+            style={{ background: "var(--primary)" }}>
+            <i className="fa-solid fa-plus text-[10px] sm:text-xs" />
+            Novo Pedido
+          </button>
         </div>
 
         {/* ── Status Tabs ── */}
