@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageSection, Pagination, StatCard } from "@/components";
 import { SortTh } from "@/components/ui/shared/SortTh.jsx";
+import { ThBadge } from "@/components/ui/shared/ThBadge.jsx";
 import {
   invoiceService, orderService, paymentService,
   orderItemService, itemService,
@@ -562,9 +563,8 @@ export default function FaturacaoPage() {
                   <thead>
                     <tr style={{ borderBottom: "1px solid var(--border)" }}>
                       {["Semana", "Previsto", "Real", "Diferença", "Tendência"].map(h => (
-                        <th key={h} className="pb-2 text-left font-semibold pr-3"
-                          style={{ color: "var(--text-muted)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                          {h}
+                        <th key={h} className="pb-2 text-left pr-3">
+                          <ThBadge>{h}</ThBadge>
                         </th>
                       ))}
                     </tr>

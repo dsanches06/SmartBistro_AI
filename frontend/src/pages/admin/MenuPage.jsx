@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageSection, Pagination, ListCard } from "@/components";
 import { SortTh } from "@/components/ui/shared/SortTh.jsx";
+import { ThBadge } from "@/components/ui/shared/ThBadge.jsx";
 import { itemService } from "@/services";
 import { MENU_CATEGORIES, MENU_CATEGORY_META, formatMenuPrice, getItemEmoji, MENU_PAGE_SIZE } from "@/utils";
 
@@ -441,7 +442,7 @@ export default function MenuPage() {
                     <SortTh col="category" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Categoria</SortTh>
                     <SortTh col="price"    sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Preço</SortTh>
                     <SortTh col="status"   sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Estado</SortTh>
-                    <th className="py-3 px-4 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-secondary)" }}>Ações</th>
+                    <th className="py-3 px-4"><ThBadge>Ações</ThBadge></th>
                   </tr>
                 </thead>
                 <tbody>

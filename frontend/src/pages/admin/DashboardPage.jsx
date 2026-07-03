@@ -8,6 +8,7 @@ import {
 } from "chart.js";
 import { Line, Doughnut } from "react-chartjs-2";
 import { PageSection, Pagination, KpiCard } from "@/components";
+import { ThBadge } from "@/components/ui/shared/ThBadge.jsx";
 import { orderService, paymentService, tableService, stockService, ingredientService, invoiceService } from "@/services";
 import {
   ORDER_STATUS_META, formatTime, formatOrderValue, getOrderTarget, getOrderClientName,
@@ -285,12 +286,12 @@ export default function DashboardPage() {
             <table className="w-full">
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                  <th className="pb-2 text-left text-xs font-semibold pr-3" style={{ color: "var(--text-muted)" }}>#</th>
-                  <th className="pb-2 text-left text-xs font-semibold pr-3" style={{ color: "var(--text-muted)" }}>Mesa</th>
-                  <th className="pb-2 text-left text-xs font-semibold pr-3 hidden sm:table-cell" style={{ color: "var(--text-muted)" }}>Cliente</th>
-                  <th className="pb-2 text-left text-xs font-semibold pr-3" style={{ color: "var(--text-muted)" }}>Estado</th>
-                  <th className="pb-2 text-left text-xs font-semibold pr-3" style={{ color: "var(--text-muted)" }}>Valor</th>
-                  <th className="pb-2 text-left text-xs font-semibold hidden sm:table-cell" style={{ color: "var(--text-muted)" }}>Hora</th>
+                  <th className="pb-2 text-left pr-3"><ThBadge>#</ThBadge></th>
+                  <th className="pb-2 text-left pr-3"><ThBadge>Mesa</ThBadge></th>
+                  <th className="pb-2 text-left pr-3 hidden sm:table-cell"><ThBadge>Cliente</ThBadge></th>
+                  <th className="pb-2 text-left pr-3"><ThBadge>Estado</ThBadge></th>
+                  <th className="pb-2 text-left pr-3"><ThBadge>Valor</ThBadge></th>
+                  <th className="pb-2 text-left hidden sm:table-cell"><ThBadge>Hora</ThBadge></th>
                 </tr>
               </thead>
               <tbody>

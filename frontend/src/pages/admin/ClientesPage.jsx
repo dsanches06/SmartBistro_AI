@@ -8,6 +8,7 @@ import { invoiceService }   from "@/services/invoiceService.js";
 import { orderItemService } from "@/services/orderItemService.js";
 import { itemService }      from "@/services/itemService.js";
 import { TrophySpin } from "@/components/ui";
+import { ThBadge } from "@/components/ui/shared/ThBadge.jsx";
 import UserCard, { getPalette, getInitials, formatDate } from "@/components/users/UserCard.jsx";
 import { useAuth } from "@/context/AuthContext";
 import { CAT_COLORS, CAT_FALLBACK } from "@/utils/menuUtils";
@@ -415,10 +416,10 @@ function CustomerDetail({ customer, onBack }) {
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-surface">
-                      <th className="text-left px-5 py-2 text-muted font-medium">Data</th>
-                      <th className="text-left px-3 py-2 text-muted font-medium">Estado</th>
-                      <th className="text-left px-3 py-2 text-muted font-medium">Tipo</th>
-                      <th className="text-right px-5 py-2 text-muted font-medium">Total</th>
+                      <th className="text-left px-5 py-2"><ThBadge>Data</ThBadge></th>
+                      <th className="text-left px-3 py-2"><ThBadge>Estado</ThBadge></th>
+                      <th className="text-left px-3 py-2"><ThBadge>Tipo</ThBadge></th>
+                      <th className="text-right px-5 py-2"><ThBadge>Total</ThBadge></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-surface">

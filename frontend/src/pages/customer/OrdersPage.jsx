@@ -9,6 +9,7 @@ import { itemService } from "@/services/itemService";
 import { getOrderTarget, getOrderItemCount, ORDER_TABS, filterOrders, ORDER_STATUS_META, ORDER_PAGE_SIZE } from "@/utils/orderUtils";
 import { TrophySpin, OrderStatusModal, PaymentModal } from "@/components/ui";
 import { Pagination } from "@/components/ui/shared/Pagination";
+import { ThBadge } from "@/components/ui/shared/ThBadge";
 
 const PAGE_SIZE = ORDER_PAGE_SIZE;
 
@@ -311,7 +312,7 @@ export default function CustomerOrdersPage() {
             <thead>
               <tr className="border-b" style={{ borderColor: "var(--border)" }}>
                 {['ID', 'Destino', 'Estado', 'Itens', 'Total', 'Hora'].map((header) => (
-                  <th key={header} className="px-4 py-3 uppercase tracking-[0.08em] text-[10px] font-semibold" style={{ color: "var(--text-muted)" }}>{header}</th>
+                  <th key={header} className="px-4 py-3"><ThBadge>{header}</ThBadge></th>
                 ))}
                 <th className="px-4 py-3" />
               </tr>

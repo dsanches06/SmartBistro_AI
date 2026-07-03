@@ -103,15 +103,21 @@ describe('POST /orders/:id/chef-start', () => {
     }))
   })
 
-  it('devolve 500 se o Chef AI lançar erro', async () => {
+  it('se o Chef AI estiver indisponível, avança em modo reserva sem IA', async () => {
     mockSendMessage.mockRejectedValueOnce(new Error('AI unavailable'))
 
     services.getOrderById.mockResolvedValue(PENDING_ORDER)
     services.getItemsByOrderId.mockResolvedValue([{ item_id: 5, quantity: 1 }])
     services.getActiveItems.mockResolvedValue([{ id: 5, name: 'Pizza', price: '9.50' }])
+    services.updateOrder.mockResolvedValue(1)
 
     const res = await request(app).post('/orders/1/chef-start')
-    expect(res.status).toBe(500)
-    expect(res.body.success).toBe(false)
+    expect(res.status).toBe(200)
+    expect(res.body.success).toBe(true)
+    expect(res.body.fallback).toBe(true)
+    expect(res.body.kitchen_sequence).toEqual(['Pizza'])
+    expect(services.updateOrder).toHaveBeenCalledWith(1, expect.objectContaining({
+      order_status: 'In Preparation',
+    }))
   })
 })

@@ -7,6 +7,7 @@ import {
 } from "chart.js";
 import { Bar, Line, Doughnut } from "react-chartjs-2";
 import { PageSection } from "@/components";
+import { ThBadge } from "@/components/ui/shared/ThBadge.jsx";
 import {
   invoiceService, orderService, orderItemService,
   itemService, tableService, userService,
@@ -290,7 +291,7 @@ function ProdutosSection({ orderItems, orders, itemMap, isDark }) {
           <thead>
             <tr style={{ borderBottom: "1px solid var(--border)" }}>
               {["#", "Produto", "Qtd vendida", "Receita"].map(h => (
-                <th key={h} className="pb-2 text-left pr-4 font-semibold" style={{ color: "var(--text-muted)" }}>{h}</th>
+                <th key={h} className="pb-2 text-left pr-4"><ThBadge>{h}</ThBadge></th>
               ))}
             </tr>
           </thead>
@@ -338,7 +339,7 @@ function MesasSection({ tables, orders }) {
             <thead>
               <tr style={{ borderBottom: "1px solid var(--border)" }}>
                 {["Mesa", "Pedidos"].map(h => (
-                  <th key={h} className="pb-2 text-left pr-4 font-semibold" style={{ color: "var(--text-muted)" }}>{h}</th>
+                  <th key={h} className="pb-2 text-left pr-4"><ThBadge>{h}</ThBadge></th>
                 ))}
               </tr>
             </thead>
@@ -389,7 +390,7 @@ function ClientesSection({ customers, orders }) {
             <thead>
               <tr style={{ borderBottom: "1px solid var(--border)" }}>
                 {["#", "Cliente", "Pedidos"].map(h => (
-                  <th key={h} className="pb-2 text-left pr-4 font-semibold" style={{ color: "var(--text-muted)" }}>{h}</th>
+                  <th key={h} className="pb-2 text-left pr-4"><ThBadge>{h}</ThBadge></th>
                 ))}
               </tr>
             </thead>

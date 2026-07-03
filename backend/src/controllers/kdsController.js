@@ -127,15 +127,41 @@ export async function chefStartOrder(req, res) {
       items:         itemsWithDetails,
     };
 
-    // 4. Invoca o Chef AI
+    // 4. Invoca o Chef AI — se estiver indisponível, cai em modo reserva (sem IA)
     console.log(`[KDS Chef] A processar pedido #${orderId} (${itemsWithDetails.length} itens)...`);
-    const chef          = new ChefAgent();
-    const sequencedText = await chef.sendMessage(buildChefMessage(validated, menuItems));
-    const sequenced     = validateAgentOutput(
-      ChefResponseSchema,
-      extractJSON(sequencedText, 'Chef'),
-      'Chef',
-    );
+    let sequenced;
+    try {
+      const chef          = new ChefAgent();
+      const sequencedText = await chef.sendMessage(buildChefMessage(validated, menuItems));
+      sequenced = validateAgentOutput(
+        ChefResponseSchema,
+        extractJSON(sequencedText, 'Chef'),
+        'Chef',
+      );
+    } catch (aiErr) {
+      console.warn(`[KDS Chef] IA indisponível para o pedido #${orderId} — modo reserva:`, aiErr.message);
+      const fallbackSeq = itemsWithDetails.flatMap(i => Array(i.quantity).fill(i.name));
+
+      await updateOrder(orderId, {
+        order_status:          'In Preparation',
+        kitchen_sequence_json: JSON.stringify(fallbackSeq),
+      });
+      scheduleChefAdvance(orderId, 60);
+      console.log(`[KDS Chef] Pedido #${orderId} (reserva) → Em Preparação (60s)`);
+
+      return res.json({
+        success:            true,
+        order_id:           orderId,
+        estimated_seconds:  60,
+        kitchen_sequence:   fallbackSeq,
+        sections:           {},
+        stock_status:       'ok',
+        stock_alerts:       [],
+        unavailable_items:  [],
+        notes:              'Chef IA indisponível — pedido avançado em modo reserva.',
+        fallback:           true,
+      });
+    }
 
     const { unavailableItems, stockStatus, stockAlerts } = deriveChefStockMetrics(sequenced);
     const kitchenSeq = sequenced.kitchen_sequence ?? [];
