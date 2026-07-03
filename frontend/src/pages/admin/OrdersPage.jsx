@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { PageSection, Pagination, ListCard } from "@/components";
+import { PageSection, Pagination, ListCard, PaymentModal } from "@/components";
 import { SortTh } from "@/components/ui/shared/SortTh.jsx";
 import { orderService, tableService, userService, itemService, orderItemService, invoiceService } from "@/services";
 import {
@@ -29,6 +29,7 @@ function NovoPedidoModal({ onClose, onCreated }) {
   const [itemSearch,    setItemSearch]    = useState("");
   const [saving,        setSaving]        = useState(false);
   const [err,           setErr]           = useState("");
+  const [pendingPayment, setPendingPayment] = useState(null); // { invoice, orderId } — takeaway aguarda pagamento
 
   useEffect(() => {
     Promise.all([
@@ -65,7 +66,7 @@ function NovoPedidoModal({ onClose, onCreated }) {
     if (!selectedItems.length) return setErr("Adicione pelo menos um item ao pedido.");
     setSaving(true); setErr("");
     try {
-      const kitchen_sequence_json = selectedItems.flatMap(i => Array(i.quantity).fill(i.name));
+      const kitchen_sequence_json = selectedItems.map(i => ({ name: i.name, quantity: i.quantity, price: i.price }));
       const orderData = {
         service_type: form.service_type,
         kitchen_sequence_json,
@@ -78,6 +79,20 @@ function NovoPedidoModal({ onClose, onCreated }) {
         order_id: order.id,
         items: selectedItems.map(i => ({ item_id: i.item_id, quantity: i.quantity })),
       });
+
+      // Takeaway com cliente associado — o backend já criou a fatura; pede o pagamento
+      // antes de o pedido seguir para a cozinha (mesmo fluxo do cardápio do cliente).
+      if (form.service_type === "Takeaway" && form.user_id) {
+        const invoice = await invoiceService.getByOrder(order.id).catch(() => null);
+        if (!invoice?.id) {
+          setErr("Stock insuficiente para preparar o pedido — foi cancelado.");
+          onCreated();
+          return;
+        }
+        setPendingPayment({ invoice, orderId: order.id });
+        return;
+      }
+
       onCreated();
       onClose();
     } catch (e) {
@@ -86,7 +101,33 @@ function NovoPedidoModal({ onClose, onCreated }) {
     } finally { setSaving(false); }
   };
 
+  const handlePaymentDone = () => {
+    if (pendingPayment) orderService.chefStart(pendingPayment.orderId).catch(() => {});
+    setPendingPayment(null);
+    onCreated();
+    onClose();
+  };
+
+  // Pedido e fatura já foram criados — fechar sem pagar só dispensa o modal,
+  // o pedido fica "Pending" a aguardar pagamento (tal como no cardápio do cliente).
+  const handlePaymentSkip = () => {
+    setPendingPayment(null);
+    onCreated();
+    onClose();
+  };
+
   const inputStyle = { background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" };
+
+  if (pendingPayment) {
+    return (
+      <PaymentModal
+        unpaidInvoices={[{ inv: pendingPayment.invoice, orderId: pendingPayment.orderId }]}
+        userId={form.user_id ? parseInt(form.user_id) : null}
+        onPaid={handlePaymentDone}
+        onClose={handlePaymentSkip}
+      />
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -109,20 +150,24 @@ function NovoPedidoModal({ onClose, onCreated }) {
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4 overflow-y-auto flex-1 pr-1">
 
-            {/* Tipo de serviço */}
-            <div className="flex gap-2">
-              {["Table", "Takeaway"].map(t => (
-                <button key={t} type="button"
-                  onClick={() => { set("service_type", t); if (t === "Takeaway") set("table_id", ""); }}
-                  className="flex-1 py-2 rounded-xl text-sm font-semibold transition-all"
-                  style={{
-                    background: form.service_type === t ? "var(--primary)" : "var(--surface-2)",
-                    color: form.service_type === t ? "#fff" : "var(--text-secondary)",
-                  }}>
-                  <i className={`fa-solid ${t === "Table" ? "fa-utensils" : "fa-bag-shopping"} mr-1.5 text-xs`} />
-                  {t === "Table" ? "Mesa" : "Takeaway"}
-                </button>
-              ))}
+            {/* Tipo de serviço — abas */}
+            <div className="flex gap-4" style={{ borderBottom: "1px solid var(--border)" }} role="tablist">
+              {["Table", "Takeaway"].map(t => {
+                const active = form.service_type === t;
+                return (
+                  <button key={t} type="button" role="tab" aria-selected={active}
+                    onClick={() => { set("service_type", t); if (t === "Takeaway") set("table_id", ""); }}
+                    className="flex items-center gap-1.5 pb-2.5 text-sm font-semibold transition-colors"
+                    style={{
+                      color: active ? "var(--primary)" : "var(--text-muted)",
+                      borderBottom: active ? "2px solid var(--primary)" : "2px solid transparent",
+                      marginBottom: -1,
+                    }}>
+                    <i className={`fa-solid ${t === "Table" ? "fa-utensils" : "fa-bag-shopping"} text-xs`} />
+                    {t === "Table" ? "Mesa" : "Takeaway"}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Mesa (só se Table) */}

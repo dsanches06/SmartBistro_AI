@@ -52,10 +52,10 @@ function FazerPedidoModal({ order, onClose, onPlaced }) {
           return Array.isArray(raw) ? raw : JSON.parse(raw || "[]");
         } catch { return []; }
       })();
-      const newNames = cartItems.flatMap(c => Array(c.qty).fill(c.item.name));
+      const newItems = cartItems.map(c => ({ name: c.item.name, quantity: c.qty, price: Number(c.item.price) }));
 
       await orderService.update(order.id, {
-        kitchen_sequence_json: JSON.stringify([...existing, ...newNames]),
+        kitchen_sequence_json: JSON.stringify([...existing, ...newItems]),
         order_status: "Pending",
       });
 
