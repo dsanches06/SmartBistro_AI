@@ -1,26 +1,21 @@
 /**
- * Processador Base de Chat — Loop agêntico com Groq e function calling
+ * Processador Base de Chat — Loop agêntico com Claude e tool use
  */
 
 import {
-  groq,
-  AGENT_MODEL_QUEUES,
-  GROQ_MODEL_QUEUE,
-  chatWithFallback,
+  anthropic,
+  CLAUDE_MODEL,
+  callClaude,
   CHATBOT_SYSTEM_PROMPT,
 } from '../config/index.js';
-
-// Fila de modelos do chatbot — usa a sua própria para não competir com os outros agentes
-const _CHATBOT_QUEUE = AGENT_MODEL_QUEUES.chatbot || GROQ_MODEL_QUEUE;
 import {
-  normalizeGroqTools,
-  normalizeGroqResponse,
-  parseGroqFunctionArgs,
-  createThinkTagFilter,
-  isRetryableGroqError,
+  normalizeClaudeTools,
+  normalizeClaudeResponse,
+  normalizeClaudeText,
+  extractClaudeToolUses,
   toResponsePayload,
-} from '../../utils/groqUtil.js';
-import { classifyGroqError } from '../../utils/classifyError.js';
+} from '../../utils/claudeUtil.js';
+import { classifyClaudeError } from '../../utils/classifyError.js';
 import { MAX_AGENTIC_STEPS, synthesizeFallbackMessage } from '../../utils/index.js';
 import { PipelineError } from '../../utils/pipelineError.js';
 
@@ -30,7 +25,7 @@ export class BaseChatProcessor {
     this.functionHandlers = functionHandlers;
   }
 
-  // ── Histórico já está no formato OpenAI — só normaliza o role ────────────────
+  // ── Histórico já está no formato Claude (role + content string) ─────────────
   buildHistory(conversationHistory = []) {
     return conversationHistory.map((item) => ({
       role:    item.role === 'assistant' ? 'assistant' : 'user',
@@ -70,135 +65,71 @@ export class BaseChatProcessor {
     return functionCalls.filter((fc) => fc.name !== 'set_assign_task_values');
   }
 
-  // ── Chamada Groq sem streaming (com fallback) ─────────────────────────────────
-  async _callGroq(messages) {
+  // ── Chamada Claude sem streaming ──────────────────────────────────────────────
+  async _callClaude(messages, systemPrompt) {
     try {
-      const response = await chatWithFallback(messages, {
-        temperature:      0.3,
-        tools:            normalizeGroqTools(this.toolConfig),
+      const response = await callClaude(messages, {
+        system:      systemPrompt,
+        temperature: 0.3,
+        tools:       normalizeClaudeTools(this.toolConfig),
       });
-      return normalizeGroqResponse(response);
+      return normalizeClaudeResponse(response);
     } catch (error) {
-      const classified = classifyGroqError(error);
+      const classified = classifyClaudeError(error);
       const pe = new PipelineError(classified.userMessage, {
-        code:    `GROQ_${classified.type}`,
+        code:    `CLAUDE_${classified.type}`,
         stage:   'provider',
         details: { message: error?.message },
         cause:   error,
       });
-      pe.groqType = classified.type;
+      pe.aiErrorType = classified.type;
       throw pe;
     }
   }
 
   // ── Streaming de um único round (emite chunks via onChunk) ────────────────────
-  async _streamRound(messages, onChunk, timeoutMs = 45000) {
-    const thinkFilter = createThinkTagFilter(onChunk);
-
+  async _streamRound(messages, systemPrompt, onChunk, timeoutMs = 45000) {
     const makeTimeout = () =>
       new Promise((_, reject) =>
         setTimeout(
           () => reject(Object.assign(
             new Error('O assistente demorou demasiado tempo a responder. Tente novamente. ⏱️'),
-            { groqType: 'TIMEOUT' },
+            { aiErrorType: 'TIMEOUT' },
           )),
           timeoutMs,
         ),
       );
 
-    // O streamTask e o toolCallsAcc ficam DENTRO do loop para que um retry
-    // com o próximo modelo comece com estado limpo. Isto permite recuperar de
-    // erros de validação de schema durante a iteração do stream (ex: llama-4-scout
-    // que passa string onde o schema espera integer).
-    for (let i = 0; i < _CHATBOT_QUEUE.length; i++) {
-      const model        = _CHATBOT_QUEUE[i];
-      let   fullContent  = '';
-      const toolCallsAcc = {};
+    try {
+      const stream = anthropic.messages.stream({
+        model:       CLAUDE_MODEL,
+        max_tokens:  4096,
+        system:      systemPrompt,
+        messages,
+        temperature: 0.3,
+        tools:       normalizeClaudeTools(this.toolConfig),
+      });
 
-      try {
-        const streamOpts = {
-          model,
-          messages,
-          temperature: 0.3,
-          tools:       normalizeGroqTools(this.toolConfig),
-          stream:      true,
-        };
+      stream.on('text', (text) => onChunk(text));
 
-        const stream = await groq.chat.completions.create(streamOpts);
-        if (i > 0) console.log(`[ChatProcessor] fallback stream para modelo ${model}`);
+      const finalMessage = await Promise.race([stream.finalMessage(), makeTimeout()]);
 
-        const streamTask = async () => {
-          for await (const chunk of stream) {
-            const delta = chunk.choices?.[0]?.delta || {};
-
-            if (delta.content) {
-              fullContent += delta.content;
-              thinkFilter.feed(delta.content);
-            }
-
-            if (Array.isArray(delta.tool_calls)) {
-              for (const tc of delta.tool_calls) {
-                const idx = tc.index ?? 0;
-                if (!toolCallsAcc[idx]) {
-                  toolCallsAcc[idx] = { id: '', type: 'function', function: { name: '', arguments: '' } };
-                }
-                if (tc.id)                  toolCallsAcc[idx].id = tc.id;
-                if (tc.function?.name)      toolCallsAcc[idx].function.name      += tc.function.name;
-                if (tc.function?.arguments) toolCallsAcc[idx].function.arguments += tc.function.arguments;
-              }
-            }
-          }
-        };
-
-        await Promise.race([streamTask(), makeTimeout()]);
-
-        // Stream concluído com sucesso — constrói o resultado e retorna
-        thinkFilter.finalize();
-
-        const toolCalls = Object.values(toolCallsAcc)
-          .filter((tc) => tc.function?.name)
-          .map((tc) => ({
-            ...tc,
-            id: tc.id || `call_${tc.function.name}_${Date.now()}`,
-          }));
-
-        const assistantMsg = {
-          role:    'assistant',
-          content: fullContent || null,
-          ...(toolCalls.length && { tool_calls: toolCalls }),
-        };
-
-        const functionCalls = toolCalls.map((tc) => ({
-          name: tc.function.name,
-          args: parseGroqFunctionArgs(tc.function.arguments),
-          raw:  tc,
-        }));
-
-        return { functionCalls, roundText: fullContent, assistantMsg };
-
-      } catch (err) {
-        if (isRetryableGroqError(err) && i < _CHATBOT_QUEUE.length - 1) {
-          console.warn(`[ChatProcessor] ${model} indisponível no stream. A tentar próximo...`);
-          continue;
-        }
-        const classified = classifyGroqError(err);
-        const pe = new PipelineError(classified.userMessage, {
-          code:    `GROQ_${classified.type}`,
-          stage:   'provider',
-          details: { message: err?.message },
-          cause:   err,
-        });
-        pe.groqType = classified.type;
-        throw pe;
-      }
+      return {
+        functionCalls: extractClaudeToolUses(finalMessage.content),
+        roundText:     normalizeClaudeText(finalMessage.content),
+        assistantMsg:  { role: 'assistant', content: finalMessage.content },
+      };
+    } catch (err) {
+      const classified = classifyClaudeError(err);
+      const pe = new PipelineError(classified.userMessage, {
+        code:    `CLAUDE_${classified.type}`,
+        stage:   'provider',
+        details: { message: err?.message },
+        cause:   err,
+      });
+      pe.aiErrorType = classified.type;
+      throw pe;
     }
-
-    // Todos os modelos falharam
-    const pe = new PipelineError('Nenhum modelo disponível de momento. Tente novamente.', {
-      code: 'GROQ_ALL_MODELS_FAILED', stage: 'provider', details: null,
-    });
-    pe.groqType = 'UNKNOWN';
-    throw pe;
   }
 
   // Pode ser sobreposto por subclasses para injectar contexto (ex: nome do cliente)
@@ -209,14 +140,14 @@ export class BaseChatProcessor {
   // ── Loop agêntico sem streaming ───────────────────────────────────────────────
   async processChatMessage(userMessage, conversationHistory = []) {
     try {
+      const systemPrompt = this.getSystemPrompt();
       const messages = [
-        { role: 'system', content: this.getSystemPrompt() },
         ...this.buildHistory(conversationHistory),
         { role: 'user', content: userMessage },
       ];
 
-      let response = await this._callGroq(messages);
-      if (response.choices?.[0]?.message) messages.push(response.choices[0].message);
+      let response = await this._callClaude(messages, systemPrompt);
+      messages.push({ role: 'assistant', content: response.content });
 
       const allResults = [];
       let step = 0;
@@ -229,16 +160,18 @@ export class BaseChatProcessor {
         const execResults = await Promise.all(callsToExecute.map((fc) => this.executeFunction(fc)));
         allResults.push(...execResults);
 
-        for (const er of execResults) {
-          messages.push({
-            role:        'tool',
+        // Todos os tool_results de uma ronda vão numa ÚNICA mensagem 'user'
+        messages.push({
+          role: 'user',
+          content: execResults.map((er) => ({
+            type:        'tool_result',
+            tool_use_id: er.functionCall.raw?.id || er.name,
             content:     JSON.stringify(toResponsePayload(er.result)),
-            tool_call_id: er.functionCall.raw?.id || er.name,
-          });
-        }
+          })),
+        });
 
-        response = await this._callGroq(messages);
-        if (response.choices?.[0]?.message) messages.push(response.choices[0].message);
+        response = await this._callClaude(messages, systemPrompt);
+        messages.push({ role: 'assistant', content: response.content });
       }
 
       return {
@@ -249,19 +182,19 @@ export class BaseChatProcessor {
         })),
       };
     } catch (error) {
-      if (error?.groqType) {
-        console.error(`[ChatProcessor] Groq ${error.groqType}:`, error.message);
-        return { success: false, groqError: true, errorType: error.groqType, message: error.message, functionResults: [] };
+      if (error?.aiErrorType) {
+        console.error(`[ChatProcessor] Claude ${error.aiErrorType}:`, error.message);
+        return { success: false, aiError: true, errorType: error.aiErrorType, message: error.message, functionResults: [] };
       }
       console.error('[ChatProcessor] Unexpected error:', error);
-      return { success: false, groqError: false, message: 'Ocorreu um erro interno. Tente novamente.', functionResults: [] };
+      return { success: false, aiError: false, message: 'Ocorreu um erro interno. Tente novamente.', functionResults: [] };
     }
   }
 
   // ── Loop agêntico com streaming verdadeiro ────────────────────────────────────
   async processChatMessageStream(userMessage, conversationHistory = [], onChunk) {
+    const systemPrompt = this.getSystemPrompt();
     const messages = [
-      { role: 'system', content: this.getSystemPrompt() },
       ...this.buildHistory(conversationHistory),
       { role: 'user', content: userMessage },
     ];
@@ -270,16 +203,17 @@ export class BaseChatProcessor {
     const allChunks  = [];
     const emit       = (chunk) => { allChunks.push(chunk); onChunk(chunk); };
 
-    let { functionCalls, assistantMsg } = await this._streamRound(messages, emit);
+    let { functionCalls, assistantMsg } = await this._streamRound(messages, systemPrompt, emit);
 
-    // Groq devolveu vazio — força continuação SEM adicionar o assistantMsg vazio ao array
-    // (dois assistant consecutivos sem user entre eles viola o formato OpenAI → 400)
+    // Claude devolveu vazio — força continuação SEM adicionar o assistantMsg vazio ao array
+    // (dois assistant consecutivos sem user entre eles viola o formato da Claude API → 400)
     if (!functionCalls.length && !allChunks.length) {
       ({ functionCalls, assistantMsg } = await this._streamRound(
         [...messages, {
           role:    'user',
           content: `${userMessage}\n\n[Sistema: continua o fluxo — chama as ferramentas necessárias para avançar.]`,
         }],
+        systemPrompt,
         emit,
       ));
     }
@@ -297,20 +231,20 @@ export class BaseChatProcessor {
       const execResults = await Promise.all(callsToExecute.map((fc) => this.executeFunction(fc)));
       allResults.push(...execResults);
 
-      for (const er of execResults) {
-        messages.push({
-          role:        'tool',
+      messages.push({
+        role: 'user',
+        content: execResults.map((er) => ({
+          type:        'tool_result',
+          tool_use_id: er.functionCall.raw?.id || er.name,
           content:     JSON.stringify(toResponsePayload(er.result)),
-          tool_call_id: er.functionCall.raw?.id || er.name,
-        });
-      }
+        })),
+      });
 
       // Usa chamada directa (sem streaming) para rounds intermédios de tools —
       // é muito mais rápido e não tem risco de timeout.
       // Se a resposta tiver texto (ronda final), emite-o de uma vez.
-      const nextResp = await this._callGroq(messages);
-      const nextMsg  = nextResp.choices?.[0]?.message;
-      if (nextMsg) messages.push(nextMsg);
+      const nextResp = await this._callClaude(messages, systemPrompt);
+      messages.push({ role: 'assistant', content: nextResp.content });
 
       functionCalls = nextResp.functionCalls ?? [];
 

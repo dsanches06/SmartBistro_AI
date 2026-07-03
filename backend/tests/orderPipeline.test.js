@@ -18,7 +18,7 @@ vi.mock('../src/genai/orchestrations/index.js', () => ({
 }))
 
 vi.mock('../src/utils/index.js', () => ({
-  classifyGroqError:    vi.fn().mockReturnValue(null),
+  classifyClaudeError:  vi.fn().mockReturnValue(null),
   ROLE_USER:            2,
   ROLE_ASSISTANT:       3,
   writeSseError:        vi.fn(),

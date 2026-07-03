@@ -1,7 +1,7 @@
 import { BaseChatProcessor } from "../models/index.js";
 import { CHATBOT_SYSTEM_PROMPT } from "../config/index.js";
 import {
-  classifyGroqError,
+  classifyClaudeError,
   calculateInvoiceTotals,
   calculateProfitMargin,
 } from "../../utils/index.js";
@@ -9,7 +9,7 @@ import { PipelineError } from "../../utils/pipelineError.js";
 
 // ── Declarações das ferramentas expostas ao chatbot ──────────────────────────
 // Apenas funções que o chatbot (orquestrador) pode chamar directamente.
-// Stock, stock, create_order, etc. são internos ao pipeline — não expostos ao Groq.
+// Stock, stock, create_order, etc. são internos ao pipeline — não expostos ao Claude.
 import {
   getUserFunctionDeclaration,
   findOrCreateUserFunctionDeclaration,
@@ -52,7 +52,7 @@ import {
 
 const fmtTable = (n) => `T${String(n).replace(/^[Tt]/, "").padStart(2, "0")}`;
 
-// ── Ferramentas expostas ao Groq (chatbot orquestrador) ───────────────────────
+// ── Ferramentas expostas ao Claude (chatbot orquestrador) ─────────────────────
 const ALL_DECLARATIONS = [
   findOrCreateUserFunctionDeclaration,   // identificar cliente
   getUserFunctionDeclaration,            // consultar cliente
@@ -70,7 +70,7 @@ const ALL_DECLARATIONS = [
   redeemCustomerPointsFunctionDeclaration, // resgatar pontos
 ];
 
-// ── Handlers: recebem os args do Groq e executam operações na BD ──────────────
+// ── Handlers: recebem os args do Claude e executam operações na BD ────────────
 export const FUNCTION_HANDLERS = {
   find_or_create_user: async (args) => {
     // Alguns modelos passam name como objecto em vez de string — coagir defensivamente
@@ -380,14 +380,14 @@ export async function processChatStream(
     const result = await processor.chat(message, onChunk);
     if (onDone) onDone(result.message || "", result.functionResults ?? []);
   } catch (err) {
-    const classified = classifyGroqError(err);
+    const classified = classifyClaudeError(err);
     const pe = new PipelineError(classified.userMessage, {
-      code: `GROQ_${classified.type}`,
+      code: `CLAUDE_${classified.type}`,
       stage: "provider",
       details: { message: err?.message },
       cause: err,
     });
-    pe.groqType = classified.type;
+    pe.aiErrorType = classified.type;
     pe.originalError = err;
 
     if (onError) onError(pe);

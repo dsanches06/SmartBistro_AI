@@ -1,26 +1,19 @@
+import { callClaude } from '../config/index.js';
 import {
-  groq,
-  chatWithFallback,
-  AGENT_MODEL_QUEUES,
-  GROQ_MODEL_QUEUE,
-} from '../config/index.js';
-import {
-  normalizeGroqResponse,
-  normalizeGroqTools,
-} from '../../utils/groqUtil.js';
-import { classifyGroqError } from '../../utils/classifyError.js';
+  normalizeClaudeResponse,
+  normalizeClaudeTools,
+} from '../../utils/claudeUtil.js';
+import { classifyClaudeError } from '../../utils/classifyError.js';
 import { PipelineError } from '../../utils/pipelineError.js';
 
 // ── Superclasse base para todos os agentes do SmartBistro ─────────────────────
 class BaseAgentAI {
-  // agentKey: chave em AGENT_MODEL_QUEUES para usar a fila de modelos própria do agente.
-  // Se não fornecida, usa a fila global GROQ_MODEL_QUEUE.
-  constructor(name, instruction, temperature = 0.25, tools = null, agentKey = null) {
+  constructor(name, instruction, temperature = 0.25, tools = null) {
     this.name        = name;
     this.temperature = temperature;
     this.tools       = tools;
-    this._modelQueue = (agentKey && AGENT_MODEL_QUEUES[agentKey]) || GROQ_MODEL_QUEUE;
-    this._messages   = [{ role: "system", content: instruction }];
+    this.system      = instruction;
+    this._messages   = [];
   }
 
   async _call(userContent) {
@@ -28,13 +21,14 @@ class BaseAgentAI {
     const messages = [...this._messages, userMsg];
 
     const options = {
+      system:      this.system,
       temperature: this.temperature,
-      ...(this.tools ? { tools: normalizeGroqTools(this.tools) } : {}),
+      ...(this.tools ? { tools: normalizeClaudeTools(this.tools) } : {}),
     };
 
     try {
-      const response   = await chatWithFallback(messages, options, this._modelQueue);
-      const normalized = normalizeGroqResponse(response);
+      const response   = await callClaude(messages, options);
+      const normalized = normalizeClaudeResponse(response);
 
       // Mantém histórico para chamadas multi-turn no mesmo agente (ex: Maître retry)
       this._messages.push(userMsg);
@@ -42,15 +36,15 @@ class BaseAgentAI {
 
       return normalized;
     } catch (error) {
-      const classified = classifyGroqError(error);
+      const classified = classifyClaudeError(error);
       console.error(`[${this.name}] ${classified.type}:`, error.message);
       const pe = new PipelineError(classified.userMessage, {
-        code:    `GROQ_${classified.type}`,
+        code:    `CLAUDE_${classified.type}`,
         stage:   'provider',
         details: { message: error?.message },
         cause:   error,
       });
-      pe.groqType     = classified.type;
+      pe.aiErrorType   = classified.type;
       pe.originalError = error;
       throw pe;
     }
@@ -62,7 +56,7 @@ class BaseAgentAI {
     return normalized.text;
   }
 
-  // ── Resposta com reasoning (captura reasoning_content / <think>) ──────────────
+  // ── Resposta com reasoning (claude-haiku-4-5 não suporta thinking — sempre null) ─
   async sendMessageWithThoughts(message) {
     const normalized = await this._call(message);
     return { text: normalized.text, thoughts: normalized.thinking ?? null };

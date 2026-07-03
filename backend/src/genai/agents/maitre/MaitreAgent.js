@@ -5,7 +5,7 @@ import { MAITRE_PROMPT } from "./maitrePrompt.js";
 // temp 0.4 → MEDIUM reasoning_effort (interação natural, alguma criatividade)
 class MaitreAgent extends BaseAgentAI {
   constructor() {
-    super("Maitre", MAITRE_PROMPT, 0.4, null, 'maitre');
+    super("Maitre", MAITRE_PROMPT, 0.4, null);
   }
 }
 

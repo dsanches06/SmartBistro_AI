@@ -5,7 +5,7 @@ import { CASHIER_PROMPT } from "./cashierPrompt.js";
 // temp 0.3 → decisões financeiras determinísticas, sem criatividade.
 class CashierAgent extends BaseAgentAI {
   constructor() {
-    super("Cashier", CASHIER_PROMPT, 0.3, null, 'cashier');
+    super("Cashier", CASHIER_PROMPT, 0.3, null);
   }
 }
 

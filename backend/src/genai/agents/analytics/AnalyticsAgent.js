@@ -7,7 +7,7 @@ import { extractJSON } from '../../helpers/index.js';
 // temp 0.4 → criatividade moderada nos labels; coerência mantida com os dados numéricos.
 class AnalyticsAgent extends BaseAgentAI {
   constructor() {
-    super('Analytics', ANALYTICS_PROMPT, 0.4, null, 'analytics');
+    super('Analytics', ANALYTICS_PROMPT, 0.4, null);
   }
 
   // Gera recomendações de itens a partir de dados SQL pré-processados.

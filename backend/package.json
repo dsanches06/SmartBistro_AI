@@ -20,6 +20,7 @@
     "vitest": "^4.1.9"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.110.0",
     "bcrypt": "^6.0.0",
     "busboy": "^1.6.0",
     "cors": "^2.8.6",

@@ -30,7 +30,7 @@ import {
   createPayment,
   updateTableStatus,
 } from '../services/index.js';
-import { classifyGroqError } from '../utils/index.js';
+import { classifyClaudeError } from '../utils/index.js';
 
 export async function processOrderPipeline(req, res) {
   const orderData = req.body;
@@ -254,7 +254,7 @@ export async function processOrderPipeline(req, res) {
     // If there's an underlying SDK/error from the AI provider, classify it and return friendly message
     try {
       const aiSource = err?.cause ?? err?.details?.sdkError ?? err;
-      const classification = classifyGroqError(aiSource);
+      const classification = classifyClaudeError(aiSource);
       if (classification && classification.type && classification.type !== 'UNKNOWN') {
         switch (classification.type) {
           case 'SERVICE_DOWN':
@@ -273,7 +273,7 @@ export async function processOrderPipeline(req, res) {
       }
     } catch (e) {
       // ignore classification errors and continue to structured handling
-      console.warn('[Pipeline] classifyGroqError failed', e && e.message);
+      console.warn('[Pipeline] classifyClaudeError failed', e && e.message);
     }
 
     // If the pipeline threw a structured error, prefer its properties

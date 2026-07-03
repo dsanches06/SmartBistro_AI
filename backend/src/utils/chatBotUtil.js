@@ -16,7 +16,7 @@ export const SSE_ERROR_EVENT = {
 };
 
 export function sseErrorEvent(err) {
-  const type = err?.groqType;
+  const type = err?.aiErrorType;
   return SSE_ERROR_EVENT[type] ?? 'provider_error';
 }
 
@@ -24,7 +24,7 @@ export function writeSseError(res, err) {
   res.write(
     `event: ${sseErrorEvent(err)}\ndata: ${JSON.stringify({
       success:   false,
-      errorType: err?.groqType ?? 'UNKNOWN',
+      errorType: err?.aiErrorType ?? 'UNKNOWN',
       message:   err.message,
     })}\n\n`,
   );
