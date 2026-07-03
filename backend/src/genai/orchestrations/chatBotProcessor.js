@@ -22,6 +22,7 @@ import { getItemsFunctionDeclaration } from "../functions/items/index.js";
 import {
   updateOrderStatusFunctionDeclaration,
   submitOrderFunctionDeclaration,
+  getOrderFunctionDeclaration,
 } from "../functions/orders/index.js";
 import { generateInvoiceFunctionDeclaration } from "../functions/invoices/index.js";
 import {
@@ -44,6 +45,7 @@ import {
   getTableById, getAllTables, updateTableStatus,
   getAllItems, getItemsByOrderId,
   createOrder, updateOrderStatus, createOrderItem,
+  getOrderById, getOrdersByCustomerId,
   createInvoice, updatePayment,
   createNotification, createLog,
   getReservationById, getActiveReservationByCustomerId,
@@ -61,6 +63,7 @@ const ALL_DECLARATIONS = [
   getItemsFunctionDeclaration,           // mostrar menu por categoria
   updateOrderStatusFunctionDeclaration,  // actualizar estado do pedido
   submitOrderFunctionDeclaration,        // submeter pedido ao pipeline Maître→Chef
+  getOrderFunctionDeclaration,           // consultar estado de um pedido
   generateInvoiceFunctionDeclaration,    // gerar fatura via Cashier (quando cliente pede conta)
   getReservationFunctionDeclaration,              // consultar reserva
   createReservationFunctionDeclaration,           // criar reserva (1 mesa)
@@ -145,6 +148,15 @@ export const FUNCTION_HANDLERS = {
     return getAllItems(search || undefined, category || undefined, sort);
   },
   update_order_status: async (args) => updateOrderStatus(args.order_id, args.order_status),
+
+  get_order: async (args) => {
+    if (args.order_id) return getOrderById(args.order_id);
+    if (args.user_id) {
+      const orders = await getOrdersByCustomerId(args.user_id);
+      return orders[0] ?? null;
+    }
+    return null;
+  },
 
   // Submete pedido ao pipeline Maître→Chef e persiste na BD.
   // Cashier NÃO é chamado aqui — só quando o cliente pedir a conta.
