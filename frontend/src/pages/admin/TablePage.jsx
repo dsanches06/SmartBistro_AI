@@ -314,13 +314,12 @@ function CustomerCombobox({ customers, loading, err, onSelect, placeholder = "Pe
 
 /* ── AtribuirMesaModal ── */
 function AtribuirMesaModal({ table, onClose, onAssigned }) {
-  const [step, setStep]               = useState(1);  // 1=cliente, 2=nº pessoas
+  const [step, setStep]               = useState(1);  // 1=nº pessoas, 2=responsável
   const [customers, setCustomers]     = useState([]);
   const [allTables, setAllTables]     = useState([]);
   const [loading, setLoading]         = useState(true);
   const [assigning, setAssigning]     = useState(false);
   const [err, setErr]                 = useState("");
-  const [selectedUser, setSelectedUser] = useState(null);
   const [partySize, setPartySize]     = useState("");
   const [extraTables, setExtraTables] = useState([]); // mesas extra para juntar
 
@@ -352,14 +351,6 @@ function AtribuirMesaModal({ table, onClose, onAssigned }) {
     })();
   }, []);
 
-  const handleSelectUser = (user) => {
-    setSelectedUser(user);
-    setPartySize("");
-    setExtraTables([]);
-    setErr("");
-    setStep(2);
-  };
-
   const findBestTable = (size) => {
     const available = allTables.filter(t => t.status === "Available" && t.capacity >= size);
     if (!available.length) return null;
@@ -377,6 +368,7 @@ function AtribuirMesaModal({ table, onClose, onAssigned }) {
   );
   const combinedCapacity = table.capacity + extraTables.reduce((s, t) => s + t.capacity, 0);
   const isMerging = extraTables.length > 0;
+  const canProceed = size >= 1 && (previewTable || (isMerging && combinedCapacity >= size));
 
   const toggleExtra = (t) => {
     setExtraTables(prev =>
@@ -385,15 +377,19 @@ function AtribuirMesaModal({ table, onClose, onAssigned }) {
     setErr("");
   };
 
-  const handleConfirm = async () => {
-    if (!size || size < 1) return setErr("Indica o número de pessoas.");
+  const handleNext = () => {
+    if (!canProceed) return;
+    setErr("");
+    setStep(2);
+  };
 
+  const handleSelectUser = async (user) => {
     if (isMerging) {
       if (combinedCapacity < size)
         return setErr(`Capacidade combinada (${combinedCapacity}) insuficiente para ${size} pessoas.`);
       setAssigning(true); setErr("");
       try {
-        await tableService.createGroup([table.id, ...extraTables.map(t => t.id)], selectedUser.id);
+        await tableService.createGroup([table.id, ...extraTables.map(t => t.id)], user.id);
         onAssigned();
         onClose();
       } catch (e) {
@@ -409,7 +405,7 @@ function AtribuirMesaModal({ table, onClose, onAssigned }) {
     setAssigning(true); setErr("");
     try {
       await orderService.create({
-        user_id: selectedUser.id,
+        user_id: user.id,
         table_id: previewTable.id,
         service_type: "Table",
         order_status: "Pending",
@@ -429,14 +425,14 @@ function AtribuirMesaModal({ table, onClose, onAssigned }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.5)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="rounded-[24px] p-6 w-full max-w-sm shadow-2xl flex flex-col gap-4"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)", maxHeight: "90vh", overflowY: "auto" }}>
+      <div className="rounded-[24px] p-6 w-full max-w-md shadow-2xl flex flex-col gap-4"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)", maxHeight: "90vh" }}>
 
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {step === 2 && (
-              <button onClick={() => { setStep(1); setSelectedUser(null); setExtraTables([]); setErr(""); }}
+              <button onClick={() => { setStep(1); setErr(""); }}
                 className="w-7 h-7 flex items-center justify-center rounded-lg"
                 style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
                 <i className="fa-solid fa-arrow-left text-xs" />
@@ -464,22 +460,7 @@ function AtribuirMesaModal({ table, onClose, onAssigned }) {
             {isMerging ? "A juntar mesas..." : "A atribuir mesa..."}
           </p>
         ) : step === 1 ? (
-          <CustomerCombobox customers={customers} loading={loading} err={err} onSelect={handleSelectUser} />
-        ) : (
-          <div className="flex flex-col gap-4">
-            {/* Cliente seleccionado */}
-            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-              style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
-              <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
-                style={{ background: "var(--primary)", color: "#fff" }}>
-                {selectedUser.name[0].toUpperCase()}
-              </div>
-              <div>
-                <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{selectedUser.name}</p>
-                {selectedUser.phone && <p className="text-xs" style={{ color: "var(--text-muted)" }}>{selectedUser.phone}</p>}
-              </div>
-            </div>
-
+          <div className="flex flex-col gap-4 overflow-y-auto pr-1" style={{ maxHeight: "70vh" }}>
             {/* Nº de pessoas */}
             <div>
               <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>
@@ -581,15 +562,29 @@ function AtribuirMesaModal({ table, onClose, onAssigned }) {
             {err && <p className="text-xs" style={{ color: "#ef4444" }}>{err}</p>}
 
             <button
-              onClick={handleConfirm}
-              disabled={!size || size < 1 || (!previewTable && !isMerging) || (isMerging && combinedCapacity < size)}
+              onClick={handleNext}
+              disabled={!canProceed}
               className="w-full py-3 rounded-2xl text-sm font-bold text-white disabled:opacity-40 transition-opacity"
               style={{ background: isMerging ? "#7c3aed" : "var(--primary)" }}>
               {isMerging
-                ? <><i className="fa-solid fa-link mr-2" />Juntar e Confirmar ({extraTables.length + 1} mesas)</>
-                : <><i className="fa-solid fa-chair mr-2" />Confirmar Atribuição</>
+                ? <>Juntar {extraTables.length + 1} mesas · Seguinte<i className="fa-solid fa-arrow-right ml-2" /></>
+                : <>Seguinte<i className="fa-solid fa-arrow-right ml-2" /></>
               }
             </button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {/* Resumo da mesa/grupo escolhido */}
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs"
+              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}>
+              <i className={`fa-solid ${isMerging ? "fa-link" : "fa-chair"}`} style={{ color: isMerging ? "#7c3aed" : "var(--primary)" }} />
+              {isMerging
+                ? <>Mesas {formatTableLabel(table.table_number)} + {extraTables.map(t => formatTableLabel(t.table_number)).join(", ")} · {size} pessoas</>
+                : <>Mesa {formatTableLabel(previewTable.table_number)} · {size} {size === 1 ? "pessoa" : "pessoas"}</>
+              }
+            </div>
+
+            <CustomerCombobox customers={customers} loading={loading} err={err} onSelect={handleSelectUser} />
           </div>
         )}
       </div>
@@ -621,24 +616,31 @@ function ReservarModal({ table, onClose, onReserved }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleSelectCustomer = (c) => {
-    setSelectedCustomer(c);
-    setForm(f => ({ ...f, phone: c.phone || "" }));
-    setErr("");
-    setStep(2);
-  };
-
   const partySize = parseInt(form.party_size) || 0;
   const needsMerge = partySize > table.capacity;
   const availableToMerge = allTables.filter(
     t => t.status === "Available" && t.id !== table.id && !extraTables.find(e => e.id === t.id),
   );
   const combinedCapacity = table.capacity + extraTables.reduce((s, t) => s + t.capacity, 0);
+  const canProceedStep1 = partySize >= 1 && (!needsMerge || combinedCapacity >= partySize);
 
   const toggleExtra = (t) =>
     setExtraTables(prev =>
       prev.find(e => e.id === t.id) ? prev.filter(e => e.id !== t.id) : [...prev, t],
     );
+
+  const handleNext = () => {
+    if (!canProceedStep1) return;
+    setErr("");
+    setStep(2);
+  };
+
+  const handleSelectCustomer = (c) => {
+    setSelectedCustomer(c);
+    setForm(f => ({ ...f, phone: c.phone || "" }));
+    setErr("");
+    setStep(3);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -676,25 +678,25 @@ function ReservarModal({ table, onClose, onReserved }) {
     }
   };
 
+  const stepTitle = step === 1 ? "Reservar Mesa" : step === 2 ? "Responsável" : "Detalhes da Reserva";
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.5)" }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="rounded-[24px] p-6 w-full max-w-sm shadow-2xl"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)", maxHeight: "90vh", overflowY: "auto" }}>
+      <div className="rounded-[24px] p-6 w-full max-w-md shadow-2xl flex flex-col gap-4"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)", maxHeight: "90vh" }}>
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {step === 2 && (
-              <button onClick={() => setStep(1)} className="w-7 h-7 flex items-center justify-center rounded-lg"
+            {step > 1 && (
+              <button onClick={() => { setStep(s => s - 1); setErr(""); }} className="w-7 h-7 flex items-center justify-center rounded-lg"
                 style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
                 <i className="fa-solid fa-arrow-left text-xs" />
               </button>
             )}
-            <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>
-              {step === 1 ? "Reservar Mesa" : "Detalhes da Reserva"}
-            </h2>
+            <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>{stepTitle}</h2>
           </div>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl"
             style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
@@ -703,48 +705,36 @@ function ReservarModal({ table, onClose, onReserved }) {
         </div>
 
         {/* Step bar */}
-        <div className="flex gap-2 mb-5">
-          {[1, 2].map(s => (
+        <div className="flex gap-2">
+          {[1, 2, 3].map(s => (
             <div key={s} className="h-1 flex-1 rounded-full transition-colors"
               style={{ background: s <= step ? "var(--primary)" : "var(--border)" }} />
           ))}
         </div>
 
         {step === 1 && (
-          <div className="flex flex-col gap-3">
-            <CustomerCombobox customers={customers} loading={loading} err={step === 1 ? err : ""} onSelect={handleSelectCustomer} />
-          </div>
-        )}
-
-        {step === 2 && (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="rounded-xl px-3 py-2.5" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
-              <p className="text-xs" style={{ color: "var(--text-muted)" }}>Cliente</p>
-              <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{selectedCustomer?.name}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Data *</label>
-                <input type="date" value={form.date} min={todayStr}
-                  onChange={e => set("date", e.target.value)}
-                  className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-                  style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Hora *</label>
-                <input type="time" value={form.time}
-                  onChange={e => set("time", e.target.value)}
-                  className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-                  style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
-              </div>
-            </div>
+          <div className="flex flex-col gap-4 overflow-y-auto pr-1" style={{ maxHeight: "70vh" }}>
             <div>
-              <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Nº de Pessoas</label>
-              <input type="number" min="1" max="50" value={form.party_size}
-                onChange={e => { set("party_size", e.target.value); setExtraTables([]); }}
-                className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-                style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>
+                Quantas pessoas?
+              </label>
+              <input
+                type="number" min="1" max="50"
+                value={form.party_size}
+                onChange={e => { set("party_size", e.target.value); setExtraTables([]); setErr(""); }}
+                className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+                style={{ background: "var(--surface-2)", border: "1.5px solid var(--border)", color: "var(--text)" }}
+                autoFocus
+              />
             </div>
+
+            {!needsMerge && partySize >= 1 && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
+                style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.3)", color: "#22c55e" }}>
+                <i className="fa-solid fa-circle-check text-sm" />
+                Mesa {formatTableLabel(table.table_number)} tem capacidade ({table.capacity} lugares) ✓
+              </div>
+            )}
 
             {/* Aviso + seleção de mesas extra quando party_size > capacity */}
             {needsMerge && (
@@ -800,6 +790,50 @@ function ReservarModal({ table, onClose, onReserved }) {
                 )}
               </div>
             )}
+
+            {err && <p className="text-xs text-red-500">{err}</p>}
+
+            <button
+              onClick={handleNext}
+              disabled={!canProceedStep1}
+              className="w-full py-3 rounded-2xl text-sm font-bold text-white disabled:opacity-40 transition-opacity"
+              style={{ background: needsMerge ? "#7c3aed" : "var(--primary)" }}>
+              {needsMerge
+                ? <>Juntar {extraTables.length + 1} mesas · Seguinte<i className="fa-solid fa-arrow-right ml-2" /></>
+                : <>Seguinte<i className="fa-solid fa-arrow-right ml-2" /></>
+              }
+            </button>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="flex flex-col gap-3">
+            <CustomerCombobox customers={customers} loading={loading} err={err} onSelect={handleSelectCustomer} />
+          </div>
+        )}
+
+        {step === 3 && (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="rounded-xl px-3 py-2.5" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>Cliente</p>
+              <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{selectedCustomer?.name}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Data *</label>
+                <input type="date" value={form.date} min={todayStr}
+                  onChange={e => set("date", e.target.value)}
+                  className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+                  style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Hora *</label>
+                <input type="time" value={form.time}
+                  onChange={e => set("time", e.target.value)}
+                  className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+                  style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+              </div>
+            </div>
 
             <div>
               <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Contacto</label>
