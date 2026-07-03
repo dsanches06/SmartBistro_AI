@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageSection, Pagination, ListCard, PaymentModal } from "@/components";
 import { SortTh } from "@/components/ui/shared/SortTh.jsx";
-import { orderService, tableService, userService, itemService, orderItemService, invoiceService } from "@/services";
+import { orderService, tableService, userService, itemService, orderItemService, invoiceService, stockService, recipeItemService } from "@/services";
 import {
   formatTime,
   getItemEmoji,
@@ -16,7 +16,7 @@ import {
   getOrderItemCount,
   getOrderTarget,
 } from "@/utils";
-import { MENU_CATEGORY_META } from "@/utils/menuUtils";
+import { MENU_CATEGORY_META, getMaxAvailableQty } from "@/utils/menuUtils";
 
 /* ── NovoPedidoModal ── */
 function NovoPedidoModal({ onClose, onCreated }) {
@@ -30,16 +30,22 @@ function NovoPedidoModal({ onClose, onCreated }) {
   const [saving,        setSaving]        = useState(false);
   const [err,           setErr]           = useState("");
   const [pendingPayment, setPendingPayment] = useState(null); // { invoice, orderId } — takeaway aguarda pagamento
+  const [stockByIngredient, setStockByIngredient] = useState(new Map());
+  const [recipeItems, setRecipeItems] = useState([]);
 
   useEffect(() => {
     Promise.all([
       tableService.getAll().catch(() => []),
       userService.getAll().catch(() => []),
       itemService.getActive().catch(() => []),
-    ]).then(([t, c, m]) => {
+      stockService.getAll().catch(() => []),
+      recipeItemService.getAll().catch(() => []),
+    ]).then(([t, c, m, stock, recipes]) => {
       setTables(Array.isArray(t) ? t : []);
       setCustomers(Array.isArray(c) ? c : []);
       setMenuItems(Array.isArray(m) ? m : []);
+      setStockByIngredient(new Map((Array.isArray(stock) ? stock : []).map(s => [s.ingredient_id, s.available_quantity])));
+      setRecipeItems(Array.isArray(recipes) ? recipes : []);
     }).finally(() => setLoading(false));
   }, []);
 
@@ -226,19 +232,23 @@ function NovoPedidoModal({ onClose, onCreated }) {
                             {catItems.map(item => {
                               const sel = selectedItems.find(s => s.item_id === item.id);
                               const qty = sel?.quantity || 0;
+                              const maxQty = getMaxAvailableQty(item.id, recipeItems, stockByIngredient);
+                              const outOfStock = maxQty <= 0;
+                              const atLimit = qty >= maxQty;
                               return (
                                 <div key={item.id}
                                   className="flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors"
                                   style={{
-                                    background: qty > 0 ? "rgba(99,102,241,0.08)" : "var(--surface-2)",
-                                    border: qty > 0 ? "1.5px solid var(--primary)" : "1px solid var(--border)",
+                                    background: outOfStock ? "rgba(239,68,68,0.06)" : qty > 0 ? "rgba(99,102,241,0.08)" : "var(--surface-2)",
+                                    border: outOfStock ? "1px solid rgba(239,68,68,0.3)" : qty > 0 ? "1.5px solid var(--primary)" : "1px solid var(--border)",
+                                    opacity: outOfStock ? 0.7 : 1,
                                   }}>
                                   <div className="flex items-center gap-2.5 min-w-0">
                                     <span style={{ fontSize: 20 }}>{getItemEmoji(item.name)}</span>
                                     <div className="min-w-0">
                                       <p className="text-sm font-semibold truncate" style={{ color: "var(--text)" }}>{item.name}</p>
-                                      <p className="text-xs font-semibold" style={{ color: "var(--primary)" }}>
-                                        {Number(item.price).toFixed(2)} €
+                                      <p className="text-xs font-semibold" style={{ color: outOfStock ? "#ef4444" : "var(--primary)" }}>
+                                        {outOfStock ? "Sem stock" : `${Number(item.price).toFixed(2)} €`}
                                       </p>
                                     </div>
                                   </div>
@@ -253,9 +263,10 @@ function NovoPedidoModal({ onClose, onCreated }) {
                                         <span className="text-sm font-bold w-5 text-center" style={{ color: "var(--primary)" }}>{qty}</span>
                                       </>
                                     )}
-                                    <button type="button" onClick={() => addItem(item)}
-                                      className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm text-white"
-                                      style={{ background: "var(--primary)" }}>
+                                    <button type="button" onClick={() => addItem(item)} disabled={atLimit}
+                                      title={atLimit ? "Sem stock suficiente" : undefined}
+                                      className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm text-white disabled:cursor-not-allowed"
+                                      style={{ background: atLimit ? "var(--text-muted)" : "var(--primary)", opacity: atLimit ? 0.5 : 1 }}>
                                       +
                                     </button>
                                   </div>

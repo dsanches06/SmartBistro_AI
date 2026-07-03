@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "@/context/ThemeContext";
 import { useTableRefresh } from "@/context/TableRefreshContext";
-import { reservationService, tableService, orderService, userService, invoiceService, itemService, orderItemService } from "@/services";
+import { reservationService, tableService, orderService, userService, invoiceService, itemService, orderItemService, stockService, recipeItemService } from "@/services";
 import { STATUS_CONFIG } from "@/utils/tablePageUtils";
 import { getItemEmoji, formatMenuPrice } from "@/utils";
-import { MENU_CATEGORY_META } from "@/utils/menuUtils";
+import { MENU_CATEGORY_META, getMaxAvailableQty } from "@/utils/menuUtils";
 import { PageSection, StatCard, TableCard, PaymentModal } from "@/components";
 
 const formatTableLabel = (number) => `T${String(number).padStart(2, "0")}`;
@@ -16,11 +16,19 @@ function FazerPedidoModal({ order, onClose, onPlaced }) {
   const [cart, setCart]           = useState({});
   const [saving, setSaving]       = useState(false);
   const [err, setErr]             = useState("");
+  const [stockByIngredient, setStockByIngredient] = useState(new Map());
+  const [recipeItems, setRecipeItems] = useState([]);
 
   useEffect(() => {
-    itemService.getActive()
-      .then(data => setMenuItems(Array.isArray(data) ? data : []))
-      .catch(() => setErr("Erro ao carregar o menu."))
+    Promise.all([
+      itemService.getActive().catch(() => []),
+      stockService.getAll().catch(() => []),
+      recipeItemService.getAll().catch(() => []),
+    ]).then(([m, stock, recipes]) => {
+      setMenuItems(Array.isArray(m) ? m : []);
+      setStockByIngredient(new Map((Array.isArray(stock) ? stock : []).map(s => [s.ingredient_id, s.available_quantity])));
+      setRecipeItems(Array.isArray(recipes) ? recipes : []);
+    }).catch(() => setErr("Erro ao carregar o menu."))
       .finally(() => setLoading(false));
   }, []);
 
@@ -114,19 +122,23 @@ function FazerPedidoModal({ order, onClose, onPlaced }) {
                     <div className="flex flex-col gap-2">
                       {catItems.map(item => {
                         const qty = cart[item.id]?.qty || 0;
+                        const maxQty = getMaxAvailableQty(item.id, recipeItems, stockByIngredient);
+                        const outOfStock = maxQty <= 0;
+                        const atLimit = qty >= maxQty;
                         return (
                           <div key={item.id}
                             className="flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors"
                             style={{
-                              background: qty > 0 ? "rgba(99,102,241,0.08)" : "var(--surface-2)",
-                              border: qty > 0 ? "1.5px solid var(--primary)" : "1px solid var(--border)",
+                              background: outOfStock ? "rgba(239,68,68,0.06)" : qty > 0 ? "rgba(99,102,241,0.08)" : "var(--surface-2)",
+                              border: outOfStock ? "1px solid rgba(239,68,68,0.3)" : qty > 0 ? "1.5px solid var(--primary)" : "1px solid var(--border)",
+                              opacity: outOfStock ? 0.7 : 1,
                             }}>
                             <div className="flex items-center gap-2.5 min-w-0">
                               <span style={{ fontSize: 20 }}>{getItemEmoji(item.name)}</span>
                               <div className="min-w-0">
                                 <p className="text-sm font-semibold truncate" style={{ color: "var(--text)" }}>{item.name}</p>
-                                <p className="text-xs font-semibold" style={{ color: "var(--primary)" }}>
-                                  {formatMenuPrice(item.price)}
+                                <p className="text-xs font-semibold" style={{ color: outOfStock ? "#ef4444" : "var(--primary)" }}>
+                                  {outOfStock ? "Sem stock" : formatMenuPrice(item.price)}
                                 </p>
                               </div>
                             </div>
@@ -141,9 +153,10 @@ function FazerPedidoModal({ order, onClose, onPlaced }) {
                                   <span className="text-sm font-bold w-5 text-center" style={{ color: "var(--primary)" }}>{qty}</span>
                                 </>
                               )}
-                              <button onClick={() => addItem(item)}
-                                className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm text-white"
-                                style={{ background: "var(--primary)" }}>
+                              <button onClick={() => addItem(item)} disabled={atLimit}
+                                title={atLimit ? "Sem stock suficiente" : undefined}
+                                className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm text-white disabled:cursor-not-allowed"
+                                style={{ background: atLimit ? "var(--text-muted)" : "var(--primary)", opacity: atLimit ? 0.5 : 1 }}>
                                 +
                               </button>
                             </div>

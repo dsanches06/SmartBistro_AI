@@ -64,3 +64,16 @@ export function groupItemsByCategory(items) {
     return acc;
   }, {});
 }
+
+// Quantas unidades de um item ainda podem ser preparadas com o stock actual.
+// Sem ficha técnica associada → assume disponível (Infinity), tal como no backend
+// (ver checkStockForKitchenItems em orderController.js).
+export function getMaxAvailableQty(itemId, recipeItems, stockByIngredient) {
+  const recipe = recipeItems.filter(r => r.item_id === itemId);
+  if (!recipe.length) return Infinity;
+  return recipe.reduce((max, r) => {
+    const available = Number(stockByIngredient.get(r.ingredient_id) ?? 0);
+    const required  = Number(r.required_quantity) || 1;
+    return Math.min(max, Math.floor(available / required));
+  }, Infinity);
+}
