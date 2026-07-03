@@ -1,6 +1,26 @@
 import { ROLE_USER, ROLE_ASSISTANT, writeSseError } from '../utils/index.js';
 import { createConversation, createChatHistory } from '../services/index.js';
 import { processChatStream } from '../genai/orchestrations/index.js';
+import { anthropic, CLAUDE_MODEL } from '../genai/config/index.js';
+
+const MAX_USER_MESSAGE_TOKENS = 100;
+
+// Mensagens demasiado longas custam mais e tendem a misturar vários pedidos —
+// pede ao cliente para dividir em perguntas/pedidos mais curtos e directos.
+async function checkMessageTokenLimit(message) {
+  try {
+    const { input_tokens } = await anthropic.messages.countTokens({
+      model: CLAUDE_MODEL,
+      messages: [{ role: 'user', content: message }],
+    });
+    if (input_tokens > MAX_USER_MESSAGE_TOKENS) {
+      return `A tua mensagem é demasiado longa (limite de ${MAX_USER_MESSAGE_TOKENS} tokens). Podes fazer um pedido ou colocar uma pergunta — tenta ser mais breve e direto.`;
+    }
+  } catch (err) {
+    console.warn('[Bot] Falha ao contar tokens da mensagem, a ignorar limite:', err.message);
+  }
+  return null;
+}
 
 // ── Envia mensagem ao bot com resposta em stream SSE ─────────────────────────
 export async function sendMessageToBotStream(req, res) {
@@ -8,6 +28,10 @@ export async function sendMessageToBotStream(req, res) {
 
   if (!message?.trim())
     return res.status(400).json({ error: 'message is required' });
+
+  const tokenLimitError = await checkMessageTokenLimit(message);
+  if (tokenLimitError)
+    return res.status(400).json({ error: tokenLimitError });
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -75,6 +99,10 @@ export async function sendMessageToConversation(req, res) {
 
   if (!message?.trim())
     return res.status(400).json({ error: 'message is required' });
+
+  const tokenLimitError = await checkMessageTokenLimit(message);
+  if (tokenLimitError)
+    return res.status(400).json({ error: tokenLimitError });
 
   try {
     await createChatHistory({ conversation_id: conversationId, role_id: ROLE_USER, content: message });
