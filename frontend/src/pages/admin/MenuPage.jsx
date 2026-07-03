@@ -3,7 +3,7 @@ import { PageSection, Pagination, ListCard } from "@/components";
 import { SortTh } from "@/components/ui/shared/SortTh.jsx";
 import { ThBadge } from "@/components/ui/shared/ThBadge.jsx";
 import { itemService } from "@/services";
-import { MENU_CATEGORIES, MENU_CATEGORY_META, formatMenuPrice, getItemEmoji, MENU_PAGE_SIZE } from "@/utils";
+import { MENU_CATEGORIES, MENU_CATEGORY_META, fmtEur, getItemEmoji, MENU_PAGE_SIZE } from "@/utils";
 
 /* ── Modal para editar preço ── */
 function EditarPrecoModal({ item, onClose, onSave, saving }) {
@@ -87,7 +87,7 @@ function GestaoRow({ item, togglingId, onEdit, onToggle }) {
         </span>
       </td>
       <td className="py-3 px-4">
-        <span className="text-sm font-bold" style={{ color: meta.accent }}>{formatMenuPrice(item.price)}</span>
+        <span className="text-sm font-bold" style={{ color: meta.accent }}>{fmtEur(item.price)}</span>
       </td>
       <td className="py-3 px-4">
         <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
@@ -142,7 +142,7 @@ function GestaoCard({ item, togglingId, onEdit, onToggle }) {
           style={{ background: `${meta.accent}18`, color: meta.accent }}>
           {meta.emoji} {meta.label}
         </span>
-        <span className="text-base font-bold" style={{ color: meta.accent }}>{formatMenuPrice(item.price)}</span>
+        <span className="text-base font-bold" style={{ color: meta.accent }}>{fmtEur(item.price)}</span>
       </div>
       <div className="flex gap-2 pt-0.5">
         <button onClick={() => onEdit(item)}

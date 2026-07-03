@@ -44,11 +44,6 @@ export function getOrderItemCount(order) {
   } catch { return 0; }
 }
 
-/** Valor total formatado em euros */
-export function formatOrderValue(amount) {
-  return `€${Number(amount || 0).toFixed(2)}`;
-}
-
 /** Destino do pedido: mesa ou takeaway */
 export function getOrderTarget(order) {
   return order.table_id ? `Mesa ${order.table_id}` : "Takeaway";

@@ -11,7 +11,7 @@ import {
   ORDER_TABLE_HEADERS,
   countOrdersByStatus,
   filterOrders,
-  formatOrderValue,
+  fmtEur,
   getOrderClientName,
   getOrderItemCount,
   getOrderTarget,
@@ -334,7 +334,7 @@ function OrderRow({ order, invoiceMap }) {
       <td className="py-3 px-4 text-sm">{getOrderClientName(order)}</td>
       <td className="py-3 px-4"><StatusBadge status={order.order_status} /></td>
       <td className="py-3 px-4 text-sm text-center">{getOrderItemCount(order)}</td>
-      <td className="py-3 px-4 text-sm font-semibold">{total ? formatOrderValue(total) : "—"}</td>
+      <td className="py-3 px-4 text-sm font-semibold">{total ? fmtEur(total) : "—"}</td>
       <td className="py-3 px-4 text-sm" style={{ color: "var(--text-secondary)" }}>{formatTime(order.created_at)}</td>
     </tr>
   );
@@ -349,7 +349,7 @@ function OrderCard({ order }) {
           #{order.id} · {getOrderTarget(order)}
         </span>
         <span className="text-sm font-bold tabular-nums" style={{ color: "var(--text)" }}>
-          {formatOrderValue(order.total_amount)}
+          {fmtEur(order.total_amount)}
         </span>
       </div>
       <div className="flex items-center justify-between">

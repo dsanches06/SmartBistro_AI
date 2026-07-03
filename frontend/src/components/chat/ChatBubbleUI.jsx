@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MENU_CATEGORY_META, formatMenuPrice, getItemEmoji } from "@/utils";
+import { MENU_CATEGORY_META, fmtEur, getItemEmoji } from "@/utils";
 
 /* ── MenuCardChat ── card seleccionável ── */
 function MenuCardChat({ item, selected, onToggle }) {
@@ -21,7 +21,7 @@ function MenuCardChat({ item, selected, onToggle }) {
         {item.name}
       </p>
       <p className="text-xs font-bold" style={{ color: meta.accent }}>
-        {formatMenuPrice(item.price)}
+        {fmtEur(item.price)}
       </p>
       {unavailable
         ? <span className="text-[10px] text-center" style={{ color: "#ef4444" }}>Indisponível</span>

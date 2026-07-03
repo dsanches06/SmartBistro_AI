@@ -6,7 +6,7 @@ import { orderService }     from "@/services/orderService";
 import { orderItemService } from "@/services/orderItemService";
 import { invoiceService }   from "@/services/invoiceService";
 import { paymentService }   from "@/services/paymentService";
-import { MENU_CATEGORIES, MENU_CATEGORY_META, formatMenuPrice, getItemEmoji, ALL_KEY } from "@/utils";
+import { MENU_CATEGORIES, MENU_CATEGORY_META, fmtEur, getItemEmoji, ALL_KEY } from "@/utils";
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { ThemeToggle, Modal, LoginModal, RegisterModal } from "@/components/ui";
@@ -651,7 +651,7 @@ export default function MainPage({ onNavChange }) {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold truncate" style={{ color: "var(--text)" }}>{item.name}</p>
                     <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-                      {formatMenuPrice(item.price)} × {qty} = <span style={{ color: "var(--primary)", fontWeight: 600 }}>{formatMenuPrice(Number(item.price) * qty)}</span>
+                      {fmtEur(item.price)} × {qty} = <span style={{ color: "var(--primary)", fontWeight: 600 }}>{fmtEur(Number(item.price) * qty)}</span>
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
@@ -674,7 +674,7 @@ export default function MainPage({ onNavChange }) {
             >
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>Total</span>
-                <span className="text-xl font-bold" style={{ color: "var(--primary)" }}>{formatMenuPrice(cartTotal)}</span>
+                <span className="text-xl font-bold" style={{ color: "var(--primary)" }}>{fmtEur(cartTotal)}</span>
               </div>
               <p className="text-xs flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>
                 <i className="fa-solid fa-bag-shopping" />
@@ -823,7 +823,7 @@ export default function MainPage({ onNavChange }) {
                   <div key={item.id} className="flex items-center justify-between px-4 py-2.5"
                     style={{ borderBottom: i < cartItems.length - 1 ? "1px solid var(--border)" : "none", background: "var(--surface-2)" }}>
                     <span className="text-xs" style={{ color: "var(--text-muted)" }}>{item.name} × {qty}</span>
-                    <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>{formatMenuPrice(Number(item.price) * qty)}</span>
+                    <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>{fmtEur(Number(item.price) * qty)}</span>
                   </div>
                 ))}
               </div>
@@ -835,7 +835,7 @@ export default function MainPage({ onNavChange }) {
                   <span className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "#22c55e" }}>
                     ⭐ {pointsToUse} pontos usados
                   </span>
-                  <span className="text-sm font-bold" style={{ color: "#22c55e" }}>− {formatMenuPrice(pointsDiscount)}</span>
+                  <span className="text-sm font-bold" style={{ color: "#22c55e" }}>− {fmtEur(pointsDiscount)}</span>
                 </div>
               )}
 
@@ -845,10 +845,10 @@ export default function MainPage({ onNavChange }) {
                 <span className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>Total</span>
                 <div className="flex items-center gap-2">
                   {pointsDiscount > 0 && (
-                    <span className="text-sm line-through" style={{ color: "var(--text-muted)" }}>{formatMenuPrice(cartTotal)}</span>
+                    <span className="text-sm line-through" style={{ color: "var(--text-muted)" }}>{fmtEur(cartTotal)}</span>
                   )}
                   <span className="text-xl font-bold" style={{ color: "var(--primary)" }}>
-                    {formatMenuPrice(Math.max(0, cartTotal - pointsDiscount))}
+                    {fmtEur(Math.max(0, cartTotal - pointsDiscount))}
                   </span>
                 </div>
               </div>
@@ -867,7 +867,7 @@ export default function MainPage({ onNavChange }) {
                 className="w-full py-3.5 rounded-2xl text-sm font-bold text-white disabled:opacity-60 transition-opacity"
                 style={{ background: "var(--primary)" }}
               >
-                {checkoutLoading ? "A processar..." : `Pagar ${formatMenuPrice(Math.max(0, cartTotal - pointsDiscount))}`}
+                {checkoutLoading ? "A processar..." : `Pagar ${fmtEur(Math.max(0, cartTotal - pointsDiscount))}`}
               </button>
             </div>
           </div>
@@ -1074,7 +1074,7 @@ function ItemCard({ item, isDark, qty, isClient, onAdd, onRemove, recLabel }) {
           </p>
         </div>
         <span className="font-bold text-xs sm:text-sm flex-shrink-0" style={{ color: meta.accent ?? "var(--primary)" }}>
-          {formatMenuPrice(item.price)}
+          {fmtEur(item.price)}
         </span>
       </div>
 

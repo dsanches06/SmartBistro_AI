@@ -1,5 +1,4 @@
 // ── Chat components barrel ────────────────────────────────────────────────────
-export { ChatBot }          from "./ChatBot.jsx";
 export { ChatUI }           from "./ChatUI.jsx";
 export { ChatBubbleUI }     from "./ChatBubbleUI.jsx";
 export { ChatHeaderUI }     from "./ChatHeaderUI.jsx";

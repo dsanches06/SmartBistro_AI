@@ -3,9 +3,9 @@ import { useTheme } from "@/context/ThemeContext";
 import { useTableRefresh } from "@/context/TableRefreshContext";
 import { reservationService, tableService, orderService, userService, invoiceService, itemService, orderItemService, stockService, recipeItemService } from "@/services";
 import { STATUS_CONFIG } from "@/utils/tablePageUtils";
-import { getItemEmoji, formatMenuPrice } from "@/utils";
+import { getItemEmoji, fmtEur } from "@/utils";
 import { MENU_CATEGORY_META, getMaxAvailableQty } from "@/utils/menuUtils";
-import { PageSection, StatCard, TableCard, PaymentModal } from "@/components";
+import { PageSection, TableCard, PaymentModal } from "@/components";
 
 const formatTableLabel = (number) => `T${String(number).padStart(2, "0")}`;
 
@@ -138,7 +138,7 @@ function FazerPedidoModal({ order, onClose, onPlaced }) {
                               <div className="min-w-0">
                                 <p className="text-sm font-semibold truncate" style={{ color: "var(--text)" }}>{item.name}</p>
                                 <p className="text-xs font-semibold" style={{ color: outOfStock ? "#ef4444" : "var(--primary)" }}>
-                                  {outOfStock ? "Sem stock" : formatMenuPrice(item.price)}
+                                  {outOfStock ? "Sem stock" : fmtEur(item.price)}
                                 </p>
                               </div>
                             </div>
@@ -180,7 +180,7 @@ function FazerPedidoModal({ order, onClose, onPlaced }) {
               {cartCount > 0 ? `${cartCount} item${cartCount !== 1 ? "s" : ""}` : "Nenhum item selecionado"}
             </span>
             <span className="text-lg font-bold" style={{ color: "var(--primary)" }}>
-              {formatMenuPrice(cartTotal)}
+              {fmtEur(cartTotal)}
             </span>
           </div>
           <button
@@ -1091,13 +1091,7 @@ export default function TablePage() {
     [mesas, statusFilter],
   );
 
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
-
-  const formattedTotalValue = (value) =>
-    `€${Number(value ?? 0)
-      .toFixed(2)
-      .replace(".", ",")}`;
+  useTheme();
 
   // Só mostra o pedido activo se o seu estado não for terminal — evita mostrar
   // dados de pedidos antigos quando a mesa já está livre.
@@ -1445,7 +1439,7 @@ export default function TablePage() {
                         Valor atual
                       </p>
                       <p className="mt-2 text-2xl font-bold text-[var(--text)]">
-                        {detailsLoading ? "A carregar..." : formattedTotalValue(activeOrder?.total_amount)}
+                        {detailsLoading ? "A carregar..." : fmtEur(activeOrder?.total_amount)}
                       </p>
                     </div>
                   </div>

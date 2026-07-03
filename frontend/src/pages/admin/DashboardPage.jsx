@@ -11,7 +11,7 @@ import { PageSection, Pagination, KpiCard } from "@/components";
 import { ThBadge } from "@/components/ui/shared/ThBadge.jsx";
 import { orderService, paymentService, tableService, stockService, ingredientService, invoiceService } from "@/services";
 import {
-  ORDER_STATUS_META, formatTime, formatOrderValue, getOrderTarget, getOrderClientName,
+  ORDER_STATUS_META, formatTime, getOrderTarget, getOrderClientName,
   isToday, isYesterday, pctChange, fmtEur,
   DASHBOARD_HOURS, DASHBOARD_DONUT_META, DASHBOARD_ORDERS_PER_PAGE, DASHBOARD_ALERTS_PER_PAGE,
   buildOperationalAlerts,
@@ -321,7 +321,7 @@ export default function DashboardPage() {
                         <StatusBadge status={order.order_status} />
                       </td>
                       <td className="py-2.5 pr-3 text-xs font-semibold" style={{ color: "var(--text)" }}>
-                        {invoiceMap[order.id]?.total_amount ? formatOrderValue(invoiceMap[order.id].total_amount) : "—"}
+                        {invoiceMap[order.id]?.total_amount ? fmtEur(invoiceMap[order.id].total_amount) : "—"}
                       </td>
                       <td className="py-2.5 text-xs hidden sm:table-cell" style={{ color: "var(--text-muted)" }}>
                         {formatTime(order.created_at)}

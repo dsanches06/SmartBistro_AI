@@ -54,10 +54,6 @@ export function getItemEmoji(name = "") {
   return "🍴";
 }
 
-export function formatMenuPrice(price) {
-  return `€${Number(price).toFixed(2)}`;
-}
-
 export function groupItemsByCategory(items) {
   return Object.keys(MENU_CATEGORY_META).reduce((acc, cat) => {
     acc[cat] = items.filter(i => i.category === cat);
