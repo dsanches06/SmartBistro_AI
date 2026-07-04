@@ -3,6 +3,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { notificationService } from "@/services";
 import { NotificationBox } from "./NotificationBox.jsx";
 
+// Sino de notificações com badge de não-lidas (polling a cada 30s) e dropdown NotificationBox.
 export function NotificationButton() {
   const { theme } = useTheme();
   const [unreadCount, setUnreadCount] = useState(0);

@@ -1,3 +1,4 @@
+// Rodapé fixo com o aviso de direitos de autor, usado em todas as páginas.
 export function Footer() {
   return (
     <footer

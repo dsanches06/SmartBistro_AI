@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Modal from "./Modal.jsx";
 
+// Campo de formulário com label; mostra botão de ocultar/mostrar quando é password.
 function Field({ label, type = "text", value, onChange, placeholder, autoFocus, maxLength }) {
   const [show, setShow] = useState(false);
   const isPassword = type === "password";
@@ -57,6 +58,7 @@ function Field({ label, type = "text", value, onChange, placeholder, autoFocus, 
   );
 }
 
+// Caixa de erro compacta; não renderiza nada se não houver mensagem.
 function ErrorMsg({ msg }) {
   if (!msg) return null;
   return (
@@ -66,6 +68,7 @@ function ErrorMsg({ msg }) {
   );
 }
 
+// Modal de registo de novo cliente (nome, username, email, telefone, password).
 export default function RegisterModal({ open, onClose, onSwitchToLogin, isDark, onRegister }) {
   const [name, setName]         = useState("");
   const [username, setUsername] = useState("");

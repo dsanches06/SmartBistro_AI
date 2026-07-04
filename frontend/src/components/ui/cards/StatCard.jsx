@@ -1,5 +1,6 @@
 import { useTheme } from "@/context/ThemeContext";
 
+// Cartão de estatística genérico (label, valor grande, subtítulo opcional e ícone).
 export function StatCard({ label, value, sub, icon, valueClassName, borderColor, className = "" }) {
   const { theme } = useTheme();
   const defaultValueClass = theme === "dark" ? "text-white" : "text-slate-900";

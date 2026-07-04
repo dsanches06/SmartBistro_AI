@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+// Paleta de cores (fundo/texto) atribuída ciclicamente a cada cliente conforme o seu id.
 const PALETTES = [
   { bg: "#EFF6FF", tx: "#1D4ED8" },
   { bg: "#F0FDF4", tx: "#166534" },
@@ -11,10 +12,12 @@ const PALETTES = [
   { bg: "#F5F3FF", tx: "#6D28D9" },
 ];
 
+// Devolve a paleta de cores correspondente a um id de cliente.
 export function getPalette(id) {
   return PALETTES[((id || 1) - 1) % PALETTES.length];
 }
 
+// Extrai até duas iniciais (maiúsculas) do nome do cliente para o avatar.
 export function getInitials(name) {
   return (name || "?")
     .split(" ")
@@ -24,6 +27,7 @@ export function getInitials(name) {
     .join("");
 }
 
+// Formata uma data no formato pt-PT (ex: "04 jul 2026"), ou "—" se vazia.
 export function formatDate(dateStr) {
   if (!dateStr) return "—";
   return new Date(dateStr).toLocaleDateString("pt-PT", {
@@ -33,6 +37,7 @@ export function formatDate(dateStr) {
   });
 }
 
+// Cartão de cliente com efeito flip 3D: frente mostra avatar/nome/estado, verso mostra detalhes e ações.
 export default function CustomerCard({ customer, onDetail, onDelete, canDelete = false, delay = 0 }) {
   const [flipped, setFlipped] = useState(false);
   const [hovered, setHovered] = useState(false);

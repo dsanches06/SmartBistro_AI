@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 
+// Chama callback quando se clica fora do elemento referenciado por ref (ex: fechar dropdown/modal).
 export function useClickOutside(ref, callback, active = true) {
   useEffect(() => {
     if (!active) return;

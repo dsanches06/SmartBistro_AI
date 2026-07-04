@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { notificationService } from "@/services";
 
+// Linha de uma notificação; marca como lida ao clicar e some da lista.
 export function NotificationItem({ notification, onRemove }) {
   const [isRead, setIsRead] = useState(notification.is_read ?? false);
 

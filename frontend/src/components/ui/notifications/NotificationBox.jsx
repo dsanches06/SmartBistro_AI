@@ -3,6 +3,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { notificationService } from "@/services";
 import { NotificationItem } from "./NotificationItem.jsx";
 
+// Dropdown com a lista de notificações não lidas; fecha ao clicar fora.
 export function NotificationBox({ isOpen, onClose, onRefreshBadge }) {
   const { theme } = useTheme();
   const [notifications, setNotifications] = useState([]);
