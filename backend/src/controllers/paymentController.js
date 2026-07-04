@@ -12,54 +12,39 @@ import {
 } from "../services/index.js";
 import { addPoints } from '../services/pointsService.js';
 import { createNotification } from '../services/notificationService.js';
+import { asyncHandler } from "../utils/index.js";
 
 const PAYMENT_METHODS = ["MB Way", "Multibanco", "Credit Card", "Cash"];
 const PAYMENT_STATUS_OPTIONS = ["Pending", "Completed", "Failed"];
 
 // GET /payments?status=&paymentMethod=
-export const getAll = async (req, res) => {
-  try {
-    const { status, paymentMethod } = req.query;
-    const payments = await getAllPayments(status, paymentMethod);
-    res.json(payments);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+export const getAll = asyncHandler(async (req, res) => {
+  const { status, paymentMethod } = req.query;
+  const payments = await getAllPayments(status, paymentMethod);
+  res.json(payments);
+});
 
 // GET /payments/:id
-export const getById = async (req, res) => {
-  try {
-    const payment = await getPaymentById(req.params.id);
-    if (!payment) return res.status(404).json({ error: "Pagamento não encontrado" });
-    res.json(payment);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+export const getById = asyncHandler(async (req, res) => {
+  const payment = await getPaymentById(req.params.id);
+  if (!payment) return res.status(404).json({ error: "Pagamento não encontrado" });
+  res.json(payment);
+});
 
 // GET /payments/invoice/:invoiceId
-export const getByInvoiceId = async (req, res) => {
-  try {
-    const payment = await getPaymentByInvoiceId(req.params.invoiceId);
-    if (!payment) return res.status(404).json({ error: "Pagamento para essa fatura não encontrado" });
-    res.json(payment);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+export const getByInvoiceId = asyncHandler(async (req, res) => {
+  const payment = await getPaymentByInvoiceId(req.params.invoiceId);
+  if (!payment) return res.status(404).json({ error: "Pagamento para essa fatura não encontrado" });
+  res.json(payment);
+});
 
 // GET /payments/user/:userId
-export const getByUserId = async (req, res) => {
-  try {
-    res.json(await getPaymentsByCustomerId(req.params.userId));
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+export const getByUserId = asyncHandler(async (req, res) => {
+  res.json(await getPaymentsByCustomerId(req.params.userId));
+});
 
 // POST /payments
-export const create = async (req, res) => {
+export const create = asyncHandler(async (req, res) => {
   try {
     const { invoice_id, user_id, amount, payment_method, payment_status } = req.body;
     if (!invoice_id || amount === undefined)
@@ -104,56 +89,40 @@ export const create = async (req, res) => {
     res.status(201).json(payment);
   } catch (err) {
     console.error('[Payment] Erro ao criar pagamento:', err.message, err.code ?? '');
-    res.status(500).json({ error: err.message });
+    throw err;
   }
-};
+});
 
 // PUT /payments/:id
-export const update = async (req, res) => {
-  try {
-    const { payment_method, payment_status, processed_at } = req.body;
-    if (payment_method && !PAYMENT_METHODS.includes(payment_method))
-      return res.status(400).json({ error: `payment_method inválido. Use: ${PAYMENT_METHODS.join(', ')}` });
-    if (payment_status && !PAYMENT_STATUS_OPTIONS.includes(payment_status))
-      return res.status(400).json({ error: `payment_status inválido. Use: ${PAYMENT_STATUS_OPTIONS.join(', ')}` });
+export const update = asyncHandler(async (req, res) => {
+  const { payment_method, payment_status, processed_at } = req.body;
+  if (payment_method && !PAYMENT_METHODS.includes(payment_method))
+    return res.status(400).json({ error: `payment_method inválido. Use: ${PAYMENT_METHODS.join(', ')}` });
+  if (payment_status && !PAYMENT_STATUS_OPTIONS.includes(payment_status))
+    return res.status(400).json({ error: `payment_status inválido. Use: ${PAYMENT_STATUS_OPTIONS.join(', ')}` });
 
-    const affected = await updatePayment(req.params.id, { payment_method, payment_status, processed_at });
-    if (!affected) return res.status(404).json({ error: "Pagamento não encontrado" });
-    res.json({ message: "Pagamento actualizado com sucesso" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+  const affected = await updatePayment(req.params.id, { payment_method, payment_status, processed_at });
+  if (!affected) return res.status(404).json({ error: "Pagamento não encontrado" });
+  res.json({ message: "Pagamento actualizado com sucesso" });
+});
 
 // PATCH /payments/:id/process
-export const process = async (req, res) => {
-  try {
-    const affected = await processPayment(req.params.id);
-    if (!affected) return res.status(404).json({ error: "Pagamento não encontrado" });
-    res.json({ message: "Pagamento processado com sucesso" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+export const process = asyncHandler(async (req, res) => {
+  const affected = await processPayment(req.params.id);
+  if (!affected) return res.status(404).json({ error: "Pagamento não encontrado" });
+  res.json({ message: "Pagamento processado com sucesso" });
+});
 
 // PATCH /payments/:id/fail
-export const fail = async (req, res) => {
-  try {
-    const affected = await failPayment(req.params.id);
-    if (!affected) return res.status(404).json({ error: "Pagamento não encontrado" });
-    res.json({ message: "Pagamento marcado como falhado" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+export const fail = asyncHandler(async (req, res) => {
+  const affected = await failPayment(req.params.id);
+  if (!affected) return res.status(404).json({ error: "Pagamento não encontrado" });
+  res.json({ message: "Pagamento marcado como falhado" });
+});
 
 // DELETE /payments/:id
-export const remove = async (req, res) => {
-  try {
-    const affected = await deletePayment(req.params.id);
-    if (!affected) return res.status(404).json({ error: "Pagamento não encontrado" });
-    res.json({ message: "Pagamento eliminado com sucesso" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+export const remove = asyncHandler(async (req, res) => {
+  const affected = await deletePayment(req.params.id);
+  if (!affected) return res.status(404).json({ error: "Pagamento não encontrado" });
+  res.json({ message: "Pagamento eliminado com sucesso" });
+});

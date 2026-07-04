@@ -1,4 +1,5 @@
 import { createTableGroup, getTableGroup, dissolveTableGroup } from "../services/index.js";
+import { asyncHandler } from "../utils/index.js";
 
 // POST /tables/groups
 export const create = async (req, res) => {
@@ -18,23 +19,15 @@ export const create = async (req, res) => {
 };
 
 // GET /tables/groups/:groupId
-export const getById = async (req, res) => {
-  try {
-    const group = await getTableGroup(req.params.groupId);
-    if (!group) return res.status(404).json({ error: "Grupo não encontrado." });
-    res.json(group);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+export const getById = asyncHandler(async (req, res) => {
+  const group = await getTableGroup(req.params.groupId);
+  if (!group) return res.status(404).json({ error: "Grupo não encontrado." });
+  res.json(group);
+});
 
 // DELETE /tables/groups/:groupId
-export const dissolve = async (req, res) => {
-  try {
-    const affected = await dissolveTableGroup(req.params.groupId);
-    if (!affected) return res.status(404).json({ error: "Grupo não encontrado." });
-    res.json({ message: "Grupo dissolvido com sucesso." });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+export const dissolve = asyncHandler(async (req, res) => {
+  const affected = await dissolveTableGroup(req.params.groupId);
+  if (!affected) return res.status(404).json({ error: "Grupo não encontrado." });
+  res.json({ message: "Grupo dissolvido com sucesso." });
+});

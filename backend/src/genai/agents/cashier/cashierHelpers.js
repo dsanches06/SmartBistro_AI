@@ -1,3 +1,4 @@
+// Preenche campos em falta/malformados da resposta do Gerente com os valores financeiros reais.
 function repairCashierResponse(parsed, financials) {
   if (!parsed || typeof parsed !== "object") return parsed;
 

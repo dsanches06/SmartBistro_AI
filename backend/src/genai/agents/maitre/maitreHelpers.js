@@ -1,3 +1,4 @@
+// Converte um valor arbitrário num inteiro positivo, ou null se não for possível.
 function parsePositiveInt(value) {
   if (value == null || value === "") return null;
   if (typeof value === "number") {
@@ -9,6 +10,7 @@ function parsePositiveInt(value) {
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : null;
 }
 
+// Verifica se o texto menciona o nome de um item do menu (por inteiro ou por todas as palavras).
 function textIncludesMenuName(text, menuName) {
   const normalizedText = String(text).toLowerCase();
   const normalizedMenuName = String(menuName)
@@ -21,6 +23,7 @@ function textIncludesMenuName(text, menuName) {
   return tokens.every((token) => token.length > 1 && normalizedText.includes(token));
 }
 
+// Encontra o item do menu mais provável para um nome dado (correspondência exacta, depois parcial).
 function guessMenuItemByName(name, menuItems) {
   if (!name || !Array.isArray(menuItems)) return null;
   const n = String(name).trim().toLowerCase();
@@ -40,6 +43,7 @@ function guessMenuItemByName(name, menuItems) {
   return found || null;
 }
 
+// Deduz quais itens do menu foram mencionados no texto bruto do pedido do cliente.
 function guessItemsFromRawText(rawText, menuItems) {
   if (!rawText || !Array.isArray(menuItems)) return [];
   const found = [];
@@ -52,6 +56,7 @@ function guessItemsFromRawText(rawText, menuItems) {
   return Array.from(new Set(found));
 }
 
+// Repara um único item devolvido pelo Maître: resolve item_id em falta e completa nome/preço.
 function repairMaitreItemObject(item, menuItems) {
   const name = item?.name ? String(item.name).trim() : "";
   const rawId = parsePositiveInt(item?.item_id ?? item?.id ?? item?.itemId);
@@ -69,11 +74,13 @@ function repairMaitreItemObject(item, menuItems) {
   };
 }
 
+// Aplica repairMaitreItemObject a toda a lista de itens.
 function repairMaitreItems(items, menuItems) {
   if (!Array.isArray(items)) return items;
   return items.map((item) => repairMaitreItemObject(item, menuItems));
 }
 
+// Normaliza invalid_items para sempre conter objectos { name, ... }, nunca strings soltas.
 function normalizeInvalidItemsArray(parsed) {
   if (!Array.isArray(parsed.invalid_items)) return parsed;
   const normalized = parsed.invalid_items
@@ -87,6 +94,7 @@ function normalizeInvalidItemsArray(parsed) {
   return { ...parsed, invalid_items: normalized };
 }
 
+// Tenta recuperar uma resposta do Maître incompleta/malformada antes de a rejeitar por completo.
 function attemptRepairMaitreResponse(parsed, menuItems, rawText = "") {
   let repaired = normalizeInvalidItemsArray(parsed || {});
 
@@ -133,6 +141,7 @@ function attemptRepairMaitreResponse(parsed, menuItems, rawText = "") {
   return repaired;
 }
 
+// Substitui os preços/nomes devolvidos pelo Maître pelos valores reais do menu activo.
 function enforceMenuPrices(validated, menuItems) {
   const menuById = new Map(menuItems.map((item) => [Number(item.id), item]));
   const invalidItems = [];

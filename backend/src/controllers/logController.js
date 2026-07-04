@@ -7,80 +7,53 @@ import {
   deleteLog,
   deleteLogsByOrderId,
 } from "../services/index.js";
+import { asyncHandler } from "../utils/index.js";
 
 // GET /logs?agent_name=&status=
-export const getAll = async (req, res) => {
-  try {
-    const { agent_name, status } = req.query;
-    const logs = await getAllLogs(agent_name, status);
-    res.json(logs);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+export const getAll = asyncHandler(async (req, res) => {
+  const { agent_name, status } = req.query;
+  const logs = await getAllLogs(agent_name, status);
+  res.json(logs);
+});
 
 // GET /logs/:id
-export const getById = async (req, res) => {
-  try {
-    const log = await getLogById(req.params.id);
-    if (!log) return res.status(404).json({ error: "Log não encontrado" });
-    res.json(log);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+export const getById = asyncHandler(async (req, res) => {
+  const log = await getLogById(req.params.id);
+  if (!log) return res.status(404).json({ error: "Log não encontrado" });
+  res.json(log);
+});
 
 // GET /logs/order/:orderId
-export const getByOrderId = async (req, res) => {
-  try {
-    const logs = await getLogsByOrderId(req.params.orderId);
-    res.json(logs);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+export const getByOrderId = asyncHandler(async (req, res) => {
+  const logs = await getLogsByOrderId(req.params.orderId);
+  res.json(logs);
+});
 
 // GET /logs/agent/:agentName
-export const getByAgent = async (req, res) => {
-  try {
-    const logs = await getLogsByAgent(req.params.agentName);
-    res.json(logs);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+export const getByAgent = asyncHandler(async (req, res) => {
+  const logs = await getLogsByAgent(req.params.agentName);
+  res.json(logs);
+});
 
 // POST /logs
-export const create = async (req, res) => {
-  try {
-    const { agent_name, status } = req.body;
-    if (!agent_name || !status)
-      return res.status(400).json({ error: "agent_name e status são obrigatórios" });
+export const create = asyncHandler(async (req, res) => {
+  const { agent_name, status } = req.body;
+  if (!agent_name || !status)
+    return res.status(400).json({ error: "agent_name e status são obrigatórios" });
 
-    const log = await createLog(req.body);
-    res.status(201).json(log);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+  const log = await createLog(req.body);
+  res.status(201).json(log);
+});
 
 // DELETE /logs/:id
-export const remove = async (req, res) => {
-  try {
-    const affected = await deleteLog(req.params.id);
-    if (!affected) return res.status(404).json({ error: "Log não encontrado" });
-    res.json({ message: "Log eliminado com sucesso" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+export const remove = asyncHandler(async (req, res) => {
+  const affected = await deleteLog(req.params.id);
+  if (!affected) return res.status(404).json({ error: "Log não encontrado" });
+  res.json({ message: "Log eliminado com sucesso" });
+});
 
 // DELETE /logs/order/:orderId
-export const removeByOrderId = async (req, res) => {
-  try {
-    const affected = await deleteLogsByOrderId(req.params.orderId);
-    res.json({ message: `${affected} log(s) eliminado(s) para o pedido ${req.params.orderId}` });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+export const removeByOrderId = asyncHandler(async (req, res) => {
+  const affected = await deleteLogsByOrderId(req.params.orderId);
+  res.json({ message: `${affected} log(s) eliminado(s) para o pedido ${req.params.orderId}` });
+});

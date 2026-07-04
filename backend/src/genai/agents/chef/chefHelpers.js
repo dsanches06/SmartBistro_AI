@@ -1,3 +1,4 @@
+// Extrai itens indisponíveis, estado de stock e alertas da resposta do Chef.
 function deriveChefStockMetrics(sequenced) {
   const unavailableItems = Array.isArray(sequenced.items)
     ? sequenced.items.filter((item) => item?.unavailable === true)

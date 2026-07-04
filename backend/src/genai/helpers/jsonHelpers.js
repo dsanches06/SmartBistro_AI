@@ -1,5 +1,6 @@
 import { PipelineError } from "../../utils/pipelineError.js";
 
+// Valida a saída de um agente contra o schema Zod esperado; lança PipelineError se inválida.
 function validateAgentOutput(schema, value, agentName) {
   const result = schema.safeParse(value);
   if (!result.success) {
@@ -20,6 +21,7 @@ function validateAgentOutput(schema, value, agentName) {
   return result.data;
 }
 
+// Fecha chavetas/parêntesis retos deixados abertos por JSON truncado ou mal formado.
 function repairBrackets(str) {
   const stack = [];
   let inStr = false;
@@ -57,6 +59,7 @@ function repairBrackets(str) {
   return result;
 }
 
+// Remove vírgulas finais e comentários, depois repara chavetas — tolera JSON "quase válido" da IA.
 function sanitiseJSON(str) {
   return repairBrackets(
     str
@@ -66,6 +69,7 @@ function sanitiseJSON(str) {
   ).trim();
 }
 
+// Extrai e faz parse do primeiro objecto/array JSON encontrado na resposta em texto de um agente.
 function extractJSON(text, agentName = "agent") {
   if (!text)
     throw new PipelineError(`[${agentName}] Resposta vazia.`, {

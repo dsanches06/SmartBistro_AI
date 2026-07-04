@@ -6,35 +6,24 @@ import {
   deleteStaff,
   isStaffMember,
 } from "../services/staffService.js";
+import { asyncHandler } from "../utils/index.js";
 
 // GET /staff
-export const getAll = async (req, res) => {
-  try {
-    res.json(await getAllStaff());
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+export const getAll = asyncHandler(async (req, res) => {
+  res.json(await getAllStaff());
+});
 
 // GET /staff/:userId
-export const getByUserId = async (req, res) => {
-  try {
-    const staff = await getStaffByUserId(req.params.userId);
-    if (!staff) return res.status(404).json({ error: "Staff member não encontrado" });
-    res.json(staff);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+export const getByUserId = asyncHandler(async (req, res) => {
+  const staff = await getStaffByUserId(req.params.userId);
+  if (!staff) return res.status(404).json({ error: "Staff member não encontrado" });
+  res.json(staff);
+});
 
 // GET /staff/:userId/check
-export const check = async (req, res) => {
-  try {
-    res.json({ is_staff: await isStaffMember(req.params.userId) });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+export const check = asyncHandler(async (req, res) => {
+  res.json({ is_staff: await isStaffMember(req.params.userId) });
+});
 
 // POST /staff
 export const create = async (req, res) => {
