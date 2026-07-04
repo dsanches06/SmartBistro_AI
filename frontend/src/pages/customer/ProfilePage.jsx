@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { authService } from "@/services/authService";
+import { Modal } from "@/components/ui";
 
 function EditDataModal({ user, onClose, onSaved }) {
   const [name, setName] = useState(user.name || "");
@@ -36,49 +37,37 @@ function EditDataModal({ user, onClose, onSaved }) {
   ];
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="w-full max-w-md rounded-2xl p-6 shadow-2xl" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="text-base font-bold" style={{ color: "var(--text)" }}>Editar dados</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg" style={{ color: "var(--text-muted)" }}>
-            <i className="fa-solid fa-xmark" />
+    <Modal open onClose={onClose} title="Editar dados" size="md">
+      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+        {fields.map(({ label, value, set, type, placeholder, maxLength }) => (
+          <div key={label} className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--primary)" }}>{label}</label>
+            <input
+              type={type}
+              value={value}
+              onChange={(e) => set(e.target.value)}
+              placeholder={placeholder}
+              maxLength={maxLength}
+              className="w-full h-10 rounded-lg px-3 text-sm outline-none"
+              style={{ background: "var(--surface-2)", border: "1.5px solid var(--border)", color: "var(--text)" }}
+            />
+          </div>
+        ))}
+        {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444" }}>{error}</p>}
+        <div className="flex gap-2 pt-1">
+          <button type="button" onClick={onClose} disabled={loading}
+            className="flex-1 py-2 rounded-xl text-sm font-semibold"
+            style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
+            Cancelar
+          </button>
+          <button type="submit" disabled={loading}
+            className="flex-1 py-2 rounded-xl text-sm font-bold text-white disabled:opacity-60"
+            style={{ background: "var(--primary)" }}>
+            {loading ? "A guardar..." : "Salvar"}
           </button>
         </div>
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-          {fields.map(({ label, value, set, type, placeholder, maxLength }) => (
-            <div key={label} className="flex flex-col gap-1">
-              <label className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--primary)" }}>{label}</label>
-              <input
-                type={type}
-                value={value}
-                onChange={(e) => set(e.target.value)}
-                placeholder={placeholder}
-                maxLength={maxLength}
-                className="w-full h-10 rounded-lg px-3 text-sm outline-none"
-                style={{ background: "var(--surface-2)", border: "1.5px solid var(--border)", color: "var(--text)" }}
-              />
-            </div>
-          ))}
-          {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444" }}>{error}</p>}
-          <div className="flex gap-2 pt-1">
-            <button type="button" onClick={onClose} disabled={loading}
-              className="flex-1 py-2 rounded-xl text-sm font-semibold"
-              style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
-              Cancelar
-            </button>
-            <button type="submit" disabled={loading}
-              className="flex-1 py-2 rounded-xl text-sm font-bold text-white disabled:opacity-60"
-              style={{ background: "var(--primary)" }}>
-              {loading ? "A guardar..." : "Salvar"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -134,70 +123,54 @@ function ChangePasswordModal({ token, onClose }) {
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="w-full max-w-sm rounded-2xl p-6 shadow-2xl" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="text-base font-bold" style={{ color: "var(--text)" }}>Alterar password</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg" style={{ color: "var(--text-muted)" }}>
-            <i className="fa-solid fa-xmark" />
+    <Modal open onClose={onClose} title="Alterar password" size="sm">
+      {success ? (
+        <div className="text-center py-4">
+          <i className="fa-solid fa-circle-check text-3xl mb-3" style={{ color: "#16a34a" }} />
+          <p className="text-sm font-semibold mb-4" style={{ color: "var(--text)" }}>Password alterada com sucesso!</p>
+          <button onClick={onClose} className="px-6 py-2 rounded-xl text-sm font-semibold text-white" style={{ background: "var(--primary)" }}>
+            Fechar
           </button>
         </div>
-
-        {success ? (
-          <div className="text-center py-4">
-            <i className="fa-solid fa-circle-check text-3xl mb-3" style={{ color: "#16a34a" }} />
-            <p className="text-sm font-semibold mb-4" style={{ color: "var(--text)" }}>Password alterada com sucesso!</p>
-            <button onClick={onClose} className="px-6 py-2 rounded-xl text-sm font-semibold text-white" style={{ background: "var(--primary)" }}>
-              Fechar
-            </button>
-          </div>
-        ) : (
-          <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-            <PasswordInput label="Password atual" value={current} onChange={(e) => setCurrent(e.target.value)} />
-            <PasswordInput label="Nova password" value={next} onChange={(e) => setNext(e.target.value)} />
-            <PasswordInput label="Confirmar nova password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
-            {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444" }}>{error}</p>}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-60"
-              style={{ background: "var(--primary)" }}
-            >
-              {loading ? "A alterar..." : "Alterar password"}
-            </button>
-          </form>
-        )}
-      </div>
-    </div>
+      ) : (
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+          <PasswordInput label="Password atual" value={current} onChange={(e) => setCurrent(e.target.value)} />
+          <PasswordInput label="Nova password" value={next} onChange={(e) => setNext(e.target.value)} />
+          <PasswordInput label="Confirmar nova password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+          {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444" }}>{error}</p>}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-60"
+            style={{ background: "var(--primary)" }}
+          >
+            {loading ? "A alterar..." : "Alterar password"}
+          </button>
+        </form>
+      )}
+    </Modal>
   );
 }
 
 function DeleteRequestModal({ onClose, onConfirm, loading }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}>
-      <div className="w-full max-w-sm rounded-2xl p-6 shadow-2xl" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-        <h3 className="text-base font-bold mb-3" style={{ color: "var(--text)" }}>Solicitar remoção de conta</h3>
-        <p className="text-sm mb-5" style={{ color: "var(--text-muted)" }}>
-          O pedido será enviado ao administrador. A conta só será removida após aprovação.
-        </p>
-        <div className="flex gap-2 justify-end">
-          <button onClick={onClose} disabled={loading}
-            className="px-4 py-2 text-sm rounded-xl font-semibold"
-            style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
-            Cancelar
-          </button>
-          <button onClick={onConfirm} disabled={loading}
-            className="px-4 py-2 text-sm rounded-xl font-semibold text-white disabled:opacity-60"
-            style={{ background: "#ef4444" }}>
-            {loading ? "Enviando..." : "Enviar pedido"}
-          </button>
-        </div>
+    <Modal open onClose={onClose} title="Solicitar remoção de conta" size="sm">
+      <p className="text-sm mb-5" style={{ color: "var(--text-muted)" }}>
+        O pedido será enviado ao administrador. A conta só será removida após aprovação.
+      </p>
+      <div className="flex gap-2 justify-end">
+        <button onClick={onClose} disabled={loading}
+          className="px-4 py-2 text-sm rounded-xl font-semibold"
+          style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
+          Cancelar
+        </button>
+        <button onClick={onConfirm} disabled={loading}
+          className="px-4 py-2 text-sm rounded-xl font-semibold text-white disabled:opacity-60"
+          style={{ background: "#ef4444" }}>
+          {loading ? "Enviando..." : "Enviar pedido"}
+        </button>
       </div>
-    </div>
+    </Modal>
   );
 }
 

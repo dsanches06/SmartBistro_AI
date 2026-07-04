@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { PageSection, Pagination, StatCard } from "@/components";
+import { PageSection, Pagination, StatCard, Modal } from "@/components";
 import { SortTh } from "@/components/ui/shared/SortTh.jsx";
 import { ThBadge } from "@/components/ui/shared/ThBadge.jsx";
 import {
@@ -95,74 +95,62 @@ function NovaFaturaModal({ orders, invoices, orderItems, menuItems, onClose, onC
   const inputStyle = { background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.5)" }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="rounded-[24px] p-6 w-full max-w-md shadow-2xl"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>Nova Fatura</h2>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl"
-            style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
-            <i className="fa-solid fa-xmark text-sm" />
+    <Modal open onClose={onClose} title="Nova Fatura" size="md">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Pedido *</label>
+          <select value={orderId} onChange={e => setOrderId(e.target.value)}
+            className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+            style={inputStyle}>
+            <option value="">Selecione um pedido…</option>
+            {availableOrders.map(o => (
+              <option key={o.id} value={o.id}>
+                #{o.id} — {o.user_name || "Sem cliente"} ({o.table_id ? `Mesa ${o.table_id}` : "Takeaway"})
+              </option>
+            ))}
+          </select>
+          {availableOrders.length === 0 && (
+            <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>Todos os pedidos já têm fatura.</p>
+          )}
+        </div>
+        <div>
+          <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Taxa de IVA</label>
+          <select value={ivaRate} onChange={e => setIvaRate(Number(e.target.value))}
+            className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+            style={inputStyle}>
+            <option value={6}>6%</option>
+            <option value={13}>13%</option>
+            <option value={23}>23%</option>
+          </select>
+        </div>
+        {orderId && (
+          <div className="rounded-xl p-3 space-y-1.5" style={{ background: "var(--surface-2)" }}>
+            <div className="flex justify-between text-xs" style={{ color: "var(--text-secondary)" }}>
+              <span>Subtotal</span><span>{fmt(subtotal)}</span>
+            </div>
+            <div className="flex justify-between text-xs" style={{ color: "var(--text-secondary)" }}>
+              <span>IVA ({ivaRate}%)</span><span>{fmt(tax)}</span>
+            </div>
+            <div className="flex justify-between text-sm font-bold pt-1" style={{ borderTop: "1px solid var(--border)", color: "var(--text)" }}>
+              <span>Total</span><span>{fmt(total)}</span>
+            </div>
+          </div>
+        )}
+        {err && <p className="text-xs text-red-500">{err}</p>}
+        <div className="flex gap-2 pt-1">
+          <button type="button" onClick={onClose}
+            className="flex-1 py-2 rounded-xl text-sm font-semibold"
+            style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
+            Cancelar
+          </button>
+          <button type="submit" disabled={saving || !orderId}
+            className="flex-1 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
+            style={{ background: "var(--primary)" }}>
+            {saving ? <i className="fa-solid fa-spinner fa-spin" /> : "Criar Fatura"}
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Pedido *</label>
-            <select value={orderId} onChange={e => setOrderId(e.target.value)}
-              className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-              style={inputStyle}>
-              <option value="">Selecione um pedido…</option>
-              {availableOrders.map(o => (
-                <option key={o.id} value={o.id}>
-                  #{o.id} — {o.user_name || "Sem cliente"} ({o.table_id ? `Mesa ${o.table_id}` : "Takeaway"})
-                </option>
-              ))}
-            </select>
-            {availableOrders.length === 0 && (
-              <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>Todos os pedidos já têm fatura.</p>
-            )}
-          </div>
-          <div>
-            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Taxa de IVA</label>
-            <select value={ivaRate} onChange={e => setIvaRate(Number(e.target.value))}
-              className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-              style={inputStyle}>
-              <option value={6}>6%</option>
-              <option value={13}>13%</option>
-              <option value={23}>23%</option>
-            </select>
-          </div>
-          {orderId && (
-            <div className="rounded-xl p-3 space-y-1.5" style={{ background: "var(--surface-2)" }}>
-              <div className="flex justify-between text-xs" style={{ color: "var(--text-secondary)" }}>
-                <span>Subtotal</span><span>{fmt(subtotal)}</span>
-              </div>
-              <div className="flex justify-between text-xs" style={{ color: "var(--text-secondary)" }}>
-                <span>IVA ({ivaRate}%)</span><span>{fmt(tax)}</span>
-              </div>
-              <div className="flex justify-between text-sm font-bold pt-1" style={{ borderTop: "1px solid var(--border)", color: "var(--text)" }}>
-                <span>Total</span><span>{fmt(total)}</span>
-              </div>
-            </div>
-          )}
-          {err && <p className="text-xs text-red-500">{err}</p>}
-          <div className="flex gap-2 pt-1">
-            <button type="button" onClick={onClose}
-              className="flex-1 py-2 rounded-xl text-sm font-semibold"
-              style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
-              Cancelar
-            </button>
-            <button type="submit" disabled={saving || !orderId}
-              className="flex-1 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
-              style={{ background: "var(--primary)" }}>
-              {saving ? <i className="fa-solid fa-spinner fa-spin" /> : "Criar Fatura"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -355,29 +343,25 @@ export default function FaturacaoPage() {
     <PageSection title="Faturação" description="Faturas, pagamentos e receitas">
 
       {deleteConfirmInv && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="rounded-2xl p-6 max-w-sm w-full shadow-2xl"
-            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-            <h3 className="text-base font-semibold mb-2" style={{ color: "var(--text)" }}>Apagar fatura</h3>
-            <p className="text-sm mb-5" style={{ color: "var(--text-muted)" }}>
-              Tem a certeza que deseja apagar a fatura{" "}
-              <span className="font-semibold" style={{ color: "var(--text)" }}>{fmtInvoiceNumber(deleteConfirmInv)}</span>?
-              Esta ação não pode ser desfeita.
-            </p>
-            <div className="flex justify-end gap-2">
-              <button onClick={() => setDeleteConfirmInv(null)}
-                className="px-4 py-2 text-sm rounded-lg border"
-                style={{ background: "var(--surface-2)", color: "var(--text-muted)", borderColor: "var(--border)" }}>
-                Cancelar
-              </button>
-              <button onClick={handleDeleteConfirm}
-                className="px-4 py-2 text-sm rounded-lg text-white"
-                style={{ background: "#B91C1C" }}>
-                Apagar
-              </button>
-            </div>
+        <Modal open onClose={() => setDeleteConfirmInv(null)} title="Apagar fatura" size="sm">
+          <p className="text-sm mb-5" style={{ color: "var(--text-muted)" }}>
+            Tem a certeza que deseja apagar a fatura{" "}
+            <span className="font-semibold" style={{ color: "var(--text)" }}>{fmtInvoiceNumber(deleteConfirmInv)}</span>?
+            Esta ação não pode ser desfeita.
+          </p>
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setDeleteConfirmInv(null)}
+              className="px-4 py-2 text-sm rounded-lg border"
+              style={{ background: "var(--surface-2)", color: "var(--text-muted)", borderColor: "var(--border)" }}>
+              Cancelar
+            </button>
+            <button onClick={handleDeleteConfirm}
+              className="px-4 py-2 text-sm rounded-lg text-white"
+              style={{ background: "#B91C1C" }}>
+              Apagar
+            </button>
           </div>
-        </div>
+        </Modal>
       )}
 
       {showCreate && (

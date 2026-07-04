@@ -5,7 +5,7 @@ import { reservationService, tableService, orderService, userService, invoiceSer
 import { STATUS_CONFIG } from "@/utils/tablePageUtils";
 import { getItemEmoji, fmtEur } from "@/utils";
 import { MENU_CATEGORY_META, getMaxAvailableQty } from "@/utils/menuUtils";
-import { PageSection, TableCard, PaymentModal } from "@/components";
+import { PageSection, TableCard, PaymentModal, Modal } from "@/components";
 
 const formatTableLabel = (number) => `T${String(number).padStart(2, "0")}`;
 
@@ -219,48 +219,36 @@ function NovaMesaModal({ onClose, onCreate }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.5)" }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="rounded-[24px] p-6 w-full max-w-sm shadow-2xl"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>Nova Mesa</h2>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl"
-            style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
-            <i className="fa-solid fa-xmark text-sm" />
+    <Modal open onClose={onClose} title="Nova Mesa" size="sm">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Número da Mesa *</label>
+          <input type="text" value={form.table_number} onChange={e => set("table_number", e.target.value)}
+            placeholder="Ex: T25"
+            className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+            style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Capacidade (lugares)</label>
+          <input type="number" min="1" max="20" value={form.capacity} onChange={e => set("capacity", e.target.value)}
+            className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+            style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+        </div>
+        {err && <p className="text-xs text-red-500">{err}</p>}
+        <div className="flex gap-2 pt-1">
+          <button type="button" onClick={onClose}
+            className="flex-1 py-2 rounded-xl text-sm font-semibold"
+            style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
+            Cancelar
+          </button>
+          <button type="submit" disabled={saving}
+            className="flex-1 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
+            style={{ background: "var(--primary)" }}>
+            {saving ? <i className="fa-solid fa-spinner fa-spin" /> : "Criar Mesa"}
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Número da Mesa *</label>
-            <input type="text" value={form.table_number} onChange={e => set("table_number", e.target.value)}
-              placeholder="Ex: T25"
-              className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Capacidade (lugares)</label>
-            <input type="number" min="1" max="20" value={form.capacity} onChange={e => set("capacity", e.target.value)}
-              className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
-          </div>
-          {err && <p className="text-xs text-red-500">{err}</p>}
-          <div className="flex gap-2 pt-1">
-            <button type="button" onClick={onClose}
-              className="flex-1 py-2 rounded-xl text-sm font-semibold"
-              style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
-              Cancelar
-            </button>
-            <button type="submit" disabled={saving}
-              className="flex-1 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
-              style={{ background: "var(--primary)" }}>
-              {saving ? <i className="fa-solid fa-spinner fa-spin" /> : "Criar Mesa"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 }
 

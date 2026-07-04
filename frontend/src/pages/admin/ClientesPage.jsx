@@ -7,7 +7,7 @@ import { orderService }     from "@/services/orderService.js";
 import { invoiceService }   from "@/services/invoiceService.js";
 import { orderItemService } from "@/services/orderItemService.js";
 import { itemService }      from "@/services/itemService.js";
-import { TrophySpin } from "@/components/ui";
+import { TrophySpin, Modal } from "@/components/ui";
 import { ThBadge } from "@/components/ui/shared/ThBadge.jsx";
 import UserCard, { getPalette, getInitials, formatDate } from "@/components/users/UserCard.jsx";
 import { useAuth } from "@/context/AuthContext";
@@ -51,32 +51,29 @@ function FilterStatCard({ label, value, icon, filter, currentFilter, onFilter })
 // ── Delete confirmation modal ──────────────────────────────────────────────────
 function DeleteConfirm({ customer, onCancel, onConfirm }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-surface rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-surface animate-fadeInUp">
-        <h3 className="text-base font-semibold text-main mb-2">Remover cliente</h3>
-        <p className="text-sm text-muted mb-5">
-          Tem a certeza que deseja remover{" "}
-          <span className="font-semibold text-main">{customer.name}</span>? Esta ação não pode ser
-          desfeita.
-        </p>
-        <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 text-sm rounded-lg border border-surface bg-surface-2 text-muted hover:bg-surface transition-colors cursor-pointer"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            className="px-4 py-2 text-sm rounded-lg bg-[#B91C1C] text-white hover:bg-[#991B1B] transition-colors cursor-pointer"
-          >
-            Remover
-          </button>
-        </div>
+    <Modal open onClose={onCancel} title="Remover cliente" size="sm">
+      <p className="text-sm text-muted mb-5">
+        Tem a certeza que deseja remover{" "}
+        <span className="font-semibold text-main">{customer.name}</span>? Esta ação não pode ser
+        desfeita.
+      </p>
+      <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-4 py-2 text-sm rounded-lg border border-surface bg-surface-2 text-muted hover:bg-surface transition-colors cursor-pointer"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          onClick={onConfirm}
+          className="px-4 py-2 text-sm rounded-lg bg-[#B91C1C] text-white hover:bg-[#991B1B] transition-colors cursor-pointer"
+        >
+          Remover
+        </button>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -101,49 +98,37 @@ function NovoClienteModal({ onClose, onCreate }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.5)" }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="rounded-[24px] p-6 w-full max-w-sm shadow-2xl"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>Novo Cliente</h2>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl"
-            style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
-            <i className="fa-solid fa-xmark text-sm" />
+    <Modal open onClose={onClose} title="Novo Cliente" size="sm">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Nome *</label>
+          <input type="text" value={form.name} onChange={e => set("name", e.target.value)}
+            placeholder="Ex: João Silva" maxLength={20}
+            className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+            style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Telefone</label>
+          <input type="tel" value={form.phone} onChange={e => set("phone", e.target.value)}
+            placeholder="Ex: 912345678"
+            className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+            style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+        </div>
+        {err && <p className="text-xs text-red-500">{err}</p>}
+        <div className="flex gap-2 pt-1">
+          <button type="button" onClick={onClose}
+            className="flex-1 py-2 rounded-xl text-sm font-semibold"
+            style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
+            Cancelar
+          </button>
+          <button type="submit" disabled={saving}
+            className="flex-1 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
+            style={{ background: "var(--primary)" }}>
+            {saving ? <i className="fa-solid fa-spinner fa-spin" /> : "Criar Cliente"}
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Nome *</label>
-            <input type="text" value={form.name} onChange={e => set("name", e.target.value)}
-              placeholder="Ex: João Silva" maxLength={20}
-              className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Telefone</label>
-            <input type="tel" value={form.phone} onChange={e => set("phone", e.target.value)}
-              placeholder="Ex: 912345678"
-              className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
-          </div>
-          {err && <p className="text-xs text-red-500">{err}</p>}
-          <div className="flex gap-2 pt-1">
-            <button type="button" onClick={onClose}
-              className="flex-1 py-2 rounded-xl text-sm font-semibold"
-              style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
-              Cancelar
-            </button>
-            <button type="submit" disabled={saving}
-              className="flex-1 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
-              style={{ background: "var(--primary)" }}>
-              {saving ? <i className="fa-solid fa-spinner fa-spin" /> : "Criar Cliente"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 }
 

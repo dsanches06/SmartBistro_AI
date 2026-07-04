@@ -6,7 +6,7 @@ import { orderService } from "@/services/orderService";
 import { invoiceService } from "@/services/invoiceService";
 import { fmtEur } from "@/utils/dashboardUtils";
 import { ORDER_STATUS_META, getOrderTarget } from "@/utils/orderUtils";
-import { TrophySpin } from "@/components/ui";
+import { TrophySpin, Modal } from "@/components/ui";
 import CustomerStatsCard from "@/components/ui/customer/CustomerStatsCard";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -25,63 +25,52 @@ function parseOrderItems(kitchenJson) {
 function OrderDetailModal({ order, amount, onClose }) {
   const items = parseOrderItems(order.kitchen_sequence_json);
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-        <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "var(--border)" }}>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
-              {order.service_type ?? "Takeaway"}
-            </p>
-            <h3 className="text-base font-bold" style={{ color: "var(--text)" }}>Pedido #{order.id}</h3>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg" style={{ color: "var(--text-muted)" }}>
-            <i className="fa-solid fa-xmark" />
-          </button>
-        </div>
+  const title = (
+    <span>
+      <span className="block text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
+        {order.service_type ?? "Takeaway"}
+      </span>
+      <span className="block text-base font-bold" style={{ color: "var(--text)" }}>Pedido #{order.id}</span>
+    </span>
+  );
 
-        <div className="px-5 py-4 space-y-2 max-h-64 overflow-y-auto">
-          {items.length === 0 ? (
-            <p className="text-sm text-center" style={{ color: "var(--text-muted)" }}>Sem itens disponíveis.</p>
-          ) : items.map((item, i) => (
-            <div key={i} className="flex items-center justify-between gap-3 py-1.5 border-b last:border-0" style={{ borderColor: "var(--border)" }}>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>{item.name}</p>
-                {item.quantity != null && (
-                  <p className="text-xs" style={{ color: "var(--text-muted)" }}>x{item.quantity}</p>
-                )}
-              </div>
-              {item.price != null && item.quantity != null && (
-                <span className="text-sm font-semibold flex-shrink-0" style={{ color: "var(--primary)" }}>
-                  {(Number(item.price) * Number(item.quantity)).toFixed(2)} €
-                </span>
+  return (
+    <Modal open onClose={onClose} title={title} size="sm">
+      <div className="space-y-2 max-h-64 overflow-y-auto -mt-2">
+        {items.length === 0 ? (
+          <p className="text-sm text-center" style={{ color: "var(--text-muted)" }}>Sem itens disponíveis.</p>
+        ) : items.map((item, i) => (
+          <div key={i} className="flex items-center justify-between gap-3 py-1.5 border-b last:border-0" style={{ borderColor: "var(--border)" }}>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>{item.name}</p>
+              {item.quantity != null && (
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>x{item.quantity}</p>
               )}
             </div>
-          ))}
-        </div>
-
-        <div className="px-5 py-3 border-t flex items-center justify-between" style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}>
-          <span className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>Total pago</span>
-          <span className="text-lg font-bold" style={{ color: "var(--primary)" }}>
-            {amount ? `${Number(amount).toFixed(2)} €` : "—"}
-          </span>
-        </div>
-
-        <div className="px-5 pb-4 pt-3">
-          <button
-            onClick={onClose}
-            className="w-full py-2.5 rounded-xl text-sm font-semibold"
-            style={{ background: "var(--surface-2)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}
-          >
-            Fechar
-          </button>
-        </div>
+            {item.price != null && item.quantity != null && (
+              <span className="text-sm font-semibold flex-shrink-0" style={{ color: "var(--primary)" }}>
+                {(Number(item.price) * Number(item.quantity)).toFixed(2)} €
+              </span>
+            )}
+          </div>
+        ))}
       </div>
-    </div>
+
+      <div className="mt-3 rounded-xl px-4 py-3 flex items-center justify-between" style={{ background: "var(--surface-2)" }}>
+        <span className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>Total pago</span>
+        <span className="text-lg font-bold" style={{ color: "var(--primary)" }}>
+          {amount ? `${Number(amount).toFixed(2)} €` : "—"}
+        </span>
+      </div>
+
+      <button
+        onClick={onClose}
+        className="w-full mt-3 py-2.5 rounded-xl text-sm font-semibold"
+        style={{ background: "var(--surface-2)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}
+      >
+        Fechar
+      </button>
+    </Modal>
   );
 }
 

@@ -5,7 +5,7 @@ import { orderItemService } from "@/services/orderItemService";
 import { invoiceService } from "@/services/invoiceService";
 import { paymentService } from "@/services/paymentService";
 import { getOrderTarget, getOrderItemCount, ORDER_TABS, filterOrders, ORDER_STATUS_META, ORDER_PAGE_SIZE } from "@/utils/orderUtils";
-import { TrophySpin, OrderStatusModal, PaymentModal } from "@/components/ui";
+import { TrophySpin, OrderStatusModal, PaymentModal, Modal } from "@/components/ui";
 import { Pagination } from "@/components/ui/shared/Pagination";
 import { ThBadge } from "@/components/ui/shared/ThBadge";
 
@@ -381,30 +381,25 @@ export default function CustomerOrdersPage() {
       )}
 
       {confirmDeleteId !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}>
-          <div className="w-full max-w-sm rounded-2xl p-6 shadow-2xl" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-            <div className="flex items-center gap-3 mb-3">
-              <i className="fa-solid fa-trash text-lg" style={{ color: "#ef4444" }} />
-              <h3 className="text-base font-bold" style={{ color: "var(--text)" }}>Remover pedido #{confirmDeleteId}</h3>
-            </div>
-            <p className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>
-              Tens a certeza que queres remover este pedido? Esta acção não pode ser desfeita.
-            </p>
-            <div className="flex gap-2">
-              <button onClick={() => setConfirmDeleteId(null)}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
-                style={{ background: "var(--surface-2)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}>
-                Cancelar
-              </button>
-              <button onClick={() => handleDelete(confirmDeleteId)}
-                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white"
-                style={{ background: "#ef4444" }}>
-                Remover
-              </button>
-            </div>
+        <Modal open onClose={() => setConfirmDeleteId(null)}
+          title={<span className="flex items-center gap-3"><i className="fa-solid fa-trash text-lg" style={{ color: "#ef4444" }} />Remover pedido #{confirmDeleteId}</span>}
+          size="sm">
+          <p className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>
+            Tens a certeza que queres remover este pedido? Esta acção não pode ser desfeita.
+          </p>
+          <div className="flex gap-2">
+            <button onClick={() => setConfirmDeleteId(null)}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
+              style={{ background: "var(--surface-2)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}>
+              Cancelar
+            </button>
+            <button onClick={() => handleDelete(confirmDeleteId)}
+              className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white"
+              style={{ background: "#ef4444" }}>
+              Remover
+            </button>
           </div>
-        </div>
+        </Modal>
       )}
 
       {payInfo && (
@@ -422,92 +417,74 @@ export default function CustomerOrdersPage() {
       )}
 
       {repeatAllergyOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
-          onClick={(e) => { if (e.target === e.currentTarget && !repeatPayLoading) setRepeatAllergyOrder(null); }}>
-          <div className="w-full max-w-sm rounded-2xl p-6 shadow-2xl" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-            <div className="flex items-center gap-3 mb-4">
-              <i className="fa-solid fa-repeat text-lg" style={{ color: "var(--primary)" }} />
-              <h3 className="text-base font-bold" style={{ color: "var(--text)" }}>Repetir pedido #{repeatAllergyOrder.id}</h3>
-            </div>
-            <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>
-              Tens alguma alergia ou intolerância alimentar que devemos ter em conta?
-            </p>
-            <textarea
-              value={allergyText}
-              onChange={(e) => setAllergyText(e.target.value)}
-              placeholder="Ex: gluten, lactose... (opcional)"
-              rows={3}
-              className="w-full rounded-xl px-3 py-2 text-sm outline-none resize-none mb-4"
-              style={{ background: "var(--surface-2)", border: "1.5px solid var(--border)", color: "var(--text)" }}
-            />
-            <div className="flex gap-2">
-              <button onClick={() => handleRepeatAllergyConfirm(null)}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
-                style={{ background: "var(--surface-2)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}>
-                Sem alergias
-              </button>
-              <button onClick={() => handleRepeatAllergyConfirm(allergyText.trim() || null)}
-                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white"
-                style={{ background: "var(--primary)" }}>
-                Continuar
-              </button>
-            </div>
+        <Modal open onClose={() => { if (!repeatPayLoading) setRepeatAllergyOrder(null); }}
+          title={<span className="flex items-center gap-3"><i className="fa-solid fa-repeat text-lg" style={{ color: "var(--primary)" }} />Repetir pedido #{repeatAllergyOrder.id}</span>}
+          size="sm">
+          <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>
+            Tens alguma alergia ou intolerância alimentar que devemos ter em conta?
+          </p>
+          <textarea
+            value={allergyText}
+            onChange={(e) => setAllergyText(e.target.value)}
+            placeholder="Ex: gluten, lactose... (opcional)"
+            rows={3}
+            className="w-full rounded-xl px-3 py-2 text-sm outline-none resize-none mb-4"
+            style={{ background: "var(--surface-2)", border: "1.5px solid var(--border)", color: "var(--text)" }}
+          />
+          <div className="flex gap-2">
+            <button onClick={() => handleRepeatAllergyConfirm(null)}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
+              style={{ background: "var(--surface-2)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}>
+              Sem alergias
+            </button>
+            <button onClick={() => handleRepeatAllergyConfirm(allergyText.trim() || null)}
+              className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white"
+              style={{ background: "var(--primary)" }}>
+              Continuar
+            </button>
           </div>
-        </div>
+        </Modal>
       )}
 
       {repeatPayInfo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
-          onClick={(e) => { if (e.target === e.currentTarget && !repeatPayLoading) setRepeatPayInfo(null); }}>
-          <div className="w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-            <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "var(--border)" }}>
-              <h3 className="text-base font-bold" style={{ color: "var(--text)" }}>
-                <i className="fa-solid fa-credit-card mr-2" style={{ color: "var(--primary)" }} />
-                Pagamento
-              </h3>
-              <button onClick={() => setRepeatPayInfo(null)} disabled={repeatPayLoading} className="p-1.5 rounded-lg" style={{ color: "var(--text-muted)" }}>
-                <i className="fa-solid fa-xmark" />
-              </button>
+        <Modal open onClose={() => { if (!repeatPayLoading) setRepeatPayInfo(null); }}
+          title={<span><i className="fa-solid fa-credit-card mr-2" style={{ color: "var(--primary)" }} />Pagamento</span>}
+          size="sm">
+          <div className="space-y-3">
+            <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+              {repeatPayInfo.kitchenSeq.map((item, i) => (
+                <div key={i} className="flex items-center justify-between px-4 py-2.5"
+                  style={{ borderBottom: i < repeatPayInfo.kitchenSeq.length - 1 ? "1px solid var(--border)" : "none", background: "var(--surface-2)" }}>
+                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>{item.name} × {item.quantity}</span>
+                  <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>€{(item.price * item.quantity).toFixed(2)}</span>
+                </div>
+              ))}
             </div>
-
-            <div className="px-5 py-4 space-y-3">
-              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
-                {repeatPayInfo.kitchenSeq.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between px-4 py-2.5"
-                    style={{ borderBottom: i < repeatPayInfo.kitchenSeq.length - 1 ? "1px solid var(--border)" : "none", background: "var(--surface-2)" }}>
-                    <span className="text-xs" style={{ color: "var(--text-muted)" }}>{item.name} × {item.quantity}</span>
-                    <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>€{(item.price * item.quantity).toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center justify-between px-4 py-3 rounded-xl"
-                style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
-                <span className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>Total</span>
-                <span className="text-xl font-bold" style={{ color: "var(--primary)" }}>€{Number(repeatPayInfo.total).toFixed(2)}</span>
-              </div>
-              {repeatPayError && (
-                <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444" }}>
-                  {repeatPayError}
-                </p>
-              )}
+            <div className="flex items-center justify-between px-4 py-3 rounded-xl"
+              style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+              <span className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>Total</span>
+              <span className="text-xl font-bold" style={{ color: "var(--primary)" }}>€{Number(repeatPayInfo.total).toFixed(2)}</span>
             </div>
-
-            <div className="px-5 pb-5 flex gap-2">
-              <button onClick={() => setRepeatPayInfo(null)} disabled={repeatPayLoading}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
-                style={{ background: "var(--surface-2)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}>
-                Cancelar
-              </button>
-              <button onClick={handleRepeatPay} disabled={repeatPayLoading}
-                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-60"
-                style={{ background: "var(--primary)" }}>
-                {repeatPayLoading ? "A processar..." : `Pagar €${Number(repeatPayInfo.total).toFixed(2)}`}
-              </button>
-            </div>
+            {repeatPayError && (
+              <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444" }}>
+                {repeatPayError}
+              </p>
+            )}
           </div>
-        </div>
+
+          <div className="pt-4 flex gap-2">
+            <button onClick={() => setRepeatPayInfo(null)} disabled={repeatPayLoading}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
+              style={{ background: "var(--surface-2)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}>
+              Cancelar
+            </button>
+            <button onClick={handleRepeatPay} disabled={repeatPayLoading}
+              className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-60"
+              style={{ background: "var(--primary)" }}>
+              {repeatPayLoading ? "A processar..." : `Pagar €${Number(repeatPayInfo.total).toFixed(2)}`}
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   );

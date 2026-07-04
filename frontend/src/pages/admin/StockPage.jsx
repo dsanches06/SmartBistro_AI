@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { PageSection, Pagination, ListCard } from "@/components";
+import { PageSection, Pagination, ListCard, Modal } from "@/components";
 import { SortTh } from "@/components/ui/shared/SortTh.jsx";
 import { stockService, ingredientService } from "@/services";
 import {
@@ -42,64 +42,52 @@ function NovoProdutoModal({ onClose, onCreated }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.5)" }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="rounded-[24px] p-6 w-full max-w-sm shadow-2xl"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>Novo Produto</h2>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl"
-            style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
-            <i className="fa-solid fa-xmark text-sm" />
-          </button>
+    <Modal open onClose={onClose} title="Novo Produto" size="sm">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Nome do Produto *</label>
+          <input autoFocus type="text" value={form.name} onChange={e => set("name", e.target.value)}
+            placeholder="Ex: Batata Doce"
+            className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+            style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
         </div>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Unidade</label>
+          <select value={form.unit} onChange={e => set("unit", e.target.value)}
+            className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+            style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }}>
+            {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+          </select>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Nome do Produto *</label>
-            <input autoFocus type="text" value={form.name} onChange={e => set("name", e.target.value)}
-              placeholder="Ex: Batata Doce"
+            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Quantidade inicial</label>
+            <input type="number" min="0" step="0.01" value={form.quantity} onChange={e => set("quantity", e.target.value)}
               className="w-full rounded-xl px-3 py-2 text-sm outline-none"
               style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
           </div>
           <div>
-            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Unidade</label>
-            <select value={form.unit} onChange={e => set("unit", e.target.value)}
+            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Custo unitário (€)</label>
+            <input type="number" min="0" step="0.01" value={form.unit_cost} onChange={e => set("unit_cost", e.target.value)}
               className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }}>
-              {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-            </select>
+              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Quantidade inicial</label>
-              <input type="number" min="0" step="0.01" value={form.quantity} onChange={e => set("quantity", e.target.value)}
-                className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-                style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Custo unitário (€)</label>
-              <input type="number" min="0" step="0.01" value={form.unit_cost} onChange={e => set("unit_cost", e.target.value)}
-                className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-                style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
-            </div>
-          </div>
-          {err && <p className="text-xs text-red-500">{err}</p>}
-          <div className="flex gap-2 pt-1">
-            <button type="button" onClick={onClose}
-              className="flex-1 py-2 rounded-xl text-sm font-semibold"
-              style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
-              Cancelar
-            </button>
-            <button type="submit" disabled={saving}
-              className="flex-1 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
-              style={{ background: "var(--primary)" }}>
-              {saving ? <i className="fa-solid fa-spinner fa-spin" /> : "Criar Produto"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        </div>
+        {err && <p className="text-xs text-red-500">{err}</p>}
+        <div className="flex gap-2 pt-1">
+          <button type="button" onClick={onClose}
+            className="flex-1 py-2 rounded-xl text-sm font-semibold"
+            style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
+            Cancelar
+          </button>
+          <button type="submit" disabled={saving}
+            className="flex-1 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
+            style={{ background: "var(--primary)" }}>
+            {saving ? <i className="fa-solid fa-spinner fa-spin" /> : "Criar Produto"}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -158,52 +146,37 @@ function AtualizarStockModal({ item, onClose, onSave, saving }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.5)" }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="rounded-[24px] p-6 w-full max-w-sm shadow-2xl"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2.5">
-            <ProductIcon name={item.name} />
-            <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>Atualizar Stock</h2>
-          </div>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl"
-            style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
-            <i className="fa-solid fa-xmark text-sm" />
+    <Modal open onClose={onClose} title={<span className="flex items-center gap-2.5"><ProductIcon name={item.name} />Atualizar Stock</span>} size="sm">
+      <p className="text-sm mb-1 font-semibold" style={{ color: "var(--text)" }}>{item.name}</p>
+      <p className="text-xs mb-4" style={{ color: "var(--text-muted)" }}>Unidade: {item.unit}</p>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>
+            Quantidade ({item.unit})
+          </label>
+          <input
+            autoFocus
+            type="number" min="0" step="0.01"
+            value={qty}
+            onChange={e => setQty(e.target.value)}
+            className="w-full rounded-xl px-3 py-2.5 text-sm font-semibold text-right outline-none"
+            style={{ background: "var(--surface-2)", border: "1.5px solid var(--primary)", color: "var(--text)" }}
+          />
+        </div>
+        <div className="flex gap-2">
+          <button type="button" onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
+            style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
+            Cancelar
+          </button>
+          <button type="submit" disabled={saving}
+            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-60"
+            style={{ background: "var(--primary)" }}>
+            {saving ? <i className="fa-solid fa-spinner fa-spin" /> : "Guardar"}
           </button>
         </div>
-        <p className="text-sm mb-1 font-semibold" style={{ color: "var(--text)" }}>{item.name}</p>
-        <p className="text-xs mb-4" style={{ color: "var(--text-muted)" }}>Unidade: {item.unit}</p>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>
-              Quantidade ({item.unit})
-            </label>
-            <input
-              autoFocus
-              type="number" min="0" step="0.01"
-              value={qty}
-              onChange={e => setQty(e.target.value)}
-              className="w-full rounded-xl px-3 py-2.5 text-sm font-semibold text-right outline-none"
-              style={{ background: "var(--surface-2)", border: "1.5px solid var(--primary)", color: "var(--text)" }}
-            />
-          </div>
-          <div className="flex gap-2">
-            <button type="button" onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
-              style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
-              Cancelar
-            </button>
-            <button type="submit" disabled={saving}
-              className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-60"
-              style={{ background: "var(--primary)" }}>
-              {saving ? <i className="fa-solid fa-spinner fa-spin" /> : "Guardar"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -378,29 +351,25 @@ export default function StockPage() {
       )}
 
       {deleteItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="rounded-2xl p-6 max-w-sm w-full shadow-2xl"
-            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-            <h3 className="text-base font-semibold mb-2" style={{ color: "var(--text)" }}>Remover produto</h3>
-            <p className="text-sm mb-5" style={{ color: "var(--text-muted)" }}>
-              Tem a certeza que deseja remover{" "}
-              <span className="font-semibold" style={{ color: "var(--text)" }}>{deleteItem.name}</span>?
-              Esta ação não pode ser desfeita.
-            </p>
-            <div className="flex justify-end gap-2">
-              <button onClick={() => setDeleteItem(null)}
-                className="px-4 py-2 text-sm rounded-lg border"
-                style={{ background: "var(--surface-2)", color: "var(--text-muted)", borderColor: "var(--border)" }}>
-                Cancelar
-              </button>
-              <button onClick={handleDeleteConfirm}
-                className="px-4 py-2 text-sm rounded-lg text-white"
-                style={{ background: "#B91C1C" }}>
-                Remover
-              </button>
-            </div>
+        <Modal open onClose={() => setDeleteItem(null)} title="Remover produto" size="sm">
+          <p className="text-sm mb-5" style={{ color: "var(--text-muted)" }}>
+            Tem a certeza que deseja remover{" "}
+            <span className="font-semibold" style={{ color: "var(--text)" }}>{deleteItem.name}</span>?
+            Esta ação não pode ser desfeita.
+          </p>
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setDeleteItem(null)}
+              className="px-4 py-2 text-sm rounded-lg border"
+              style={{ background: "var(--surface-2)", color: "var(--text-muted)", borderColor: "var(--border)" }}>
+              Cancelar
+            </button>
+            <button onClick={handleDeleteConfirm}
+              className="px-4 py-2 text-sm rounded-lg text-white"
+              style={{ background: "#B91C1C" }}>
+              Remover
+            </button>
           </div>
-        </div>
+        </Modal>
       )}
 
       {modalItem && (

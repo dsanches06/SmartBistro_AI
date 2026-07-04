@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { PageSection, Pagination, ListCard } from "@/components";
+import { PageSection, Pagination, ListCard, Modal } from "@/components";
 import { SortTh } from "@/components/ui/shared/SortTh.jsx";
 import { ThBadge } from "@/components/ui/shared/ThBadge.jsx";
 import { itemService } from "@/services";
@@ -17,51 +17,36 @@ function EditarPrecoModal({ item, onClose, onSave, saving }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.5)" }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="rounded-[24px] p-6 w-full max-w-sm shadow-2xl"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2.5">
-            <span style={{ fontSize: 24 }}>{getItemEmoji(item.name)}</span>
-            <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>Editar Preço</h2>
-          </div>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl"
-            style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
-            <i className="fa-solid fa-xmark text-sm" />
+    <Modal open onClose={onClose} title={<span className="flex items-center gap-2.5"><span style={{ fontSize: 24 }}>{getItemEmoji(item.name)}</span>Editar Preço</span>} size="sm">
+      <p className="text-sm font-semibold mb-0.5" style={{ color: "var(--text)" }}>{item.name}</p>
+      <p className="text-xs mb-4" style={{ color: meta.accent }}>{meta.emoji} {meta.label}</p>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>
+            Preço (€)
+          </label>
+          <input
+            autoFocus type="number" min="0.01" step="0.01"
+            value={price}
+            onChange={e => setPrice(e.target.value)}
+            className="w-full rounded-xl px-3 py-2.5 text-sm font-bold text-right outline-none"
+            style={{ background: "var(--surface-2)", border: "1.5px solid var(--primary)", color: "var(--text)" }}
+          />
+        </div>
+        <div className="flex gap-2">
+          <button type="button" onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
+            style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
+            Cancelar
+          </button>
+          <button type="submit" disabled={saving}
+            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-60"
+            style={{ background: "var(--primary)" }}>
+            {saving ? <i className="fa-solid fa-spinner fa-spin" /> : "Guardar"}
           </button>
         </div>
-        <p className="text-sm font-semibold mb-0.5" style={{ color: "var(--text)" }}>{item.name}</p>
-        <p className="text-xs mb-4" style={{ color: meta.accent }}>{meta.emoji} {meta.label}</p>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>
-              Preço (€)
-            </label>
-            <input
-              autoFocus type="number" min="0.01" step="0.01"
-              value={price}
-              onChange={e => setPrice(e.target.value)}
-              className="w-full rounded-xl px-3 py-2.5 text-sm font-bold text-right outline-none"
-              style={{ background: "var(--surface-2)", border: "1.5px solid var(--primary)", color: "var(--text)" }}
-            />
-          </div>
-          <div className="flex gap-2">
-            <button type="button" onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
-              style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
-              Cancelar
-            </button>
-            <button type="submit" disabled={saving}
-              className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-60"
-              style={{ background: "var(--primary)" }}>
-              {saving ? <i className="fa-solid fa-spinner fa-spin" /> : "Guardar"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -186,61 +171,48 @@ function CreateItemModal({ onClose, onCreate }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.5)" }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="rounded-[24px] p-6 w-full max-w-sm shadow-2xl"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>Novo Item</h2>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl"
-            style={{ background: "var(--surface-2)", color: "var(--text-muted)" }}>
-            <i className="fa-solid fa-xmark text-sm" />
+    <Modal open onClose={onClose} title="Novo Item" size="sm">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Nome</label>
+          <input type="text" value={form.name} onChange={e => set("name", e.target.value)}
+            placeholder="Ex: Frango Grelhado"
+            className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+            style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Categoria</label>
+          <select value={form.category} onChange={e => set("category", e.target.value)}
+            className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+            style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }}>
+            {MENU_CATEGORIES.map(c => (
+              <option key={c.key} value={c.key}>{c.emoji} {c.label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Preço (€)</label>
+          <input type="number" min="0.01" step="0.01" value={form.price}
+            onChange={e => set("price", e.target.value)}
+            placeholder="0.00"
+            className="w-full rounded-xl px-3 py-2 text-sm outline-none"
+            style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
+        </div>
+        {err && <p className="text-xs text-red-500">{err}</p>}
+        <div className="flex gap-2 pt-1">
+          <button type="button" onClick={onClose}
+            className="flex-1 py-2 rounded-xl text-sm font-semibold"
+            style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
+            Cancelar
+          </button>
+          <button type="submit" disabled={saving}
+            className="flex-1 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
+            style={{ background: "var(--primary)" }}>
+            {saving ? <i className="fa-solid fa-spinner fa-spin" /> : "Criar Item"}
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Nome</label>
-            <input type="text" value={form.name} onChange={e => set("name", e.target.value)}
-              placeholder="Ex: Frango Grelhado"
-              className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Categoria</label>
-            <select value={form.category} onChange={e => set("category", e.target.value)}
-              className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }}>
-              {MENU_CATEGORIES.map(c => (
-                <option key={c.key} value={c.key}>{c.emoji} {c.label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold mb-1" style={{ color: "var(--text-secondary)" }}>Preço (€)</label>
-            <input type="number" min="0.01" step="0.01" value={form.price}
-              onChange={e => set("price", e.target.value)}
-              placeholder="0.00"
-              className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }} />
-          </div>
-          {err && <p className="text-xs text-red-500">{err}</p>}
-          <div className="flex gap-2 pt-1">
-            <button type="button" onClick={onClose}
-              className="flex-1 py-2 rounded-xl text-sm font-semibold"
-              style={{ background: "var(--surface-2)", color: "var(--text-secondary)" }}>
-              Cancelar
-            </button>
-            <button type="submit" disabled={saving}
-              className="flex-1 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
-              style={{ background: "var(--primary)" }}>
-              {saving ? <i className="fa-solid fa-spinner fa-spin" /> : "Criar Item"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 }
 
