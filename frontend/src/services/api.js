@@ -1,10 +1,19 @@
+import { getCookie } from '@/context/sessionGuard.js'
+
 // Base comum para todas as chamadas HTTP do frontend.
 const BASE = '/api'
+const TOKEN_KEY = import.meta.env.VITE_AUTH_TOKEN_KEY
 
 // Executa um pedido fetch com JSON e devolve a resposta já parseada.
+// Injeta automaticamente o JWT (cookie) no header Authorization, quando existe.
 async function request(path, options = {}) {
+  const token = getCookie(TOKEN_KEY)
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
     ...options,
   })
   if (!res.ok) throw new Error(`API ${res.status} — ${path}`)

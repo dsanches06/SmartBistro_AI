@@ -7,18 +7,6 @@ export const THIRTY_AGO_STR = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).to
 // Paleta de cores dos gráficos donut (top produtos, estado dos pedidos, etc.).
 export const DONUT_COLORS = ["#6366f1", "#f59e0b", "#3b82f6", "#22c55e", "#9ca3af"];
 
-// Cor de barra por estado de pedido nos gráficos de barras.
-export const BAR_STATUS_COLORS = {
-  Pending: "#6366f1", "In Preparation": "#f59e0b",
-  Ready: "#22c55e", Delivered: "#3b82f6", Done: "#9ca3af", Cancelled: "#ef4444",
-};
-
-// Rótulos curtos por estado de pedido, para eixos e legendas de gráficos.
-export const STATUS_LABELS = {
-  Pending: "Novos", "In Preparation": "Em prep.", Ready: "Prontos",
-  Delivered: "Entregue", Done: "Concluído", Cancelled: "Cancelado",
-};
-
 // Secções (abas) disponíveis na página de Relatórios.
 export const REPORT_SECTIONS = [
   { key: "vendas",      label: "Vendas",      icon: "fa-solid fa-chart-line" },

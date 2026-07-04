@@ -1,3 +1,13 @@
+import { getCookie } from "@/context/sessionGuard.js";
+
+const TOKEN_KEY = import.meta.env.VITE_AUTH_TOKEN_KEY;
+
+// Cabeçalhos de autenticação (Authorization: Bearer <jwt>), quando existe sessão activa.
+function authHeaders() {
+  const token = getCookie(TOKEN_KEY);
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 // Resolve o URL base do backend consoante o ambiente (produção vs. desenvolvimento).
 export function getBackendUrl() {
   if (import.meta.env.PROD) {
@@ -30,7 +40,7 @@ class BaseService {
     try {
       const response = await fetch(`${this.BACKEND_URL}${endpoint}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify(payload),
       });
       if (!response.ok)
@@ -103,7 +113,7 @@ class BaseService {
   async sendMessage(endpoint, payload) {
     const res = await fetch(`${this.BACKEND_URL}${endpoint}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify(payload),
     });
     if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
@@ -112,7 +122,7 @@ class BaseService {
 
   // Executa GET e devolve JSON
   async fetchData(endpoint) {
-    const res = await fetch(`${this.BACKEND_URL}${endpoint}`);
+    const res = await fetch(`${this.BACKEND_URL}${endpoint}`, { headers: authHeaders() });
     if (!res.ok)
       throw new Error(`Erro ao buscar dados: ${res.status} ${res.statusText}`);
     return res.json();
