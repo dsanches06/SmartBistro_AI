@@ -1,7 +1,11 @@
 import { Router } from "express";
 import { recipeItemController } from "../controllers/index.js";
+import { verifyToken, requireRole } from "../middlewares/authMiddleware.js";
 
 const router = Router();
+
+// Fichas técnicas — funcionalidade exclusiva de staff.
+router.use(verifyToken, requireRole(1));
 
 router.get("/", recipeItemController.getAll);
 router.get("/item/:itemId", recipeItemController.getByItemId);

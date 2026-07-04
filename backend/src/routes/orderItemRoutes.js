@@ -1,7 +1,11 @@
 import { Router } from "express";
 import { orderItemController } from "../controllers/index.js";
+import { verifyToken } from "../middlewares/authMiddleware.js";
 
 const router = Router();
+
+// Usado tanto pelo checkout do cliente como pelos modais de pedido do staff.
+router.use(verifyToken);
 
 router.get("/", orderItemController.getAll);
 router.get("/order/:orderId", orderItemController.getByOrderId);
