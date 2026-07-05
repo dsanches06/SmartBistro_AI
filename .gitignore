@@ -36,3 +36,10 @@ logs/
 *.sln
 *.sw?
 
+# Documentos internos (não vão para o repositório)
+docs/proposta.docx
+docs/relatorio.docx
+docs/relatorio.md
+docs/backend.md
+docs/defesa.md
+docs/frontend.md
