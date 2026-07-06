@@ -74,15 +74,21 @@ export const getTableDetailsById = async (id) => {
   );
 
   // Procurar o pedido activo: pode estar na mesa directamente ou via group_id
+  // (query montada condicionalmente porque o Postgres não infere o tipo de um
+  // parâmetro usado só em "? IS NOT NULL" quando groupId é null)
+  const orderWhere = groupId
+    ? "WHERE (o.table_id = ? OR o.group_id = ?)"
+    : "WHERE o.table_id = ?";
+  const orderParams = groupId ? [id, groupId] : [id];
   const [orderRows] = await db.query(
     `SELECT o.*, u.name AS user_name
      FROM orders o
      LEFT JOIN users u ON u.id = o.user_id
-     WHERE (o.table_id = ? OR (? IS NOT NULL AND o.group_id = ?))
+     ${orderWhere}
        AND o.order_status NOT IN ('Done', 'Cancelled', 'Delivered')
      ORDER BY o.created_at DESC
      LIMIT 1`,
-    [id, groupId, groupId],
+    orderParams,
   );
 
   const activeReservation = reservationRows[0]
