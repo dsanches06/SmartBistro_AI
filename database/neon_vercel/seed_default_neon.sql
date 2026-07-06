@@ -1,16 +1,13 @@
 -- =========================================================================
--- SEED DEFAULT — SmartBistro AI (Neon/PostgreSQL)
--- Dados de arranque sem utilizadores regulares nem atividade operacional.
--- Mesas todas livres (Available), sem reservas nem pedidos.
+-- SEED DEFAULT — SmartBistro AI (full MySQL seed converted to Neon/PostgreSQL)
 -- Executar DEPOIS de schema_neon.sql.
---
--- Inclui:  roles · users (admin/manager) · staff · auth_accounts · tables
---          ingredients · stock · items · recipe_items
--- Exclui:  conversations · chat_history
---          notification · reservations · orders · order_items
---          invoices · payments · logs
 -- =========================================================================
 
+-- =========================================================================
+-- SEED DATA — SmartBistro AI
+-- Executar DEPOIS de schema.sql (DDL puro)
+-- Timestamps relativos a NOW() para demo sempre realista
+-- =========================================================================
 -- =========================================================================
 -- 1. ROLES
 -- =========================================================================
@@ -20,11 +17,40 @@ INSERT INTO roles (name, flow_order) VALUES
 ('MODEL', 3);
 
 -- =========================================================================
--- 2. UTILIZADORES BASE (Admin e Manager)
+-- 2. UTILIZADORES
 -- =========================================================================
-INSERT INTO users (name, email, active, role_id) VALUES
-('Admin SmartBistro',   'admin@smartbistro.pt',   TRUE, 1),
-('Manager SmartBistro', 'manager@smartbistro.pt', TRUE, 1);
+-- Admin e Manager (role_id=1)
+INSERT INTO users (name, email, phone, active, role_id) VALUES
+('Admin SmartBistro',   'admin@smartbistro.pt',   NULL,        TRUE, 1),
+('Manager SmartBistro', 'manager@smartbistro.pt', '555-0100',  TRUE, 1);
+
+-- Utilizadores regulares (role_id=2 via DEFAULT)
+INSERT INTO users (name, phone, active) VALUES
+('Hugo Neto',        '555-0108', TRUE),  -- id=3
+('Ana Silva',        '555-0101', TRUE),  -- id=4
+('Joana Luz',        '555-0110', TRUE),  -- id=5
+('Bruno Costa',      '555-0102', TRUE),  -- id=6
+('Igor Lima',        '555-0109', TRUE),  -- id=7
+('Carla Dias',       '555-0103', TRUE),  -- id=8
+('Filipe Gil',       '555-0106', TRUE),  -- id=9
+('Elena Vaz',        '555-0105', TRUE),  -- id=10
+('David Reas',       '555-0104', TRUE),  -- id=11
+('Gina Rosa',        '555-0107', TRUE),  -- id=12
+('Ana Pereira',      '555-0111', TRUE),  -- id=13
+('Carlos Silva',     '555-0112', TRUE),  -- id=14
+('Manuel Santos',    '555-0113', TRUE),  -- id=15
+('Mariana Costa',    '555-0114', TRUE),  -- id=16
+('Pedro Almeida',    '555-0115', TRUE),  -- id=17
+('Joana Martins',    '555-0116', TRUE),  -- id=18
+('Danilson Sanches', '555-0120', TRUE),  -- id=19
+('Abel Pinto',       '555-0155', TRUE),  -- id=20
+-- Utilizadores sem mesa nem pedido (disponíveis para atribuição/reserva)
+('Ricardo Fonseca',  '555-0130', TRUE),  -- id=21
+('Sofia Mendes',     '555-0131', TRUE),  -- id=22
+('Tiago Ferreira',   '555-0132', TRUE),  -- id=23
+('Beatriz Neves',    '555-0133', TRUE),  -- id=24
+('Nuno Rodrigues',   '555-0134', TRUE),  -- id=25
+('Catarina Lima',    '555-0135', TRUE);  -- id=26
 
 -- =========================================================================
 -- 3. STAFF (Admin e Manager são funcionários)
@@ -39,36 +65,37 @@ INSERT INTO auth_accounts (user_id, username, password_hash) VALUES
 (2, 'manager', '$2b$10$8xnntok3EVYFLuse1MYds.klcWYqzZLXijT1S1r9/CdNvUkWZbgju');
 
 -- =========================================================================
--- 5. MESAS — todas disponíveis, sem ocupação nem reserva
+-- 5. MESAS
+-- Occupied → pedido activo  |  Reserved → reserva futura  |  Available → livre
 -- =========================================================================
 INSERT INTO tables (table_number, capacity, status) VALUES
 ('T01',  2, 'Available'),
 ('T02',  4, 'Available'),
-('T03',  4, 'Available'),
-('T04',  4, 'Available'),
-('T05',  6, 'Available'),
-('T06',  6, 'Available'),
-('T07',  8, 'Available'),
+('T03',  4, 'Occupied'),
+('T04',  4, 'Reserved'),
+('T05',  6, 'Occupied'),
+('T06',  6, 'Occupied'),
+('T07',  8, 'Occupied'),
 ('T08',  8, 'Available'),
 ('T09',  2, 'Available'),
 ('T10', 10, 'Available'),
-('T11',  2, 'Available'),
-('T12',  4, 'Available'),
-('T13',  4, 'Available'),
-('T14',  6, 'Available'),
+('T11',  2, 'Reserved'),
+('T12',  4, 'Occupied'),
+('T13',  4, 'Occupied'),
+('T14',  6, 'Reserved'),
 ('T15',  8, 'Available'),
 ('T16',  2, 'Available'),
-('T17',  4, 'Available'),
+('T17',  4, 'Occupied'),
 ('T18',  4, 'Available'),
 ('T19',  6, 'Available'),
 ('T20', 10, 'Available'),
-('T21',  4, 'Available'),
-('T22',  4, 'Available'),
-('T23',  6, 'Available'),
+('T21',  4, 'Occupied'),
+('T22',  4, 'Occupied'),
+('T23',  6, 'Occupied'),
 ('T24',  8, 'Available');
 
 -- =========================================================================
--- 6. INGREDIENTES
+-- 6. INGREDIENTES + STOCK
 -- =========================================================================
 INSERT INTO ingredients (name, measurement_unit) VALUES
 ('Long Italian Pasta',  'kg'),
@@ -108,9 +135,6 @@ INSERT INTO ingredients (name, measurement_unit) VALUES
 ('Coca-Cola',           'L'),
 ('Sumol',               'L');
 
--- =========================================================================
--- 7. STOCK
--- =========================================================================
 INSERT INTO stock (ingredient_id, available_quantity, unit_cost) VALUES
 ( 1, 20.00,  1.5000), ( 2, 15.00,  7.5000), ( 3, 50.00,  0.4000),
 ( 4, 10.00,  5.5000), ( 5,  8.00, 12.0000),
@@ -124,7 +148,7 @@ INSERT INTO stock (ingredient_id, available_quantity, unit_cost) VALUES
 (33,  5.00, 15.0000), (34, 10.00,  2.0000), (35, 40.00,  0.8000), (36, 30.00,  0.7000);
 
 -- =========================================================================
--- 8. ITENS DO MENU
+-- 7. ITENS DO MENU + FICHAS TÉCNICAS
 -- =========================================================================
 INSERT INTO items (name, category, price) VALUES
 ('Esparguete Bolonhesa', 'Main Course', 12.50),
@@ -156,9 +180,6 @@ INSERT INTO items (name, category, price) VALUES
 ('Café',                 'Beverage',     1.50),
 ('Pão',                  'Appetizer',    2.50);
 
--- =========================================================================
--- 9. FICHAS TÉCNICAS (receitas)
--- =========================================================================
 INSERT INTO recipe_items (item_id, ingredient_id, required_quantity) VALUES
 (1,  1, 0.12), (1,  2, 0.15),
 (2,  3, 1.00), (2,  2, 0.18),
@@ -182,3 +203,277 @@ INSERT INTO recipe_items (item_id, ingredient_id, required_quantity) VALUES
 (23,  4, 0.30), (23,  8, 0.01), (23, 19, 0.02),
 (24, 34, 0.20), (24, 19, 0.02),
 (25, 35, 0.33), (26, 36, 0.33), (27, 33, 0.01), (28, 17, 1.00);
+
+-- =========================================================================
+-- 8. RESERVAS (datas futuras a partir de hoje)
+-- =========================================================================
+INSERT INTO reservations (user_id, table_id, reservation_date, party_size, status, phone, notes) VALUES
+(11, 11, CURRENT_TIMESTAMP + INTERVAL '1 day' + INTERVAL '19 hours', 2, 'Confirmed', '555-0111', NULL),
+(12,  4, CURRENT_TIMESTAMP + INTERVAL '1 day' + INTERVAL '20 hours', 4, 'Confirmed', '555-0112', NULL),
+(14, 14, CURRENT_TIMESTAMP + INTERVAL '1 day' + INTERVAL '20 hours' + INTERVAL '30 minutes', 5, 'Confirmed', '555-0114', 'Sem glúten'),
+(15,  2, CURRENT_TIMESTAMP + INTERVAL '2 days' + INTERVAL '12 hours' + INTERVAL '30 minutes', 2, 'Pending',   '555-0115', NULL),
+(16,  9, CURRENT_TIMESTAMP + INTERVAL '2 days' + INTERVAL '13 hours', 1, 'Pending',   '555-0116', 'Mesa na esplanada'),
+(10, 10, CURRENT_TIMESTAMP + INTERVAL '2 days' + INTERVAL '19 hours', 8, 'Confirmed', '555-0105', 'Reunião de empresa'),
+(17, 18, CURRENT_TIMESTAMP + INTERVAL '2 days' + INTERVAL '19 hours' + INTERVAL '30 minutes', 2, 'Confirmed', '555-0115', NULL),
+( 3, 16, CURRENT_TIMESTAMP + INTERVAL '3 days' + INTERVAL '12 hours', 2, 'Pending',   '555-0110', NULL),
+( 4, 15, CURRENT_TIMESTAMP + INTERVAL '3 days' + INTERVAL '20 hours', 3, 'Pending',   '555-0102', NULL),
+( 5, 20, CURRENT_TIMESTAMP + INTERVAL '5 days' + INTERVAL '13 hours', 9, 'Confirmed', '555-0109', 'Aniversário'),
+( 6, 19, CURRENT_TIMESTAMP + INTERVAL '5 days' + INTERVAL '19 hours', 5, 'Confirmed', '555-0103', NULL),
+( 7,  3, CURRENT_TIMESTAMP + INTERVAL '-6 days' + INTERVAL '19 hours', 4, 'Completed', '555-0106', NULL),
+( 8, 15, CURRENT_TIMESTAMP + INTERVAL '-5 days' + INTERVAL '20 hours', 6, 'Completed', '555-0105', NULL),
+( 9,  4, CURRENT_TIMESTAMP + INTERVAL '-4 days' + INTERVAL '19 hours', 2, 'Completed', '555-0104', NULL),
+(10,  6, CURRENT_TIMESTAMP + INTERVAL '-8 days' + INTERVAL '20 hours', 5, 'Cancelled', '555-0107', 'Cancelado pelo utilizador');
+
+-- =========================================================================
+-- 9. PEDIDOS (KDS)
+-- =========================================================================
+INSERT INTO orders (user_id, table_id, service_type, allergy_restrictions, kitchen_sequence_json, order_status, created_at) VALUES
+-- DELIVERED (histórico, pago)
+(16,  9, 'Table',    NULL, '["Grilled Salmon","Legumes Salteados","Sparkling Water"]',                        'Delivered',      NOW() - INTERVAL '110 minutes'),
+(15,  2, 'Table',    NULL, '["Frango Assado","Craft Beer"]',                                                 'Delivered',      NOW() - INTERVAL '95 minutes'),
+-- READY (preparado, aguarda Maître)
+(14, 12, 'Table',    NULL, '["Bruschetta","Sumol","Esparguete Bolonhesa","Caesar Salad","Chocolate Mousse"]', 'Ready',          NOW() - INTERVAL '35 minutes'),
+(13, NULL,'Takeaway',NULL, '["Hamburguer Gourmet","Batatas Fritas","Sparkling Water"]',                       'Ready',          NOW() - INTERVAL '28 minutes'),
+(12,  3, 'Table',    NULL, '["Bruschetta","Sumol"]',                                                         'Ready',          NOW() - INTERVAL '25 minutes'),
+-- PENDING (Chef AI processa ao abrir o KDS)
+(11,  7, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL '5 minutes'),
+(12,  3, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL '4 minutes'),
+(14, 12, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL '3 minutes'),
+( 9,  5, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL '3 minutes'),
+-- IN PREPARATION
+(20, 17, 'Table',    NULL, '["Esparguete Bolonhesa","Tiramisu"]',                                            'In Preparation', NOW() - INTERVAL '18 minutes'),
+( 3, 22, 'Table',    NULL, '["Chicken Wings","Coca-Cola"]',                                                  'In Preparation', NOW() - INTERVAL '14 minutes'),
+( 4, 21, 'Table',    NULL, '["Creme Soup","Vegetarian Pasta","Cheesecake"]',                                 'In Preparation', NOW() - INTERVAL '12 minutes'),
+( 5, 23, 'Table',    NULL, '["Chicken Parmigiana","Craft Beer","Tiramisu"]',                                 'In Preparation', NOW() - INTERVAL '10 minutes'),
+-- PENDING
+( 7,  6, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL '2 minutes'),
+( 8, 13, 'Table',    NULL, '[]',                                                                             'Pending',        NOW() - INTERVAL '1 minute');
+
+-- =========================================================================
+-- 10. ORDER ITEMS
+-- =========================================================================
+INSERT INTO order_items (order_id, item_id, quantity) VALUES
+( 1,  7, 1), ( 1, 24, 1), ( 1, 16, 1),
+( 2, 23, 1), ( 2, 14, 1),
+( 3,  3, 1), ( 3, 26, 1), ( 3,  1, 1), ( 3,  4, 1), ( 3, 10, 1),
+( 4,  2, 1), ( 4, 19, 1), ( 4, 16, 1),
+( 5,  3, 1), ( 5, 26, 1),
+( 6, 17, 1), ( 6, 18, 1), ( 6, 19, 1), ( 6, 25, 1),
+( 7, 20, 1), ( 7, 26, 1),
+( 8, 21, 1), ( 8, 22, 1), ( 8, 15, 1), ( 8, 28, 1), ( 8, 27, 1),
+( 9,  4, 1), ( 9,  7, 1), ( 9, 13, 1),
+(10,  1, 1), (10, 11, 1),
+(11,  5, 1), (11, 25, 1),
+(12,  6, 1), (12,  9, 1), (12, 12, 1),
+(13,  8, 1), (13, 14, 1), (13, 11, 1),
+(14, 17, 1), (14, 15, 1),
+(15,  4, 1), (15,  7, 1), (15, 14, 1);
+
+-- =========================================================================
+-- 11. FATURAS
+-- =========================================================================
+INSERT INTO invoices (order_id, subtotal_amount, tax_amount, total_amount, profit_margin, issued_at)
+VALUES (1, 28.00, 3.64, 31.64, 27.48, NOW() - INTERVAL '90 minutes');
+INSERT INTO invoices (order_id, subtotal_amount, tax_amount, total_amount, profit_margin, issued_at)
+VALUES (2, 19.00, 2.47, 21.47, 18.71, NOW() - INTERVAL '75 minutes');
+INSERT INTO invoices (order_id, subtotal_amount, tax_amount, total_amount, profit_margin, issued_at)
+VALUES (3, 37.00, 4.81, 41.81, 36.40, NOW() - INTERVAL '25 minutes');
+INSERT INTO invoices (order_id, subtotal_amount, tax_amount, total_amount, profit_margin, issued_at)
+VALUES (4, 20.00, 2.60, 22.60, 19.80, NOW() - INTERVAL '18 minutes');
+INSERT INTO invoices (order_id, subtotal_amount, tax_amount, total_amount, profit_margin, issued_at)
+VALUES (5, 9.50, 1.24, 10.74, 9.68, NOW() - INTERVAL '15 minutes');
+
+-- =========================================================================
+-- 12. PAGAMENTOS
+-- =========================================================================
+INSERT INTO payments (invoice_id, user_id, amount, payment_method, payment_status, processed_at) VALUES
+(1, 16, 31.64, 'MB Way',      'Completed', NOW() - INTERVAL '85 minutes'),
+(2, 15, 21.47, 'Cash',        'Completed', NOW() - INTERVAL '70 minutes'),
+(3, 14, 41.81, 'Multibanco',  'Pending',   NULL),
+(4, 13, 22.60, 'MB Way',      'Pending',   NULL),
+(5, 12, 10.74, 'Credit Card', 'Pending',   NULL);
+
+-- =========================================================================
+-- 13. NOTIFICAÇÕES
+-- =========================================================================
+INSERT INTO notification (user_id, title, message, is_read, sent_at) VALUES
+(16, 'Pagamento recebido',      'O seu pagamento de 31,64 € foi processado com sucesso. Obrigado!',            TRUE,  NOW() - INTERVAL '85 minutes'),
+(15, 'Pagamento recebido',      'O seu pagamento de 21,47 € foi processado com sucesso. Obrigado!',            TRUE,  NOW() - INTERVAL '70 minutes'),
+(14, 'A sua conta está pronta', 'A sua fatura de 41,81 € está disponível. Pode pagar ao balcão ou via app.',   FALSE, NOW() - INTERVAL '25 minutes'),
+(13, 'A sua conta está pronta', 'A sua fatura de 22,60 € está disponível. Pode levantar o seu pedido.',        FALSE, NOW() - INTERVAL '18 minutes'),
+(12, 'A sua conta está pronta', 'A sua fatura de 10,74 € está disponível. Pode pagar ao balcão ou via app.',   FALSE, NOW() - INTERVAL '15 minutes');
+
+-- =========================================================================
+-- 14. PROGRAMA DE PONTOS (1€ pago = 1 ponto | calculados dos pagamentos do seed)
+-- Secção 12 Completed: user16=31pts, user15=21pts
+-- Secção 18 Completed: user3=89, user4=71, user5=84, user6=91, user7=44, user8=32
+-- Secção 22 Completed: user19(Danilson)=177
+-- =========================================================================
+INSERT INTO user_points (user_id, balance, total_earned, total_redeemed) VALUES
+(3,  89,  89,  0),   -- Hugo Neto:    17+19+19+34=89 pts
+(4,  71,  71,  0),   -- Ana Silva:    33+18+20=71 pts
+(5,  84,  84,  0),   -- Joana Luz:    27+30+27=84 pts
+(6,  91,  91,  0),   -- Bruno Costa:  25+41+25=91 pts
+(7,  44,  44,  0),   -- Igor Lima:    24+20=44 pts
+(8,  32,  32,  0),   -- Carla Dias:   16+16=32 pts
+(15, 21,  21,  0),   -- Manuel Santos: 21 pts
+(16, 31,  31,  0),   -- Mariana Costa: 31 pts
+(19, 177, 177, 0);   -- Danilson:     38+22+23+25+20+25+24=177 pts
+
+-- Transações de pontos (uma por pagamento efectuado)
+INSERT INTO points_transactions (user_id, amount, description, order_id) VALUES
+(3,  17, 'Compra #16', 16), (3,  19, 'Compra #19', 19),
+(3,  19, 'Compra #25', 25), (3,  34, 'Compra #31', 31),
+(4,  33, 'Compra #17', 17), (4,  18, 'Compra #23', 23), (4,  20, 'Compra #29', 29),
+(5,  27, 'Compra #18', 18), (5,  30, 'Compra #24', 24), (5,  27, 'Compra #30', 30),
+(6,  25, 'Compra #20', 20), (6,  41, 'Compra #26', 26), (6,  25, 'Compra #32', 32),
+(7,  24, 'Compra #21', 21), (7,  20, 'Compra #27', 27),
+(8,  16, 'Compra #22', 22), (8,  16, 'Compra #28', 28),
+(15, 21, 'Compra #2',   2),
+(16, 31, 'Compra #1',   1),
+(19, 38, 'Compra #33', 33), (19, 22, 'Compra #34', 34), (19, 23, 'Compra #35', 35),
+(19, 25, 'Compra #36', 36), (19, 20, 'Compra #37', 37), (19, 25, 'Compra #38', 38),
+(19, 24, 'Compra #39', 39);
+
+-- =========================================================================
+-- 15. PEDIDOS HISTÓRICOS (últimos 30 dias — para previsão de receitas e recomendações)
+-- Usam utilizadores existentes: 3=Hugo 4=Ana 5=Joana 6=Bruno 7=Igor 8=Carla
+-- Itens: 1=Esparguete(12.50) 2=Hamburguer(14.00) 4=Caesar Salad(9.00)
+--        5=Chicken Wings(11.00) 7=Grilled Salmon(18.50) 10=Choc Mousse(6.00)
+--        11=Tiramisu(7.00) 13=OJ(3.50) 14=Craft Beer(4.50) 17=Bife(16.00)
+--        18=Arroz Marisco(19.50) 19=Batatas(4.00) 23=Frango(14.50) 25=Coca(2.50)
+-- =========================================================================
+INSERT INTO orders (user_id, service_type, kitchen_sequence_json, order_status, created_at) VALUES
+(3, 'Takeaway', '[{"name":"Esparguete Bolonhesa","quantity":1,"price":12.50},{"name":"Craft Beer","quantity":1,"price":4.50}]',     'Delivered', NOW() - INTERVAL '29 days'),
+(4, 'Takeaway', '[{"name":"Hamburguer Gourmet","quantity":2,"price":14.00},{"name":"Coca-Cola","quantity":2,"price":2.50}]',         'Delivered', NOW() - INTERVAL '27 days'),
+(5, 'Takeaway', '[{"name":"Grilled Salmon","quantity":1,"price":18.50},{"name":"Caesar Salad","quantity":1,"price":9.00}]',          'Delivered', NOW() - INTERVAL '25 days'),
+(3, 'Takeaway', '[{"name":"Esparguete Bolonhesa","quantity":1,"price":12.50},{"name":"Tiramisu","quantity":1,"price":7.00}]',        'Delivered', NOW() - INTERVAL '23 days'),
+(6, 'Takeaway', '[{"name":"Chicken Wings","quantity":2,"price":11.00},{"name":"Batatas Fritas","quantity":1,"price":4.00}]',         'Delivered', NOW() - INTERVAL '21 days'),
+(7, 'Takeaway', '[{"name":"Arroz de Marisco","quantity":1,"price":19.50},{"name":"Craft Beer","quantity":1,"price":4.50}]',          'Delivered', NOW() - INTERVAL '19 days'),
+(8, 'Takeaway', '[{"name":"Esparguete Bolonhesa","quantity":1,"price":12.50},{"name":"Orange Juice","quantity":1,"price":3.50}]',    'Delivered', NOW() - INTERVAL '17 days'),
+(4, 'Takeaway', '[{"name":"Hamburguer Gourmet","quantity":1,"price":14.00},{"name":"Batatas Fritas","quantity":1,"price":4.00}]',    'Delivered', NOW() - INTERVAL '15 days'),
+(5, 'Takeaway', '[{"name":"Grilled Salmon","quantity":1,"price":18.50},{"name":"Chocolate Mousse","quantity":2,"price":6.00}]',      'Delivered', NOW() - INTERVAL '13 days'),
+(3, 'Takeaway', '[{"name":"Chicken Wings","quantity":1,"price":11.00},{"name":"Batatas Fritas","quantity":2,"price":4.00}]',         'Delivered', NOW() - INTERVAL '11 days'),
+(6, 'Takeaway', '[{"name":"Hamburguer Gourmet","quantity":2,"price":14.00},{"name":"Craft Beer","quantity":1,"price":4.50}]',        'Delivered', NOW() - INTERVAL '9 days'),
+(7, 'Takeaway', '[{"name":"Bife à Casa","quantity":1,"price":16.00},{"name":"Batatas Fritas","quantity":1,"price":4.00}]',           'Delivered', NOW() - INTERVAL '7 days'),
+(8, 'Takeaway', '[{"name":"Esparguete Bolonhesa","quantity":1,"price":12.50},{"name":"Orange Juice","quantity":1,"price":3.50}]',    'Delivered', NOW() - INTERVAL '5 days'),
+(4, 'Takeaway', '[{"name":"Bife à Casa","quantity":1,"price":16.00},{"name":"Batatas Fritas","quantity":1,"price":4.00}]',           'Delivered', NOW() - INTERVAL '4 days'),
+(5, 'Takeaway', '[{"name":"Grilled Salmon","quantity":1,"price":18.50},{"name":"Caesar Salad","quantity":1,"price":9.00}]',          'Delivered', NOW() - INTERVAL '3 days'),
+(3, 'Takeaway', '[{"name":"Frango Assado","quantity":1,"price":14.50},{"name":"Arroz de Marisco","quantity":1,"price":19.50}]',      'Delivered', NOW() - INTERVAL '2 days'),
+(6, 'Takeaway', '[{"name":"Hamburguer Gourmet","quantity":1,"price":14.00},{"name":"Chicken Wings","quantity":1,"price":11.00}]',    'Delivered', NOW() - INTERVAL '1 day');
+
+-- =========================================================================
+-- 16. ORDER ITEMS HISTÓRICOS (espelham kitchen_sequence_json acima)
+-- IDs dos pedidos históricos começam em 16 (após os 15 do seed principal)
+-- =========================================================================
+INSERT INTO order_items (order_id, item_id, quantity) VALUES
+(16, 1,1),(16,14,1),
+(17, 2,2),(17,25,2),
+(18, 7,1),(18, 4,1),
+(19, 1,1),(19,11,1),
+(20, 5,2),(20,19,1),
+(21,18,1),(21,14,1),
+(22, 1,1),(22,13,1),
+(23, 2,1),(23,19,1),
+(24, 7,1),(24,10,2),
+(25, 5,1),(25,19,2),
+(26, 2,2),(26,14,1),
+(27,17,1),(27,19,1),
+(28, 1,1),(28,13,1),
+(29,17,1),(29,19,1),
+(30, 7,1),(30, 4,1),
+(31,23,1),(31,18,1),
+(32, 2,1),(32, 5,1);
+
+-- =========================================================================
+-- 17. FATURAS HISTÓRICAS (IVA 13% — para previsão de receitas funcionar)
+-- =========================================================================
+INSERT INTO invoices (order_id, subtotal_amount, tax_amount, total_amount, profit_margin, issued_at) VALUES
+(16, 15.04,  1.96,  17.00, 0, NOW() - INTERVAL '29 days'),
+(17, 29.20,  3.80,  33.00, 0, NOW() - INTERVAL '27 days'),
+(18, 24.34,  3.16,  27.50, 0, NOW() - INTERVAL '25 days'),
+(19, 17.26,  2.24,  19.50, 0, NOW() - INTERVAL '23 days'),
+(20, 22.12,  2.88,  25.00, 0, NOW() - INTERVAL '21 days'),
+(21, 21.24,  2.76,  24.00, 0, NOW() - INTERVAL '19 days'),
+(22, 14.16,  1.84,  16.00, 0, NOW() - INTERVAL '17 days'),
+(23, 15.93,  2.07,  18.00, 0, NOW() - INTERVAL '15 days'),
+(24, 26.99,  3.51,  30.50, 0, NOW() - INTERVAL '13 days'),
+(25, 16.81,  2.19,  19.00, 0, NOW() - INTERVAL '11 days'),
+(26, 36.73,  4.77,  41.50, 0, NOW() - INTERVAL '9 days'),
+(27, 17.70,  2.30,  20.00, 0, NOW() - INTERVAL '7 days'),
+(28, 14.16,  1.84,  16.00, 0, NOW() - INTERVAL '5 days'),
+(29, 17.70,  2.30,  20.00, 0, NOW() - INTERVAL '4 days'),
+(30, 24.34,  3.16,  27.50, 0, NOW() - INTERVAL '3 days'),
+(31, 30.09,  3.91,  34.00, 0, NOW() - INTERVAL '2 days'),
+(32, 22.12,  2.88,  25.00, 0, NOW() - INTERVAL '1 day');
+
+-- =========================================================================
+-- 18. PAGAMENTOS HISTÓRICOS
+-- =========================================================================
+INSERT INTO payments (invoice_id, user_id, amount, payment_method, payment_status, processed_at) VALUES
+(6,  3, 17.00, 'Cash',        'Completed', NOW() - INTERVAL '29 days'),
+(7,  4, 33.00, 'MB Way',      'Completed', NOW() - INTERVAL '27 days'),
+(8,  5, 27.50, 'Credit Card', 'Completed', NOW() - INTERVAL '25 days'),
+(9,  3, 19.50, 'Cash',        'Completed', NOW() - INTERVAL '23 days'),
+(10, 6, 25.00, 'MB Way',      'Completed', NOW() - INTERVAL '21 days'),
+(11, 7, 24.00, 'Cash',        'Completed', NOW() - INTERVAL '19 days'),
+(12, 8, 16.00, 'MB Way',      'Completed', NOW() - INTERVAL '17 days'),
+(13, 4, 18.00, 'Credit Card', 'Completed', NOW() - INTERVAL '15 days'),
+(14, 5, 30.50, 'MB Way',      'Completed', NOW() - INTERVAL '13 days'),
+(15, 3, 19.00, 'Cash',        'Completed', NOW() - INTERVAL '11 days'),
+(16, 6, 41.50, 'MB Way',      'Completed', NOW() - INTERVAL '9 days'),
+(17, 7, 20.00, 'Cash',        'Completed', NOW() - INTERVAL '7 days'),
+(18, 8, 16.00, 'Credit Card', 'Completed', NOW() - INTERVAL '5 days'),
+(19, 4, 20.00, 'MB Way',      'Completed', NOW() - INTERVAL '4 days'),
+(20, 5, 27.50, 'Credit Card', 'Completed', NOW() - INTERVAL '3 days'),
+(21, 3, 34.00, 'Cash',        'Completed', NOW() - INTERVAL '2 days'),
+(22, 6, 25.00, 'MB Way',      'Completed', NOW() - INTERVAL '1 day');
+
+-- =========================================================================
+-- 19. PEDIDOS HISTÓRICOS DO DANILSON (user_id=19) — para Meus Pedidos + Recomendações
+-- IDs: 33–39 (após os 32 existentes)
+-- =========================================================================
+INSERT INTO orders (user_id, table_id, service_type, allergy_restrictions, kitchen_sequence_json, order_status, created_at) VALUES
+(19, NULL, 'Takeaway', NULL, '[{"name":"Hamburguer Gourmet","quantity":2,"price":14.00},{"name":"Batatas Fritas","quantity":1,"price":4.00},{"name":"Coca-Cola","quantity":1,"price":2.50}]',  'Delivered', NOW() - INTERVAL '3 days'),
+(19, NULL, 'Takeaway', NULL, '[{"name":"Hamburguer Gourmet","quantity":1,"price":14.00},{"name":"Chocolate Mousse","quantity":1,"price":6.00}]',                                              'Delivered', NOW() - INTERVAL '6 days'),
+(19, NULL, 'Takeaway', NULL, '[{"name":"Frango Assado","quantity":1,"price":14.50},{"name":"Batatas Fritas","quantity":1,"price":4.00},{"name":"Sumol","quantity":1,"price":2.00}]',          'Delivered', NOW() - INTERVAL '10 days'),
+(19, NULL, 'Takeaway', NULL, '[{"name":"Hamburguer Gourmet","quantity":1,"price":14.00},{"name":"Caesar Salad","quantity":1,"price":9.00}]',                                                  'Delivered', NOW() - INTERVAL '14 days'),
+(19, NULL, 'Takeaway', NULL, '[{"name":"Bacalhau à Brás","quantity":1,"price":17.00},{"name":"Café","quantity":1,"price":1.50}]',                                                             'Delivered', NOW() - INTERVAL '18 days'),
+(19, NULL, 'Takeaway', NULL, '[{"name":"Frango Assado","quantity":1,"price":14.50},{"name":"Coca-Cola","quantity":1,"price":2.50},{"name":"Chocolate Mousse","quantity":1,"price":6.00}]',    'Delivered', NOW() - INTERVAL '22 days'),
+(19, NULL, 'Takeaway', NULL, '[{"name":"Hamburguer Gourmet","quantity":1,"price":14.00},{"name":"Batatas Fritas","quantity":2,"price":4.00}]',                                                'Delivered', NOW() - INTERVAL '26 days');
+
+-- =========================================================================
+-- 20. ORDER ITEMS DO DANILSON (espelham kitchen_sequence_json acima)
+-- =========================================================================
+INSERT INTO order_items (order_id, item_id, quantity) VALUES
+(33,  2, 2), (33, 19, 1), (33, 25, 1),
+(34,  2, 1), (34, 10, 1),
+(35, 23, 1), (35, 19, 1), (35, 26, 1),
+(36,  2, 1), (36,  4, 1),
+(37, 21, 1), (37, 27, 1),
+(38, 23, 1), (38, 25, 1), (38, 10, 1),
+(39,  2, 1), (39, 19, 2);
+
+-- =========================================================================
+-- 21. FATURAS DO DANILSON (invoice IDs 23–29)
+-- =========================================================================
+INSERT INTO invoices (order_id, subtotal_amount, tax_amount, total_amount, profit_margin, issued_at) VALUES
+(33, 34.50,  4.49, 38.99, 0, NOW() - INTERVAL '3 days'),
+(34, 20.00,  2.60, 22.60, 0, NOW() - INTERVAL '6 days'),
+(35, 20.50,  2.67, 23.17, 0, NOW() - INTERVAL '10 days'),
+(36, 23.00,  2.99, 25.99, 0, NOW() - INTERVAL '14 days'),
+(37, 18.50,  2.41, 20.91, 0, NOW() - INTERVAL '18 days'),
+(38, 23.00,  2.99, 25.99, 0, NOW() - INTERVAL '22 days'),
+(39, 22.00,  2.86, 24.86, 0, NOW() - INTERVAL '26 days');
+
+-- =========================================================================
+-- 22. PAGAMENTOS DO DANILSON (invoice IDs 23–29, user_id=19)
+-- =========================================================================
+INSERT INTO payments (invoice_id, user_id, amount, payment_method, payment_status, processed_at) VALUES
+(23, 19, 38.99, 'MB Way',      'Completed', NOW() - INTERVAL '3 days'),
+(24, 19, 22.60, 'Cash',        'Completed', NOW() - INTERVAL '6 days'),
+(25, 19, 23.17, 'MB Way',      'Completed', NOW() - INTERVAL '10 days'),
+(26, 19, 25.99, 'Credit Card', 'Completed', NOW() - INTERVAL '14 days'),
+(27, 19, 20.91, 'Cash',        'Completed', NOW() - INTERVAL '18 days'),
+(28, 19, 25.99, 'MB Way',      'Completed', NOW() - INTERVAL '22 days'),
+(29, 19, 24.86, 'Credit Card', 'Completed', NOW() - INTERVAL '26 days');
