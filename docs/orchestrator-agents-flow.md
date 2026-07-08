@@ -35,13 +35,30 @@ Arquivo: [`backend/src/genai/orchestrations/chatBotProcessor.js`](../backend/src
   - `onDone(result.message || '', result.functionResults ?? [])`
   - em erro, classifica com `classifyClaudeError(err)` e chama `onError`
 
-## 5. Function calling e Claude
+## 5. Claude e o loop de agentes
+
+- O orquestrador baseia-se em `backend/src/genai/models/BaseChatProcessor.js`.
+- Historico é convertido para o formato Claude com `role` + `content`.
+- `BaseChatProcessor._callClaude(...)` chama `callClaude(...)` com `tools` normalizados e temperatura `0.3`.
+- `BaseChatProcessor._streamRound(...)` abre um stream `anthropic.messages.stream(...)` e envia chunks de texto a `onChunk`.
+- O resultado de cada ronda pode incluir `functionCalls` extraídas de `assistantMsg.content`.
+- Cada `functionCall` é executada por `executeFunction(functionCall)`:
+  - analisa `name` e `args`
+  - encontra o handler em `FUNCTION_HANDLERS`
+  - retorna `{ name, args, result, functionCall }`
+- Após executar as funções, o resultado é reencaminhado como mensagem `tool_result` ao Claude para permitir a próxima ronda.
+- O loop repete enquanto existirem `functionCalls` e o número de passagens for menor que `MAX_AGENTIC_STEPS` (5).
+- `filterFunctionCalls(...)` limpa funções redundantes quando necessário, por exemplo `set_assign_task_values`.
+- Em modo stream, se Claude não devolver texto e não houver chunks, o sistema força continuação com prompt adicional para avançar.
+- No fim, o processor retorna `message` e `functionResults`, que são enviados no evento SSE `done`.
+
+## 6. Function calling e Claude
 
 - O orquestrador usa ferramentas para responder com capacidade de `function call`.
 - Quando Claude decide chamar uma função, o resultado chega ao backend via `FUNCTION_HANDLERS`.
 - O backend transforma o resultado em `functionResults` e envia ao frontend no evento SSE final.
 
-## 6. Limite de 100 tokens por mensagem
+## 7. Limite de 100 tokens por mensagem
 
 Arquivo: [`backend/src/controllers/chatBotController.js`](../backend/src/controllers/chatBotController.js)
 

@@ -91,7 +91,15 @@ Arquivo: [`backend/src/genai/orchestrations/chatBotProcessor.js`](../backend/src
   - chama `processor.chat(message, onChunk)`
   - `onDone(result.message || '', result.functionResults ?? [])`
   - em erro, classifica com `classifyClaudeError(err)` e chama `onError`
+## 6.1 Claude e o loop de agentes
 
+- O orquestrador usa `backend/src/genai/models/BaseChatProcessor.js` para gerir a interação com Claude.
+- A conversa é convertida para o formato esperado por Claude (`role` + `content`).
+- O modelo Claude é chamado com ferramentas (`tools`) normalizadas, permitindo `function call`.
+- Quando Claude devolve `functionCalls`, o backend executa cada função em `FUNCTION_HANDLERS`.
+- Os resultados são reenviados ao Claude como mensagens `tool_result`, permitindo que ele continue o fluxo.
+- O loop continua enquanto existirem `functionCalls` e não ultrapassar `MAX_AGENTIC_STEPS`.
+- Em stream, o texto parcial é enviado para o frontend imediatamente, e a última resposta combina texto e `functionResults`.
 ## 7. Backend: tratamento de erros SSE
 
 Arquivo: [`backend/src/utils/chatBotUtil.js`](../backend/src/utils/chatBotUtil.js)
@@ -132,3 +140,37 @@ Arquivo: [`frontend/src/pages/admin/TablePage.jsx`](../frontend/src/pages/admin/
 - Apenas rotas sensíveis usam `verifyToken` / `requireRole` no backend.
 - O chat público (`/message/stream` e `/history/conversation/:conversationId`) pode ser usado sem login.
 - Limitação de 100 tokens por mensagem é válida para reduzir custos e controlar prompts.
+
+## 11. Diagrama simplificado: Claude → ferramentas → SSE
+
+```text
+Frontend (ChatUI)                          Backend (chatBotController)
+        |                                          |
+        | POST /chat/message/stream                |
+        |----------------------------------------->|
+        |                                          | start SSE response
+        |                                          | call processChatStream()
+        |                                          | create / reuse processor
+        |                                          | buildHistory() + user message
+        |                                          | Claude stream via _streamRound()
+        |                                          |----------------------------------
+        |                                          |        Claude / tools layer
+        |                                          |----------------------------------
+        |                                          | emit event: message (chunks)
+        |<-----------------------------------------|
+        | update UI with partial bot text         |
+        |                                          |
+        |                                          | if Claude returns functionCalls:
+        |                                          |   executeFunction() via FUNCTION_HANDLERS
+        |                                          |   append tool_result message
+        |                                          |   call Claude again
+        |                                          |----------------------------------
+        |                                          | final response with text + functionResults
+        |<-----------------------------------------|
+        | render bot answer and handle results    |
+```
+
+- `Backend/src/genai/models/BaseChatProcessor.js` é o ponto onde Claude recebe o histórico e as ferramentas.
+- `backend/src/genai/orchestrations/chatBotProcessor.js` define os handlers de função e mantém a sessão de conversa.
+- `backend/src/controllers/chatBotController.js` transforma o resultado final em SSE `done` com `functionResults`.
+- O frontend recebe `message` para texto parcial e `done` ao terminar.
